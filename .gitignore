@@ -1,0 +1,29 @@
+.idea/
+.venv/
+.venv*/
+venv/
+venv*/
+.pytest_cache/
+.mypy_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+.python-version
+.DS_Store
+.claude/
+
+# Local secrets and machine-specific config
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Generated runtime artifacts
+runs/
