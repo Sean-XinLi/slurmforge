@@ -41,6 +41,8 @@ Profile = "https://github.com/Sean-XinLi"
 dev = [
   "packaging>=24.0",
   "pytest>=9.0",
+  "pytest",
+  "ruff"
 ]
 
 [project.scripts]
