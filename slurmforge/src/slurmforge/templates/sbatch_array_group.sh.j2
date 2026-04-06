@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#SBATCH --job-name={{ array_job_name }}
+#SBATCH --output={{ array_log_dir }}/slurm-%j.out
+#SBATCH --error={{ array_log_dir }}/slurm-%j.err
+#SBATCH --partition={{ cluster.partition }}
+#SBATCH --account={{ cluster.account }}
+{% if cluster.qos %}#SBATCH --qos={{ cluster.qos }}{% endif %}
+#SBATCH --time={{ cluster.time_limit }}
+#SBATCH --nodes={{ cluster.nodes }}
+#SBATCH --ntasks-per-node=1
+#SBATCH --gres=gpu:{{ cluster.gpus_per_node }}
+#SBATCH --cpus-per-task={{ cluster.cpus_per_task }}
+#SBATCH --array=0-{{ array_size - 1 }}
+{% if cluster.mem and cluster.mem != "0" %}#SBATCH --mem={{ cluster.mem }}{% endif %}
+{% if cluster.constraint %}#SBATCH --constraint={{ cluster.constraint }}{% endif %}
+{% for a in cluster.extra_sbatch_args -%}
+#SBATCH {{ a }}
+{% endfor %}
+
+set -euo pipefail
+
+TASK_ID="${SLURM_ARRAY_TASK_ID}"
+TOTAL={{ array_size }}
+BATCH_ROOT={{ batch_root|shellquote }}
+RECORDS_DIR={{ records_dir|shellquote }}
+ARRAY_LOG_DIR={{ array_log_dir|shellquote }}
+RUN_PLAN_EXECUTOR_BIN={{ run_plan_executor_bin|shellquote }}
+RUN_RECORD="${RECORDS_DIR}/task_$(printf "%06d" "${TASK_ID}").json"
+
+printf '%s\n' "[ARRAY] batch_root=${BATCH_ROOT}"
+printf '%s\n' "[ARRAY] group_index={{ group_index }}"
+printf '%s\n' "[ARRAY] total_tasks=${TOTAL}"
+printf '%s\n' "[ARRAY] task_id=${TASK_ID}"
+printf '%s\n' "[ARRAY] run_record=${RUN_RECORD}"
+
+if [[ ! -f "${RUN_RECORD}" ]]; then
+  echo "[ERROR] run record not found: ${RUN_RECORD}"
+  exit 3
+fi
+
+export AI_INFRA_ARRAY_LOG_DIR="${ARRAY_LOG_DIR}"
+"${RUN_PLAN_EXECUTOR_BIN}" --record "${RUN_RECORD}"

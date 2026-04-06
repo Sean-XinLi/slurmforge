@@ -1,0 +1,9 @@
+project: "demo"
+experiment_name: "hello_command"
+
+output:
+  base_output_dir: "./runs"
+
+run:
+  command: "python train.py --epochs 1"
+  command_mode: "argv"

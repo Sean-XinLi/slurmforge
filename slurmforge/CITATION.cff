@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use slurmforge, please cite this project."
+title: "slurmforge"
+version: "0.1.0"
+license: "MIT"
+authors:
+  - family-names: "Li"
+    given-names: "Xin"
+    email: "seanxinlee@gmail.com"
+    alias: "Sean-XinLi"
+url: "https://github.com/Sean-XinLi"
+abstract: "Slurm-native experiment orchestration toolkit for planning, compiling, and running ML workloads."

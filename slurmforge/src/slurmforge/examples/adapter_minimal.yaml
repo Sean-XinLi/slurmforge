@@ -1,0 +1,14 @@
+project: "demo"
+experiment_name: "hello_adapter"
+
+output:
+  base_output_dir: "./runs"
+
+run:
+  adapter:
+    script: "train_adapter.py"
+    pass_run_args: true
+    pass_model_overrides: true
+  args:
+    lr: 0.001
+    epochs: 10

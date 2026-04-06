@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+
+
+def _runtime_dir(env_name: str, fallback: str) -> Path:
+    return Path(os.environ.get(env_name, fallback)).resolve()
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_type", default="mix")
+    parser.add_argument("--max_length", type=int, required=True)
+    parser.add_argument("--epochsize", type=int, required=True)
+    parser.add_argument("--batch_size", type=int, required=True)
+    parser.add_argument("--grad_accum_steps", type=int, default=1)
+    parser.add_argument("--lr", type=float, required=True)
+    parser.add_argument("--use_amp", action="store_true")
+    parser.add_argument("--amp_dtype", default="bf16")
+    parser.add_argument("--ckpt_dir", default="auto")
+    parser.add_argument("--resume_from_checkpoint", default="")
+    parser.add_argument("--config_yaml", default="")
+    parser.add_argument("--model_overrides_json", default="")
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    result_dir = _runtime_dir("AI_INFRA_RESULT_DIR", "./local_results")
+    checkpoint_dir = _runtime_dir("AI_INFRA_CHECKPOINT_DIR", "./local_results/checkpoints")
+    meta_dir = _runtime_dir("AI_INFRA_META_DIR", "./local_results/meta")
+
+    model_overrides = {}
+    if args.model_overrides_json:
+        model_overrides = json.loads(args.model_overrides_json)
+    resume_from_checkpoint = args.resume_from_checkpoint or os.environ.get("AI_INFRA_RESUME_FROM_CHECKPOINT", "")
+
+    payload = {
+        "model_type": args.model_type,
+        "max_length": args.max_length,
+        "epochsize": args.epochsize,
+        "batch_size": args.batch_size,
+        "grad_accum_steps": args.grad_accum_steps,
+        "lr": args.lr,
+        "use_amp": args.use_amp,
+        "amp_dtype": args.amp_dtype,
+        "ckpt_dir": args.ckpt_dir,
+        "resume_from_checkpoint": resume_from_checkpoint,
+        "config_yaml": args.config_yaml,
+        "model_overrides": model_overrides,
+    }
+    _write_json(result_dir / "train_summary.json", payload)
+    _write_json(meta_dir / "train_metadata.json", payload)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    (checkpoint_dir / "last.ckpt").write_text("demo checkpoint\n", encoding="utf-8")
+
+    print(
+        "hpc training finished: "
+        f"model_type={args.model_type} batch_size={args.batch_size} lr={args.lr}"
+    )
+
+
+if __name__ == "__main__":
+    main()

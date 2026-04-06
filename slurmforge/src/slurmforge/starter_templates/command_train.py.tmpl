@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+
+
+def _runtime_dir(env_name: str, fallback: str) -> Path:
+    return Path(os.environ.get(env_name, fallback)).resolve()
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=int, required=True)
+    parser.add_argument("--resume_from_checkpoint", default="")
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    result_dir = _runtime_dir("AI_INFRA_RESULT_DIR", "./local_results")
+    checkpoint_dir = _runtime_dir("AI_INFRA_CHECKPOINT_DIR", "./local_results/checkpoints")
+    meta_dir = _runtime_dir("AI_INFRA_META_DIR", "./local_results/meta")
+
+    payload = {
+        "epochs": args.epochs,
+        "resume_from_checkpoint": args.resume_from_checkpoint or os.environ.get("AI_INFRA_RESUME_FROM_CHECKPOINT", ""),
+        "result_dir": str(result_dir),
+    }
+    _write_json(result_dir / "train_summary.json", payload)
+    _write_json(meta_dir / "train_metadata.json", payload)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    (checkpoint_dir / "last.ckpt").write_text("demo checkpoint\n", encoding="utf-8")
+
+    print(f"command-mode training finished: epochs={args.epochs}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from ...models import (
+    BatchSharedSpec,
+    EvalConfigSpec,
+    ModelConfigSpec,
+    OutputConfigSpec,
+    RunConfigSpec,
+)
+from ...normalize import (
+    normalize_artifacts,
+    normalize_cluster,
+    normalize_env,
+    normalize_launcher,
+    normalize_notify,
+    normalize_resources,
+    normalize_validation,
+)
+from ...runtime import (
+    ArtifactsConfig,
+    ClusterConfig,
+    EnvConfig,
+    LauncherConfig,
+    NotifyConfig,
+    ResourcesConfig,
+    ValidationConfig,
+)
+from ..eval import normalize_eval_config
+from ..output import normalize_output_config
+from ..run import build_run_spec, normalize_model_config, validate_external_command_launcher
+from .inputs import ExperimentSectionInputs
+
+
+@dataclass(frozen=True)
+class NormalizedExperimentSections:
+    model: ModelConfigSpec | None
+    run: RunConfigSpec
+    launcher: LauncherConfig
+    cluster: ClusterConfig
+    env: EnvConfig
+    resources: ResourcesConfig
+    artifacts: ArtifactsConfig
+    eval: EvalConfigSpec
+    output: OutputConfigSpec
+    notify: NotifyConfig
+    validation: ValidationConfig
+
+
+def normalize_experiment_sections(
+    inputs: ExperimentSectionInputs,
+    *,
+    batch_shared: BatchSharedSpec | None = None,
+) -> NormalizedExperimentSections:
+    model = normalize_model_config(
+        inputs.model_cfg_raw,
+        required=(inputs.run_mode == "model_cli"),
+        config_path=inputs.config_path,
+    )
+    launcher = normalize_launcher(inputs.launcher_cfg_raw)
+    cluster = normalize_cluster(inputs.cluster_cfg_raw)
+    env = normalize_env(inputs.env_cfg_raw)
+    resources = normalize_resources(inputs.resources_cfg_raw)
+    artifacts = normalize_artifacts(inputs.artifacts_cfg_raw)
+    validation = normalize_validation(inputs.validation_cfg_raw)
+    eval_spec = normalize_eval_config(inputs.eval_cfg, config_path=inputs.config_path)
+    output = (
+        batch_shared.output
+        if batch_shared is not None
+        else normalize_output_config(inputs.output_cfg_raw, config_path=inputs.config_path)
+    )
+    notify = batch_shared.notify if batch_shared is not None else normalize_notify(inputs.notify_cfg_raw)
+
+    if inputs.run_mode == "command":
+        validate_external_command_launcher(
+            launcher,
+            inputs.launcher_cfg_raw,
+            config_path=inputs.config_path,
+            context_name="command mode",
+            runtime_field_name="run.external_runtime",
+            launcher_field_name="launcher",
+        )
+
+    run_spec = build_run_spec(
+        inputs.run_cfg,
+        config_path=inputs.config_path,
+        run_mode=inputs.run_mode,
+    )
+
+    return NormalizedExperimentSections(
+        model=model,
+        run=run_spec,
+        launcher=launcher,
+        cluster=cluster,
+        env=env,
+        resources=resources,
+        artifacts=artifacts,
+        eval=eval_spec,
+        output=output,
+        notify=notify,
+        validation=validation,
+    )
