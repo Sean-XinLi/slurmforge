@@ -14,6 +14,7 @@ dist/
 htmlcov/
 .python-version
 .DS_Store
+.claude
 
 # Local secrets and machine-specific config
 .env

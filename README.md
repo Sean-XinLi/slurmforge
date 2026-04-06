@@ -36,12 +36,6 @@ Unlike general-purpose orchestration tools, slurmforge is designed specifically 
 
 ## Architecture (High-Level)
 
-slurmforge separates:
-
-- planning (config → run graph)
-- materialization (run graph → sbatch scripts)
-- execution (runtime helpers)
-
 ```mermaid
 
 flowchart TD
