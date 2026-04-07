@@ -6,6 +6,10 @@ import os
 from pathlib import Path
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# UTILITIES  ·  slurmforge internal helpers  [keep as-is]
+# ─────────────────────────────────────────────────────────────────────────────
+
 def _runtime_dir(env_name: str, fallback: str) -> Path:
     return Path(os.environ.get(env_name, fallback)).resolve()
 
@@ -15,8 +19,20 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION A  ·  SLURMFORGE ARG CONTRACT  [keep as-is]
+# ─────────────────────────────────────────────────────────────────────────────
+# slurmforge passes all experiment.yaml hyperparameters as a JSON string via
+# --run_args_json, sweep overrides via --model_overrides_json, and sets
+# --resume_from_checkpoint automatically on job resume.
+#
+#   ✘  Do NOT remove or rename any of the three args below.
+#   ✘  Do NOT add positional args; slurmforge only injects named args.
+# ─────────────────────────────────────────────────────────────────────────────
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    # ↓ slurmforge contract — keep all three args
     parser.add_argument("--run_args_json", required=True)
     parser.add_argument("--model_overrides_json", default="{}")
     parser.add_argument("--resume_from_checkpoint", default="")
@@ -26,23 +42,57 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    result_dir = _runtime_dir("AI_INFRA_RESULT_DIR", "./local_results")
+    # slurmforge sets these env vars at runtime; fallbacks are for local runs.
+    result_dir     = _runtime_dir("AI_INFRA_RESULT_DIR",     "./local_results")
     checkpoint_dir = _runtime_dir("AI_INFRA_CHECKPOINT_DIR", "./local_results/checkpoints")
-    meta_dir = _runtime_dir("AI_INFRA_META_DIR", "./local_results/meta")
+    meta_dir       = _runtime_dir("AI_INFRA_META_DIR",       "./local_results/meta")
 
-    run_args = json.loads(args.run_args_json)
+    # slurmforge populates these from experiment.yaml at submission time.
+    run_args        = json.loads(args.run_args_json)
     model_overrides = json.loads(args.model_overrides_json or "{}")
-    payload = {
+    resume_from     = args.resume_from_checkpoint or os.environ.get("AI_INFRA_RESUME_FROM_CHECKPOINT", "")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SECTION B  ·  YOUR ADAPTER CODE  [replace this block]
+    # ─────────────────────────────────────────────────────────────────────────
+    # This script is a bridge between slurmforge and your training framework.
+    #
+    # Inputs ready to use:
+    #   run_args        — dict of all hyperparameters from experiment.yaml
+    #   model_overrides — dict of sweep overrides merged on top of run_args (may be empty)
+    #   resume_from     — checkpoint path to resume from (empty = fresh run)
+    #   result_dir      — write output artefacts here
+    #   checkpoint_dir  — write checkpoints here
+    #
+    # Required by slurmforge after this script exits:
+    #   checkpoint_dir / "adapter.ckpt"      ← must exist (used for resume & run lineage)
+    #   result_dir / "adapter_summary.json"  ← recommended (shown in sforge status)
+    #
+    # TODO: Replace the demo block below with calls to your training framework.
+    #   Typical pattern: merge run_args + model_overrides, then call your trainer.
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # ↓↓↓ DEMO PLACEHOLDER — delete everything between these markers ↓↓↓
+    effective_args = {**run_args, **model_overrides}
+    _write_json(result_dir / "adapter_summary.json", {
+        "effective_args": effective_args,
+        "resume_from": resume_from,
+    })
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    (checkpoint_dir / "adapter.ckpt").write_text("replace with real checkpoint save\n", encoding="utf-8")
+    print("[demo] adapter finished — replace this with your real framework calls")
+    # ↑↑↑ DEMO PLACEHOLDER — delete everything between these markers ↑↑↑
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SECTION C  ·  SLURMFORGE OUTPUT CONTRACT  [keep as-is]
+    # ─────────────────────────────────────────────────────────────────────────
+    # slurmforge reads meta_dir after every run for bookkeeping.
+    # ─────────────────────────────────────────────────────────────────────────
+    _write_json(meta_dir / "adapter_metadata.json", {
         "run_args": run_args,
         "model_overrides": model_overrides,
-        "resume_from_checkpoint": args.resume_from_checkpoint or os.environ.get("AI_INFRA_RESUME_FROM_CHECKPOINT", ""),
-    }
-    _write_json(result_dir / "adapter_summary.json", payload)
-    _write_json(meta_dir / "adapter_metadata.json", payload)
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    (checkpoint_dir / "adapter.ckpt").write_text("adapter checkpoint\n", encoding="utf-8")
-
-    print(f"adapter finished: keys={sorted(run_args)}")
+        "resume_from": resume_from,
+    })
 
 
 if __name__ == "__main__":

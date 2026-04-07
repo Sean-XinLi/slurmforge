@@ -1,46 +1,47 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# REFERENCE ONLY  ·  command mode scaffold
+# ═════════════════════════════════════════════════════════════════════════════
+# In command mode YOUR training entry point is the command you set in
+# experiment.yaml under run.command, for example:
+#
+#     run:
+#       command: "python /path/to/my_train.py --epochs 10 --lr 0.001"
+#
+# This file is NOT called by slurmforge.  It is generated purely as a reference
+# showing which environment variables slurmforge injects into your job's shell
+# environment, so you can read them inside your own training script.
+#
+# You may delete this file entirely — it has no effect on job execution.
+# ═════════════════════════════════════════════════════════════════════════════
 from __future__ import annotations
 
-import argparse
-import json
 import os
 from pathlib import Path
 
 
-def _runtime_dir(env_name: str, fallback: str) -> Path:
-    return Path(os.environ.get(env_name, fallback)).resolve()
+# ─────────────────────────────────────────────────────────────────────────────
+# SLURMFORGE ENV VAR CONTRACT  ·  available inside run.command at runtime
+# ─────────────────────────────────────────────────────────────────────────────
+# Read these environment variables inside your own training script to integrate
+# with the slurmforge output and checkpoint pipeline.
+#
+# Required outputs that slurmforge reads after your command exits:
+#   checkpoint_dir / "last.ckpt"         ← must exist (used for resume & run lineage)
+#   result_dir / "train_summary.json"    ← recommended (shown in sforge status)
+#   meta_dir / "train_metadata.json"     ← slurmforge bookkeeping
+# ─────────────────────────────────────────────────────────────────────────────
 
+def show_injected_env() -> None:
+    result_dir     = Path(os.environ.get("AI_INFRA_RESULT_DIR",     "./local_results"))
+    checkpoint_dir = Path(os.environ.get("AI_INFRA_CHECKPOINT_DIR", "./local_results/checkpoints"))
+    meta_dir       = Path(os.environ.get("AI_INFRA_META_DIR",       "./local_results/meta"))
+    resume_from    = os.environ.get("AI_INFRA_RESUME_FROM_CHECKPOINT", "")
 
-def _write_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, required=True)
-    parser.add_argument("--resume_from_checkpoint", default="")
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
-
-    result_dir = _runtime_dir("AI_INFRA_RESULT_DIR", "./local_results")
-    checkpoint_dir = _runtime_dir("AI_INFRA_CHECKPOINT_DIR", "./local_results/checkpoints")
-    meta_dir = _runtime_dir("AI_INFRA_META_DIR", "./local_results/meta")
-
-    payload = {
-        "epochs": args.epochs,
-        "resume_from_checkpoint": args.resume_from_checkpoint or os.environ.get("AI_INFRA_RESUME_FROM_CHECKPOINT", ""),
-        "result_dir": str(result_dir),
-    }
-    _write_json(result_dir / "train_summary.json", payload)
-    _write_json(meta_dir / "train_metadata.json", payload)
-    checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    (checkpoint_dir / "last.ckpt").write_text("demo checkpoint\n", encoding="utf-8")
-
-    print(f"command-mode training finished: epochs={args.epochs}")
+    print(f"result_dir:     {result_dir}")
+    print(f"checkpoint_dir: {checkpoint_dir}")
+    print(f"meta_dir:       {meta_dir}")
+    print(f"resume_from:    {resume_from or '(fresh run)'}")
 
 
 if __name__ == "__main__":
-    main()
+    show_injected_env()

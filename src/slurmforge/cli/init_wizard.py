@@ -45,9 +45,9 @@ def _prompt_choice(
         print(f"  Please enter a number between 1 and {len(options)}.")
 
 
-def run_wizard(*, out: str, force: bool) -> tuple[str, str, str]:
+def run_wizard() -> tuple[str, str]:
     """
-    Run the interactive wizard and return (template_type, profile, out_dir).
+    Run the interactive wizard and return (template_type, profile).
     Raises SystemExit if the user cancels.
     """
     if not sys.stdin.isatty():
@@ -77,4 +77,4 @@ def run_wizard(*, out: str, force: bool) -> tuple[str, str, str]:
         _PROFILES,
     )
 
-    return template_type, profile, out
+    return template_type, profile

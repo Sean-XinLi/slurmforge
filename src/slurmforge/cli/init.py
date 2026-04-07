@@ -28,13 +28,12 @@ Examples
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from ..starter_catalog import PROFILES, TEMPLATE_TYPES, get_starter_spec
 from ..starter_projects import init_project
 from .init_wizard import run_wizard
-
-_DEFAULT_OUT = "./slurmforge_starter"
 
 _TYPE_DESCRIPTIONS = {
     "script":   "Scaffold for a train.py-style script — slurmforge manages args and submission.",
@@ -42,6 +41,36 @@ _TYPE_DESCRIPTIONS = {
     "registry": "Scaffold using a shared team model registry.",
     "adapter":  "Scaffold with an interface-bridge adapter script (advanced).",
 }
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _default_out_dir(template_type: str) -> Path:
+    return Path(f"./slurmforge_{template_type}_starter")
+
+
+def _prompt_overwrite(out_dir: Path) -> bool:
+    """
+    Return True if it is safe to proceed (dir is empty/new, or user confirmed overwrite).
+    Exits the process if the user declines or stdin is not a TTY.
+    """
+    if not out_dir.exists() or not any(out_dir.iterdir()):
+        return True
+    if not sys.stdin.isatty():
+        print(
+            f"[sforge init] '{out_dir}' is not empty. Re-run with --force to overwrite.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    print(f"\n  '{out_dir.name}' already exists and is not empty.")
+    try:
+        answer = input("  Overwrite existing files? [y/N] ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        sys.exit(0)
+    return answer in ("y", "yes")
 
 
 # ---------------------------------------------------------------------------
@@ -62,14 +91,17 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--out",
-        default=_DEFAULT_OUT,
+        default=None,
         metavar="DIR",
-        help="Destination directory for the project scaffold (default: %(default)s)",
+        help=(
+            "Destination directory for the project scaffold "
+            "(default: ./slurmforge_<TYPE>_starter)"
+        ),
     )
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite existing files in the destination directory",
+        help="Overwrite existing files without prompting",
     )
 
 
@@ -77,10 +109,19 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
 # Handlers
 # ---------------------------------------------------------------------------
 
-def _do_init(*, template_type: str, profile: str, out: str, force: bool) -> None:
+def _do_init(*, template_type: str, profile: str, out: str | None, force: bool) -> None:
+    out_dir = (
+        Path(out) if out is not None else _default_out_dir(template_type)
+    ).expanduser().resolve()
+
+    if not force:
+        if not _prompt_overwrite(out_dir):
+            print("[sforge init] Aborted.")
+            return
+        force = True  # user confirmed or dir was empty — propagate to init_project
+
     spec = get_starter_spec(template_type, profile)
-    written = init_project(template_type, profile, Path(out), force=force)
-    out_dir = Path(out).expanduser().resolve()
+    written = init_project(template_type, profile, out_dir, force=force)
     print(f"[OK] Initialized '{template_type}' scaffold (profile: {profile}) in: {out_dir}")
     print(f"[INFO] {spec.post_init_guidance}")
     print()
@@ -106,8 +147,8 @@ def handle_init_template(args: argparse.Namespace) -> None:
 
 def handle_init_wizard(args: argparse.Namespace) -> None:
     """Fallback handler when no TYPE subcommand is given — launches interactive wizard."""
-    template_type, profile, out = run_wizard(out=args.out, force=args.force)
-    _do_init(template_type=template_type, profile=profile, out=out, force=args.force)
+    template_type, profile = run_wizard()
+    _do_init(template_type=template_type, profile=profile, out=args.out, force=args.force)
 
 
 # ---------------------------------------------------------------------------
@@ -124,14 +165,14 @@ def add_subparser(subparsers: argparse._SubParsersAction) -> None:  # type: igno
     # Top-level --out/--force for wizard path (TYPE subcommand overrides these)
     init_parser.add_argument(
         "--out",
-        default=_DEFAULT_OUT,
+        default=None,
         metavar="DIR",
         help="Output directory (wizard mode — overridden by TYPE subcommand flags)",
     )
     init_parser.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite existing files",
+        help="Overwrite existing files without prompting",
     )
     init_parser.set_defaults(handler=handle_init_wizard)
 

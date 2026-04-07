@@ -140,7 +140,10 @@ runs/<project>/<experiment>/batch_<name>/sbatch/
 
 There are two normal ways to adapt a starter project:
 
-1. Replace the generated `train.py`, `eval.py`, or `train_adapter.py` bodies with your real logic.
+1. Edit the generated scripts in place. Each script is divided into three labelled sections:
+   - **Section A — arg contract** `[keep as-is]`: CLI args that slurmforge injects at submission time. Add your own args here; do not remove the contract args.
+   - **Section B — your code** `[replace this block]`: the demo placeholder. Delete everything between the `↓↓↓ DEMO PLACEHOLDER` and `↑↑↑ DEMO PLACEHOLDER` markers and insert your real training or eval logic.
+   - **Section C — output contract** `[keep as-is]`: writes to `meta_dir` after every run for slurmforge bookkeeping.
 2. Keep the generated `experiment.yaml`, but change `model.script` and `eval.script` to point at entrypoint scripts that already exist in your project.
 
 `model.script` should point to the script that launches training, not to a module that only defines layers or model classes.

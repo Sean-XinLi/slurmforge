@@ -7,38 +7,75 @@ import os
 from pathlib import Path
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# UTILITIES  ·  slurmforge internal helpers  [keep as-is]
+# ─────────────────────────────────────────────────────────────────────────────
+
 def _runtime_dir(env_name: str, fallback: str) -> Path:
     return Path(os.environ.get(env_name, fallback)).resolve()
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION A  ·  SLURMFORGE ARG CONTRACT  [keep as-is]
+# ─────────────────────────────────────────────────────────────────────────────
+# slurmforge injects these args at eval job submission time:
+#   --test_size      ← fraction of data for evaluation (from experiment.yaml)
+#   --run_args_json  ← full hyperparameter dict of the training run being evaluated
+#
+#   ✔  ADD your own eval args below (--split, --metric, etc.).
+#   ✘  Do NOT remove or rename --test_size / --run_args_json.
+# ─────────────────────────────────────────────────────────────────────────────
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    # ↓ slurmforge contract — keep these two args
     parser.add_argument("--test_size", type=float, required=True)
     parser.add_argument("--run_args_json", default="{}")
+    # TODO: Add your own eval args here if needed.
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
 
-    eval_csv_dir = _runtime_dir("AI_INFRA_EVAL_CSV_DIR", "./local_results/eval_csv")
+    # slurmforge sets these env vars at runtime; fallbacks are for local runs.
+    eval_csv_dir   = _runtime_dir("AI_INFRA_EVAL_CSV_DIR",   "./local_results/eval_csv")
     eval_image_dir = _runtime_dir("AI_INFRA_EVAL_IMAGE_DIR", "./local_results/eval_images")
+
+    # slurmforge populates run_args from the training run this eval is attached to.
     run_args = json.loads(args.run_args_json or "{}")
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # SECTION B  ·  YOUR EVAL CODE  [replace this block]
+    # ─────────────────────────────────────────────────────────────────────────
+    # Inputs ready to use:
+    #   args.test_size  — fraction of data for evaluation
+    #   run_args        — hyperparameters of the training run being evaluated
+    #   eval_csv_dir    — write CSV metrics here (slurmforge reads these)
+    #   eval_image_dir  — write plots / image artefacts here
+    #
+    # Required by slurmforge after eval completes:
+    #   eval_csv_dir / "metrics.csv"   ← must exist, with columns: metric, value
+    #
+    # TODO: Delete the demo block below and insert your real evaluation logic.
+    # ─────────────────────────────────────────────────────────────────────────
+
+    # ↓↓↓ DEMO PLACEHOLDER — delete everything between these markers ↓↓↓
     eval_csv_dir.mkdir(parents=True, exist_ok=True)
     eval_image_dir.mkdir(parents=True, exist_ok=True)
 
     with (eval_csv_dir / "metrics.csv").open("w", encoding="utf-8", newline="") as fp:
         writer = csv.writer(fp)
         writer.writerow(["metric", "value"])
+        # TODO: Replace the row below with your real evaluation metrics.
         writer.writerow(["test_size", args.test_size])
-        writer.writerow(["run_arg_count", len(run_args)])
 
     (eval_image_dir / "summary.txt").write_text(
-        f"test_size={args.test_size} run_arg_count={len(run_args)}\n",
+        f"test_size={args.test_size}\n[demo — replace with real plot output]\n",
         encoding="utf-8",
     )
-    print(f"eval finished: test_size={args.test_size}")
+    print("[demo] eval finished — replace this with your real evaluation logic")
+    # ↑↑↑ DEMO PLACEHOLDER — delete everything between these markers ↑↑↑
 
 
 if __name__ == "__main__":

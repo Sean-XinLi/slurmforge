@@ -15,6 +15,7 @@ htmlcov/
 .python-version
 .DS_Store
 .claude
+.ruff_cache
 
 # Local secrets and machine-specific config
 .env

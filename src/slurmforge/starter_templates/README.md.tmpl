@@ -28,8 +28,12 @@ __POST_INIT_GUIDANCE__
 ## Notes
 
 - Fill in `experiment.yaml` before submitting any real jobs.
-- Replace the generated scaffold scripts (`train.py`, `eval.py`, `train_adapter.py`) with
-  your actual training code, or point `model.script` at an existing entrypoint.
+- In each generated script (`train.py`, `eval.py`, `train_adapter.py`) look for the
+  `↓↓↓ DEMO PLACEHOLDER` / `↑↑↑ DEMO PLACEHOLDER` markers — delete everything between
+  them and insert your real training or eval logic.
+  Keep **Section A** (arg contract) and **Section C** (output contract) unchanged;
+  only **Section B** is yours to replace.
+  Alternatively, point `model.script` at an existing entrypoint in your own project.
 - `model.script` must be a training entrypoint script (not a module that only defines classes).
 - If eval is enabled, `eval.train_outputs` controls whether eval consumes the
   `latest`, `best`, or an `explicit` checkpoint from train.
