@@ -167,7 +167,7 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
 
             venv_python = self._create_install_env(tmp_path / "venv")
             subprocess.run(
-                [str(venv_python), "-m", "pip", "install", "--no-build-isolation", str(checkout_root)],
+                [str(venv_python), "-m", "pip", "install", str(checkout_root)],
                 check=True,
             )
 
