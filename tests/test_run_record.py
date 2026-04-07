@@ -7,7 +7,7 @@ import warnings
 from dataclasses import replace
 from pathlib import Path
 
-from tests._support import sample_run_plan, sample_run_snapshot, sample_stage_plan
+from tests._support import sample_run_plan, sample_run_snapshot
 
 from slurmforge.pipeline.planning.contracts import PlanDiagnostic
 from slurmforge.pipeline.records import (
