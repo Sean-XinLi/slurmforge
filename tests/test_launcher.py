@@ -274,8 +274,6 @@ class LauncherTests(unittest.TestCase):
     def test_rerun_mode_uses_retry_builder(self) -> None:
         from slurmforge.cli import rerun
         from slurmforge.pipeline.config.normalize import normalize_notify
-        from slurmforge.pipeline.planning import PlannedRun
-        from tests._support import sample_run_plan, sample_run_snapshot
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -317,8 +315,6 @@ class LauncherTests(unittest.TestCase):
     def test_rerun_mode_uses_retry_batch_metadata_for_notify_and_batch_root(self) -> None:
         from slurmforge.cli import rerun
         from slurmforge.pipeline.config.normalize import normalize_notify
-        from slurmforge.pipeline.planning import PlannedRun
-        from tests._support import sample_run_plan, sample_run_snapshot
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -356,8 +352,6 @@ class LauncherTests(unittest.TestCase):
     def test_rerun_mode_passes_retry_metadata_to_manifest(self) -> None:
         from slurmforge.cli import rerun
         from slurmforge.pipeline.config.normalize import normalize_notify
-        from slurmforge.pipeline.planning import PlannedRun
-        from tests._support import sample_run_plan, sample_run_snapshot
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

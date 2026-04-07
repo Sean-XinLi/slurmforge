@@ -1,5 +1,5 @@
-from __future__ import annotations
 """``sforge generate`` -- expand an experiment config into sbatch arrays."""
+from __future__ import annotations
 
 import argparse
 import datetime

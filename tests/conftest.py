@@ -21,7 +21,7 @@ except ModuleNotFoundError as exc:
         "Tests require PyYAML. Install project dependencies into the active Python environment before running pytest."
     ) from exc
 
-from tests._support import remove_generated_artifact_dirs, slurmforge_root
+from tests._support import remove_generated_artifact_dirs, slurmforge_root  # noqa: E402
 
 
 def pytest_sessionfinish(session, exitstatus) -> None:

@@ -1,5 +1,5 @@
-from __future__ import annotations
 """``sforge replay`` -- regenerate a batch from persisted run snapshots."""
+from __future__ import annotations
 
 import argparse
 import datetime

@@ -1,5 +1,5 @@
-from __future__ import annotations
 """``sforge status`` -- summarize execution status for runs in a batch."""
+from __future__ import annotations
 
 import argparse
 from pathlib import Path

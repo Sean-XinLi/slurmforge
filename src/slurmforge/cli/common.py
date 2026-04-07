@@ -1,5 +1,5 @@
-from __future__ import annotations
 """Shared CLI argument builders and batch materialization helpers."""
+from __future__ import annotations
 
 import argparse
 from pathlib import Path

@@ -1,5 +1,5 @@
-from __future__ import annotations
 """``sforge rerun`` -- rebuild a retry batch from an existing batch's run records."""
+from __future__ import annotations
 
 import argparse
 import datetime

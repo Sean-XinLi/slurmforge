@@ -1,5 +1,5 @@
-from __future__ import annotations
 """``sforge validate`` -- validate an experiment config without generating a batch."""
+from __future__ import annotations
 
 import argparse
 import datetime
