@@ -29,12 +29,14 @@ from .paths import (
     attempt_result_path_for_result_dir as attempt_result_path_for_result_dir,
     job_key_from_env as job_key_from_env,
     latest_result_dir_pointer_path_for_run as latest_result_dir_pointer_path_for_run,
+    status_path_for_result_dir as status_path_for_result_dir,
 )
 from .slurm import query_slurm_job_state as query_slurm_job_state
 from .store import (
     read_attempt_result as read_attempt_result,
     read_execution_status as read_execution_status,
     read_latest_result_dir as read_latest_result_dir,
+    write_attempt_result as write_attempt_result,
     write_latest_result_dir as write_latest_result_dir,
     write_execution_status as write_execution_status,
 )
