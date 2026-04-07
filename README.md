@@ -1,5 +1,7 @@
 # slurmforge
 
+[![PyPI version](https://img.shields.io/pypi/v/slurmforge.svg)](https://pypi.org/project/slurmforge/)
+
 ## TL;DR
 
 Define experiments in YAML → generate reproducible Slurm jobs.
@@ -65,22 +67,20 @@ You do not need to understand the internal planner or executor model to start. T
 
 ## Install
 
-The primary distribution path is GitHub source checkout install.
-
-Source installation is recommended to ensure compatibility with your local environment and Slurm setup.
-
-Use any Python 3.10 or newer interpreter.
-
-Create the virtual environment outside the source checkout so the package directory stays clean.
-Source-checkout installs intentionally use the active environment's local build toolchain instead of an isolated build environment.
-
+Install from PyPI:
 
 ```bash
-git clone <repo-url>
+pip install slurmforge
+```
+
+Or install from source for the latest development version:
+
+```bash
+git clone https://github.com/Sean-XinLi/slurmforge
 cd slurmforge
 python -m venv ../slurmforge_venv
 source ../slurmforge_venv/bin/activate
-python -m pip install --no-build-isolation .
+pip install .
 ```
 
 Main CLI:
@@ -651,7 +651,7 @@ New features may not be accepted unless aligned with the project scope.
 ## Development
 
 ```bash
-python -m pip install --no-build-isolation '.[dev]'
+pip install -e '.[dev]'
 pytest -q
 ```
 
