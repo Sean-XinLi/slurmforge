@@ -33,9 +33,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Sean-XinLi"
-Author = "https://github.com/Sean-XinLi"
-Profile = "https://github.com/Sean-XinLi"
+Homepage = "https://github.com/Sean-XinLi/slurmforge"
+Repository = "https://github.com/Sean-XinLi/slurmforge"
+Issues = "https://github.com/Sean-XinLi/slurmforge/issues"
+Changelog = "https://github.com/Sean-XinLi/slurmforge/releases"
 
 [project.optional-dependencies]
 dev = [

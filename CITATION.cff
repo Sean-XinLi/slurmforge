@@ -8,5 +8,5 @@ authors:
     given-names: "Xin"
     email: "seanxinlee@gmail.com"
     alias: "Sean-XinLi"
-url: "https://github.com/Sean-XinLi"
+url: "https://github.com/Sean-XinLi/slurmforge"
 abstract: "Slurm-native experiment orchestration toolkit for planning, compiling, and running ML workloads."
