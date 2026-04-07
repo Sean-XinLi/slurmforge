@@ -281,10 +281,6 @@ class LauncherTests(unittest.TestCase):
             tmp_path = Path(tmp)
             source_batch = tmp_path / "batch_src"
             source_batch.mkdir(parents=True, exist_ok=True)
-            retry_plan = PlannedRun(
-                plan=sample_run_plan(run_dir=str(tmp_path / "batch_retry" / "runs" / "run_001_r1")),
-                snapshot=sample_run_snapshot(),
-            )
             planned_batch = SimpleNamespace(
                 total_runs=1,
                 batch_root=tmp_path / "retry_runs" / "demo" / "exp" / "batch_retry_123",
@@ -328,10 +324,6 @@ class LauncherTests(unittest.TestCase):
             tmp_path = Path(tmp)
             source_batch = tmp_path / "batch_src"
             source_batch.mkdir(parents=True, exist_ok=True)
-            retry_plan = PlannedRun(
-                plan=sample_run_plan(run_dir=str(tmp_path / "batch_retry" / "runs" / "run_001_r1")),
-                snapshot=sample_run_snapshot(),
-            )
             planned_batch = SimpleNamespace(
                 total_runs=1,
                 batch_root=tmp_path / "retry_runs" / "demo_retry" / "exp_retry" / "batch_retry_456",
@@ -371,10 +363,6 @@ class LauncherTests(unittest.TestCase):
             tmp_path = Path(tmp)
             source_batch = tmp_path / "batch_src"
             source_batch.mkdir(parents=True, exist_ok=True)
-            retry_plan = PlannedRun(
-                plan=sample_run_plan(run_dir=str(tmp_path / "batch_retry" / "runs" / "run_001_r1")),
-                snapshot=sample_run_snapshot(),
-            )
             planned_batch = SimpleNamespace(
                 total_runs=1,
                 batch_root=tmp_path / "retry_runs" / "demo" / "exp" / "batch_retry_789",
