@@ -26,10 +26,8 @@ from .paths import (
     attempt_result_path_for_result_dir,
     job_key_from_env,
     latest_result_dir_pointer_path_for_run,
-    result_dir_for_run,
-    status_path_for_result_dir,
 )
-from .slurm import SlurmJobState, query_slurm_job_state
+from .slurm import query_slurm_job_state
 from .store import (
     read_attempt_result,
     read_execution_status,
