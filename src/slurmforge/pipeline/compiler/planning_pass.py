@@ -4,7 +4,6 @@ from typing import Any
 
 from ...errors import InternalCompilerError
 from ..planning import BatchIdentity, PlannedRun, build_planned_run
-from ..planning.contracts import PlanDiagnostic
 from ..sources.inference import infer_model_name_from_cfg, infer_train_mode_from_cfg
 from ..sources.models import FailedCompiledRun, SourceRunInput
 from .diagnostics import diagnostic_from_exception

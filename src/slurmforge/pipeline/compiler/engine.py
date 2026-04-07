@@ -6,7 +6,7 @@ from .base import CompilerFlowBase
 from .reporting import build_compile_report, build_contextless_report
 from .reports import BatchCompileReport
 from .requests import SourceRequest
-from .state import CollectedSourceBundle, MaterializedSourceBundle
+from .state import MaterializedSourceBundle
 from ..planning import PlannedRun
 from ..planning.validator import PlanningValidationError
 from ..sources.models import FailedCompiledRun

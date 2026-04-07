@@ -6,7 +6,6 @@ from typing import Any
 from ....errors import ConfigContractError
 from ..constants import EVAL_CHECKPOINT_POLICIES
 from ..models.eval import EvalConfigSpec, EvalTrainOutputsConfig
-from ..models.runtime import ExternalRuntimeConfig
 from ..runtime import serialize_launcher_config
 from ..scalars import normalize_bool
 from ..utils import ensure_dict

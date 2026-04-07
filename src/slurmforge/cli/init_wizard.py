@@ -5,7 +5,6 @@ Falls back gracefully when stdin is not a TTY (CI, piped input).
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
 
 _TRAINING_TYPES = [

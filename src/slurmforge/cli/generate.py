@@ -5,7 +5,6 @@ import argparse
 import datetime
 from pathlib import Path
 
-from ..errors import ConfigContractError
 from ..pipeline.compiler import AuthoringSourceRequest, BatchCompileError, compile_source, iter_compile_report_lines
 from ..pipeline.compiler.reports import require_success
 from ..pipeline.config.validation.advisory import check_advisory
