@@ -42,7 +42,6 @@ Changelog = "https://github.com/Sean-XinLi/slurmforge/releases"
 dev = [
   "packaging>=24.0",
   "pytest>=9.0",
-  "pytest",
   "ruff"
 ]
 
