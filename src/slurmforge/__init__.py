@@ -1,4 +1,4 @@
-"""Generic Slurm-oriented experiment orchestration package for slurmforge."""
+"""Slurm-oriented AI/ML experiment orchestration package for slurmforge."""
 
 from __future__ import annotations
 

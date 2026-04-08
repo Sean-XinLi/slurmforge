@@ -175,10 +175,11 @@ _CATALOG: dict[tuple[str, str], StarterSpec] = {
         post_init_guidance=(
             "Fill in cluster.partition, cluster.account, cluster.time_limit, and "
             "run.adapter.script. Replace the generated train_adapter.py with your "
-            "bridge logic. Enable sweep if needed."
+            "bridge logic. Enable eval or sweep if needed."
         ),
         scaffold_resources=(
             StarterResource("train_adapter.py", kind="template", source_name="adapter_train.py.tmpl"),
+            StarterResource("eval.py", kind="template", source_name="eval.py.tmpl"),
         ),
     ),
 }

@@ -16,6 +16,33 @@ _EXTRA_DESCRIPTIONS: dict[str, str] = {
     "model_registry":   "Registry file referenced by the registry starter (models.yaml format).",
 }
 
+# Short one-line descriptions used by `sforge examples list`.
+_LIST_DESCRIPTIONS: dict[str, str] = {
+    "command_starter":  "Single-GPU run from your existing command",
+    "command_hpc":      "Multi-GPU / cluster run (Slurm)",
+    "command_minimal":  "Minimal command example",
+    "script_starter":   "Single-GPU run with your own script",
+    "script_hpc":       "Multi-GPU / distributed run (Slurm)",
+    "adapter_starter":  "Single-GPU adapter pipeline",
+    "adapter_hpc":      "Multi-GPU adapter on cluster",
+    "adapter_minimal":  "Minimal adapter example",
+    "registry_starter": "Single-GPU multi-model workflow",
+    "registry_hpc":     "Multi-GPU multi-model runs on cluster",
+    "model_registry":   "Registry definition file",
+}
+
+_QUICK_START: tuple[str, str] = (
+    "command_starter",
+    "Run your training on a single GPU (local or simple setup)",
+)
+
+_GROUPS: list[tuple[str, list[str]]] = [
+    ("Command mode (use existing code)", ["command_starter", "command_hpc", "command_minimal"]),
+    ("Script mode (write your own)",     ["script_starter", "script_hpc"]),
+    ("Adapter mode (advanced)",          ["adapter_starter", "adapter_hpc", "adapter_minimal"]),
+    ("Registry mode (multi-model)",      ["registry_starter", "registry_hpc", "model_registry"]),
+]
+
 
 def _build_descriptions() -> dict[str, str]:
     descriptions: dict[str, str] = {
@@ -59,6 +86,16 @@ def _resolve_example_filename(name: str) -> str:
 def read_example_text(name: str) -> str:
     filename = _resolve_example_filename(name)
     return read_package_text(_EXAMPLES_PACKAGE, filename)
+
+
+def get_example_list_view() -> dict[str, object]:
+    """Return structured data for the grouped `sforge examples list` display."""
+    available = set(list_example_names())
+    groups = [
+        (heading, [(n, _LIST_DESCRIPTIONS.get(n, "")) for n in names if n in available])
+        for heading, names in _GROUPS
+    ]
+    return {"quick_start": _QUICK_START, "groups": groups}
 
 
 def export_example(name: str, output_path: Path, *, force: bool = False) -> Path:

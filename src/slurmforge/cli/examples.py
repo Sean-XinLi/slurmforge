@@ -4,15 +4,29 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from ..example_configs import export_example, list_example_catalog, read_example_text
+from ..example_configs import export_example, get_example_list_view, read_example_text
+
+_NAME_WIDTH = 23  # column width for the example name field
 
 
 def handle_examples_list(_args: argparse.Namespace) -> None:
-    for name, description in list_example_catalog():
-        if description:
-            print(f"{name:<26} {description}")
-        else:
-            print(name)
+    view = get_example_list_view()
+    qs_name, qs_desc = view["quick_start"]  # type: ignore[misc]
+
+    print("Quick start:")
+    print(f"  {qs_name:<{_NAME_WIDTH}} {qs_desc}")
+    print()
+    print("\u2501" * 32)
+
+    for heading, entries in view["groups"]:  # type: ignore[misc]
+        print()
+        print(heading)
+        for name, desc in entries:
+            if desc:
+                print(f"  {name:<{_NAME_WIDTH}} {desc}")
+            else:
+                print(f"  {name}")
+    print()
 
 
 def handle_examples_show(args: argparse.Namespace) -> None:
@@ -39,9 +53,18 @@ def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser
     show_parser.add_argument("name", help="Example name, with or without .yaml suffix")
     show_parser.set_defaults(handler=handle_examples_show)
 
-    export_parser = examples_subparsers.add_parser("export", help="Copy one shipped raw YAML reference example to a file")
+    export_parser = examples_subparsers.add_parser(
+        "export",
+        help="Copy one shipped raw YAML reference example to a file",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  sforge examples export command_starter --out ./experiment.yaml\n"
+            "  sforge examples export script_hpc --out ./experiment.yaml --force\n"
+        ),
+    )
     export_parser.add_argument("name", help="Example name, with or without .yaml suffix")
-    export_parser.add_argument("--out", required=True, help="Destination path for the exported raw YAML example")
+    export_parser.add_argument("--out", required=True, metavar="FILE", help="Destination path for the exported YAML (e.g. ./experiment.yaml)")
     export_parser.add_argument(
         "--force",
         action="store_true",

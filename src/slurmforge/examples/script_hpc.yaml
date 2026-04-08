@@ -72,7 +72,7 @@ eval:
   enabled: false        # set to true to run eval after every training run
   script: "eval.py"
   workdir: "."
-  launch_mode: "single"
+  launch_mode: "single"   # single / ddp / auto / inherit
   args: {}              # e.g.: {test_split: 0.1, metrics: "accuracy,f1"}
   train_outputs:
     checkpoint_policy: "latest"   # latest / best / explicit

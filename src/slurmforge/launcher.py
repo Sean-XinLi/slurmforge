@@ -9,7 +9,7 @@ from .cli import examples, generate, init, replay, rerun, status, validate
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Slurm-oriented experiment orchestration CLI. "
+            "Slurm-oriented AI/ML experiment orchestration CLI. "
             "Start with `sforge init` for a starter project scaffold or "
             "`sforge examples` for raw YAML references."
         )

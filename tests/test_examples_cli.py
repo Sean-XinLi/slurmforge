@@ -69,7 +69,7 @@ class ExampleCliTests(unittest.TestCase):
 
         output = buf.getvalue()
         self.assertIn("command_minimal", output)
-        self.assertIn("existing training command", output)
+        self.assertIn("Minimal command example", output)
 
     def test_export_example_requires_force_to_overwrite(self) -> None:
         from slurmforge.example_configs import export_example

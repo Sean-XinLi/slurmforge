@@ -61,7 +61,7 @@ eval:
   enabled: false
   script: "eval.py"
   workdir: "."
-  launch_mode: "single"
+  launch_mode: "single"   # single / ddp / auto / inherit
   args: {}
   train_outputs:
     checkpoint_policy: "latest"

@@ -14,7 +14,7 @@ sbatch runs/.../sbatch/*.sh
 ```
 
 
-`slurmforge` is a Slurm-native experiment orchestration toolkit designed for large-scale training workflows.
+`slurmforge` is a Slurm-native AI/ML experiment orchestration toolkit designed for large-scale training workflows.
 
 It helps you:
 - expand experiment sweeps from a single config

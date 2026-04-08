@@ -47,8 +47,8 @@ _TYPE_DESCRIPTIONS = {
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _default_out_dir(template_type: str) -> Path:
-    return Path(f"./slurmforge_{template_type}_starter")
+def _default_out_dir(template_type: str, profile: str) -> Path:
+    return Path(f"./slurmforge_{template_type}_{profile}")
 
 
 def _prompt_overwrite(out_dir: Path) -> bool:
@@ -95,7 +95,7 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         metavar="DIR",
         help=(
             "Destination directory for the project scaffold "
-            "(default: ./slurmforge_<TYPE>_starter)"
+            "(default: ./slurmforge_<TYPE>_<PROFILE>)"
         ),
     )
     parser.add_argument(
@@ -111,7 +111,7 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
 
 def _do_init(*, template_type: str, profile: str, out: str | None, force: bool) -> None:
     out_dir = (
-        Path(out) if out is not None else _default_out_dir(template_type)
+        Path(out) if out is not None else _default_out_dir(template_type, profile)
     ).expanduser().resolve()
 
     if not force:

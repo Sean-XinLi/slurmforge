@@ -11,10 +11,14 @@ from slurmforge.cli.init import _default_out_dir, _prompt_overwrite
 
 
 class DefaultOutDirTests(unittest.TestCase):
-    def test_derives_name_from_template_type(self) -> None:
+    def test_derives_name_from_template_type_and_profile(self) -> None:
         for ttype in ("script", "command", "registry", "adapter"):
-            with self.subTest(ttype=ttype):
-                self.assertEqual(_default_out_dir(ttype), Path(f"./slurmforge_{ttype}_starter"))
+            for profile in ("starter", "hpc"):
+                with self.subTest(ttype=ttype, profile=profile):
+                    self.assertEqual(
+                        _default_out_dir(ttype, profile),
+                        Path(f"./slurmforge_{ttype}_{profile}"),
+                    )
 
 
 class PromptOverwriteTests(unittest.TestCase):

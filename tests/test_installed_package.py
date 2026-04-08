@@ -194,7 +194,7 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
 
             # ── CLI help output ──────────────────────────────────────────────
             root_help = self._run([str(cli_path), "--help"], cwd=work_root)
-            self.assertIn("Slurm-oriented experiment orchestration CLI", root_help.stdout)
+            self.assertIn("Slurm-oriented AI/ML experiment orchestration CLI", root_help.stdout)
             self.assertIn("sforge init", root_help.stdout)
 
             init_help = self._run([str(cli_path), "init", "--help"], cwd=work_root)
@@ -208,8 +208,8 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
             list_examples = self._run([str(cli_path), "examples", "list"], cwd=work_root)
             example_lines = list_examples.stdout.splitlines()
             # script_hpc replaces the old model_cli_script_hpc
-            self.assertTrue(any(line.startswith("script_hpc") for line in example_lines))
-            self.assertTrue(any(line.startswith("model_registry") for line in example_lines))
+            self.assertTrue(any("script_hpc" in line for line in example_lines))
+            self.assertTrue(any("model_registry" in line for line in example_lines))
 
             show_hpc = self._run([str(cli_path), "examples", "show", "script_hpc"], cwd=work_root)
             self.assertIn('project: "my_project"', show_hpc.stdout)
