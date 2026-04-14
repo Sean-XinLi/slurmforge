@@ -26,6 +26,7 @@ class ExperimentSectionInputs:
     output_cfg_raw: dict[str, Any]
     notify_cfg_raw: Any
     validation_cfg_raw: Any
+    storage_cfg_raw: Any
 
 
 def gather_experiment_section_inputs(
@@ -58,4 +59,5 @@ def gather_experiment_section_inputs(
         output_cfg_raw=ensure_dict(cfg.get("output"), "output"),
         notify_cfg_raw=cfg.get("notify"),
         validation_cfg_raw=cfg.get("validation"),
+        storage_cfg_raw=cfg.get("storage"),
     )

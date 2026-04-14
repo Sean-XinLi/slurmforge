@@ -30,7 +30,6 @@ def render_array_group_script(
         "experiment_name": experiment_name,
         "array_job_name": slurm_safe_job_name(f"{project}_{experiment_name}_arr{group.group_index:03d}"),
         "cluster": serialize_cluster_config(group.cluster),
-        "records_dir": str(group.records_dir),
         "array_log_dir": str(layout.array_log_dir),
         "batch_root": str(layout.final_batch_root),
         "run_plan_executor_bin": "sforge-run-plan-executor",

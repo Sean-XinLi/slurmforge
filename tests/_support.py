@@ -199,3 +199,10 @@ def sample_run_snapshot(**overrides):
     if overrides:
         base = replace(base, **overrides)
     return base
+
+
+def write_test_descriptor(batch_root: Path) -> None:
+    """Write a default storage descriptor to a manually set up test batch."""
+    from slurmforge.pipeline.config.api import StorageConfigSpec
+    from slurmforge.storage.descriptor import write_storage_descriptor
+    write_storage_descriptor(batch_root, StorageConfigSpec(), batch_root)

@@ -8,6 +8,7 @@ from ...models import (
     ModelConfigSpec,
     OutputConfigSpec,
     RunConfigSpec,
+    StorageConfigSpec,
 )
 from ...normalize import (
     normalize_artifacts,
@@ -30,6 +31,7 @@ from ...runtime import (
 from ..eval import normalize_eval_config
 from ..output import normalize_output_config
 from ..run import build_run_spec, normalize_model_config, validate_external_command_launcher
+from ..storage import normalize_storage_config
 from .inputs import ExperimentSectionInputs
 
 
@@ -46,6 +48,7 @@ class NormalizedExperimentSections:
     output: OutputConfigSpec
     notify: NotifyConfig
     validation: ValidationConfig
+    storage: StorageConfigSpec
 
 
 def normalize_experiment_sections(
@@ -71,6 +74,7 @@ def normalize_experiment_sections(
         else normalize_output_config(inputs.output_cfg_raw, config_path=inputs.config_path)
     )
     notify = batch_shared.notify if batch_shared is not None else normalize_notify(inputs.notify_cfg_raw)
+    storage = batch_shared.storage if batch_shared is not None else normalize_storage_config(inputs.storage_cfg_raw)
 
     if inputs.run_mode == "command":
         validate_external_command_launcher(
@@ -100,4 +104,5 @@ def normalize_experiment_sections(
         output=output,
         notify=notify,
         validation=validation,
+        storage=storage,
     )

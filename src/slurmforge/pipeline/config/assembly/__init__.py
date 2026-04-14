@@ -24,6 +24,7 @@ from .spec_builder import (
     materialize_authoring_experiment_spec,
     materialize_replay_experiment_spec,
 )
+from .storage import normalize_storage_config
 
 __all__ = [
     "NormalizedExperimentContract",
@@ -38,6 +39,7 @@ __all__ = [
     "normalize_eval_config",
     "normalize_experiment_contract",
     "normalize_output_config",
+    "normalize_storage_config",
     "prepare_authoring_batch_input",
     "resolve_authoring_model_catalog",
     "resolve_replay_model_catalog",

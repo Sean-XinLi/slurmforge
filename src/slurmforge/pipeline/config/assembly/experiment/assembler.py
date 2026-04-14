@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ...models import (
     EvalConfigSpec,
@@ -8,6 +8,7 @@ from ...models import (
     OutputConfigSpec,
     PlanningHints,
     RunConfigSpec,
+    StorageConfigSpec,
 )
 from ...runtime import (
     ArtifactsConfig,
@@ -38,6 +39,7 @@ class NormalizedExperimentContract:
     notify: NotifyConfig
     validation: ValidationConfig
     hints: PlanningHints
+    storage: StorageConfigSpec = field(default_factory=StorageConfigSpec)
 
 
 def assemble_experiment_contract(
@@ -61,4 +63,5 @@ def assemble_experiment_contract(
         notify=sections.notify,
         validation=sections.validation,
         hints=hints,
+        storage=sections.storage,
     )

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from typing import Sequence
 
@@ -31,8 +32,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    result_dir = Path(args.result_dir)
     manifest = write_train_outputs_contract(
-        result_dir=Path(args.result_dir),
+        result_dir=result_dir,
         manifest_path=Path(args.manifest_path),
         env_path=Path(args.env_path),
         checkpoint_globs=list(args.checkpoint_glob or []),
@@ -43,6 +45,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         workdirs=list(args.workdir or []),
         max_matches_per_glob=max(1, int(args.max_matches_per_glob)),
     )
+
+    batch_root_env = (os.environ.get("AI_INFRA_BATCH_ROOT") or "").strip()
+    if batch_root_env:
+        from ..storage import open_batch_storage
+        handle = open_batch_storage(Path(batch_root_env))
+        handle.execution.write_train_outputs_manifest(result_dir.resolve(), manifest)
+
     print(f"[train_outputs] wrote manifest: {args.manifest_path}")
     if manifest.primary_checkpoint:
         print(f"[train_outputs] primary_checkpoint={manifest.primary_checkpoint}")

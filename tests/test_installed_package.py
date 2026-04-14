@@ -149,8 +149,12 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
         self._seed_active_runtime_dependencies(self._site_packages_dir(venv_python))
         return venv_python
 
-    def _first_record_path(self, batch_root: Path) -> Path:
-        return next(batch_root.glob("records/group_*/task_*.json"))
+    def _first_record_locator(self, batch_root: Path) -> tuple[Path, int, int]:
+        """Return (batch_root, group_index, task_index) for the first task record."""
+        first_record = next(batch_root.glob("records/group_*/task_*.json"))
+        group_index = int(first_record.parent.name.replace("group_", ""))
+        task_index = int(first_record.stem.replace("task_", ""))
+        return batch_root, group_index, task_index
 
     def _first_result_dir(self, batch_root: Path) -> Path:
         return next((batch_root / "runs").glob("run_*/job-*"))
@@ -167,7 +171,15 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
 
             venv_python = self._create_install_env(tmp_path / "venv")
             subprocess.run(
-                [str(venv_python), "-m", "pip", "install", str(checkout_root)],
+                [
+                    str(venv_python),
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-build-isolation",
+                    "--no-deps",
+                    str(checkout_root),
+                ],
                 check=True,
             )
 
@@ -214,6 +226,8 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
             show_hpc = self._run([str(cli_path), "examples", "show", "script_hpc"], cwd=work_root)
             self.assertIn('project: "my_project"', show_hpc.stdout)
             self.assertIn('script: "eval.py"', show_hpc.stdout)
+            self.assertIn("storage:", show_hpc.stdout)
+            self.assertIn('engine: "none"', show_hpc.stdout)
             # new templates use null sentinels, not placeholder strings
             self.assertIn('account: ~', show_hpc.stdout)
 
@@ -323,8 +337,14 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
             self.assertIn("selected_runs=1", rerun_preview.stdout)
 
             # ── executor: run the record from script_starter batch ───────────
+            _batch_root, _group_idx, _task_idx = self._first_record_locator(primary_batch_root)
             executor_result = self._run(
-                [str(executor_path), "--record", str(self._first_record_path(primary_batch_root))],
+                [
+                    str(executor_path),
+                    "--batch-root", str(_batch_root),
+                    "--group-index", str(_group_idx),
+                    "--task-index", str(_task_idx),
+                ],
                 cwd=primary_project_root,
             )
             self.assertIn("training finished", executor_result.stdout)

@@ -55,9 +55,6 @@ class TemplatingTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-            records_dir = tmp_path / "records $(touch record_hack)"
-            records_dir.mkdir()
-            (records_dir / "task_000000.json").write_text("{}", encoding="utf-8")
 
             rendered = build_template_env().get_template("sbatch_array_group.sh.j2").render(
                 array_job_name=slurm_safe_job_name(f"{project}_{experiment_name}_arr001"),
@@ -66,8 +63,6 @@ class TemplatingTests(unittest.TestCase):
                 group_index=1,
                 array_size=1,
                 cluster=deepcopy(cluster),
-                runtime_setup_lines=["export AI_INFRA_TEST_ENV=1"],
-                records_dir=str(records_dir),
                 array_log_dir='logs $(touch array_log_hack)',
                 batch_root='batch $(touch batch_root_hack)',
                 run_plan_executor_bin="/bin/echo",
@@ -93,8 +88,12 @@ class TemplatingTests(unittest.TestCase):
             )
 
             self.assertIn("[ARRAY] batch_root=batch $(touch batch_root_hack)", result.stdout)
-            self.assertIn(str(records_dir / "task_000000.json"), result.stdout)
+            self.assertIn("[ARRAY] group_index=1", result.stdout)
+            self.assertIn("[ARRAY] task_id=0", result.stdout)
+            # /bin/echo receives the --batch-root/--group-index/--task-index args
+            self.assertIn("--batch-root", result.stdout)
+            self.assertIn("--group-index", result.stdout)
+            self.assertIn("--task-index", result.stdout)
             self.assertFalse((tmp_path / "should_not_exist").exists())
-            self.assertFalse((tmp_path / "record_hack").exists())
             self.assertFalse((tmp_path / "batch_root_hack").exists())
             self.assertFalse((tmp_path / "array_log_hack").exists())

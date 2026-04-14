@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 from typing import Sequence
 
-from ....records import load_batch_run_plans, load_run_snapshot, resolve_dispatch_record_path
+from slurmforge.storage import open_batch_storage
+
+from ....records import resolve_dispatch_record_path
 from ...failures import build_source_failure, source_diagnostic
 from ...models import SourceInputBatch, SourceRunInput
 from ..loaders import replay_input_from_snapshot
@@ -25,8 +27,12 @@ def collect_replay_batch_source(
         }
     }
     source_summary = f"batch={resolved_batch_root}"
+
+    handle = open_batch_storage(resolved_batch_root)
+    planning_store = handle.planning
+
     try:
-        plans = load_batch_run_plans(resolved_batch_root)
+        plans = planning_store.load_batch_run_plans(resolved_batch_root)
         selected_plans = select_batch_plans(plans, run_ids=run_ids, run_indices=run_indices)
     except (FileNotFoundError, ValueError) as exc:
         return SourceInputBatch(
@@ -42,8 +48,14 @@ def collect_replay_batch_source(
     for selected_index, plan in enumerate(selected_plans, start=1):
         source_label = f"replay run {plan.run_id} (batch={resolved_batch_root})"
         try:
-            snapshot = load_run_snapshot(Path(plan.run_dir))
+            snapshot = planning_store.load_run_snapshot(resolved_batch_root, plan.run_id)
+            if snapshot is None:
+                raise FileNotFoundError(f"No snapshot found for run_id={plan.run_id}")
             record_path = resolve_dispatch_record_path(resolved_batch_root, plan.dispatch)
+            # In pure DB mode (planning_recovery=false), record files don't exist.
+            # Don't pass dangling paths to downstream contracts.
+            if record_path is not None and not record_path.exists():
+                record_path = None
             source_inputs.append(
                 replay_input_from_snapshot(
                     snapshot,

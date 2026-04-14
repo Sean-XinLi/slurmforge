@@ -8,7 +8,10 @@ from pathlib import Path
 from slurmforge.pipeline.compiler import BatchCompileError, RetrySourceRequest, compile_source
 from slurmforge.pipeline.compiler.reports import require_success
 from slurmforge.pipeline.config.api import EvalTrainOutputsConfig
-from tests._support import sample_run_plan, sample_run_snapshot, sample_stage_plan
+from slurmforge.pipeline.config.codecs import normalize_storage_config
+from slurmforge.pipeline.materialization import materialize_batch
+from slurmforge.pipeline.planning import BatchIdentity, PlannedBatch, PlannedRun
+from tests._support import sample_run_plan, sample_run_snapshot, sample_stage_plan, write_test_descriptor
 
 from slurmforge.pipeline.sources.replay import collect_retry_source_inputs
 from slurmforge.pipeline.records import build_replay_spec, serialize_run_plan, serialize_run_snapshot
@@ -77,6 +80,77 @@ def _write_status(run_dir: Path, job_id: str, status: ExecutionStatus) -> None:
     write_latest_result_dir(run_dir, result_dir)
 
 
+def _materialize_retry_batch(
+    tmp_path: Path,
+    *,
+    storage_cfg_dict: dict | None = None,
+) -> tuple[Path, Path, Path]:
+    from slurmforge.storage import create_planning_store
+    from tests._support import make_template_env
+
+    storage_config = normalize_storage_config(storage_cfg_dict)
+    identity = BatchIdentity(
+        project_root=tmp_path,
+        base_output_dir=tmp_path / "runs",
+        project="demo",
+        experiment_name="exp",
+        batch_name="retry_src",
+    )
+    batch_root = identity.batch_root
+    run_dir_1 = batch_root / "runs" / "run_001_r1"
+    run_dir_2 = batch_root / "runs" / "run_002_r2"
+
+    plan1 = sample_run_plan(
+        run_index=1,
+        total_runs=2,
+        run_id="r1",
+        run_dir=str(run_dir_1),
+        run_dir_rel="runs/run_001_r1",
+        train_stage=sample_stage_plan(workdir=tmp_path),
+    )
+    plan2 = sample_run_plan(
+        run_index=2,
+        total_runs=2,
+        run_id="r2",
+        run_dir=str(run_dir_2),
+        run_dir_rel="runs/run_002_r2",
+        train_stage=sample_stage_plan(workdir=tmp_path),
+    )
+    snap1 = sample_run_snapshot(
+        run_index=1,
+        total_runs=2,
+        run_id="r1",
+        replay_spec=build_replay_spec(
+            _resolved_cfg(lr=0.001),
+            planning_root=str(tmp_path),
+            source_batch_root=str(batch_root),
+            source_run_id="r1",
+            source_record_path=str(batch_root / "records" / "group_01" / "task_000000.json"),
+        ),
+    )
+    snap2 = sample_run_snapshot(
+        run_index=2,
+        total_runs=2,
+        run_id="r2",
+        replay_spec=build_replay_spec(
+            _resolved_cfg(lr=0.002),
+            planning_root=str(tmp_path),
+            source_batch_root=str(batch_root),
+            source_run_id="r2",
+            source_record_path=str(batch_root / "records" / "group_01" / "task_000001.json"),
+        ),
+    )
+
+    planned_batch = PlannedBatch(
+        identity=identity,
+        planned_runs=(PlannedRun(plan=plan1, snapshot=snap1), PlannedRun(plan=plan2, snapshot=snap2)),
+        storage_config=storage_config,
+    )
+    store = create_planning_store(storage_config, make_template_env())
+    materialize_batch(planned_batch=planned_batch, planning_store=store)
+    return batch_root, run_dir_1, run_dir_2
+
+
 def _write_snapshot(run_dir: Path, snapshot) -> None:
     snapshot_path = run_dir / "meta" / "run_snapshot.json"
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -89,6 +163,7 @@ class RetryTests(unittest.TestCase):
             batch_root = Path(tmp) / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
 
             plan1 = sample_run_plan(
                 run_index=1,
@@ -153,6 +228,59 @@ class RetryTests(unittest.TestCase):
         self.assertEqual(collection.manifest_extras["retry_source"]["selected_run_ids"], ["r2"])
         self.assertEqual(collection.manifest_extras["retry_source"]["selected_failure_counts"], {"oom": 1})
 
+    def test_collect_retry_source_inputs_uses_storage_in_sqlite_pure_db_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            batch_root, run_dir_1, run_dir_2 = _materialize_retry_batch(
+                tmp_path,
+                storage_cfg_dict={
+                    "backend": {"engine": "sqlite"},
+                    "exports": {"planning_recovery": False},
+                },
+            )
+
+            _write_status(
+                run_dir_1,
+                "101",
+                ExecutionStatus(
+                    state="success",
+                    job_key="101",
+                    slurm_job_id="101",
+                    result_dir=str(run_dir_1 / "job-101"),
+                ),
+            )
+            _write_status(
+                run_dir_2,
+                "102",
+                ExecutionStatus(
+                    state="failed",
+                    failure_class="script_error",
+                    failed_stage="train",
+                    reason="train_exit_code=2",
+                    job_key="102",
+                    slurm_job_id="102",
+                    result_dir=str(run_dir_2 / "job-102"),
+                ),
+            )
+
+            collection = collect_retry_source_inputs(
+                source_batch_root=batch_root,
+                status_query="failed",
+                cli_overrides=[],
+            )
+
+        self.assertEqual(collection.checked_inputs, 1)
+        self.assertEqual(len(collection.failed_runs), 0)
+        self.assertEqual(len(collection.source_inputs), 1)
+        self.assertEqual(collection.source_inputs[0].source.source_run_id, "r2")
+        # In pure DB mode (planning_recovery=false), record files don't exist.
+        self.assertIsNone(collection.source_inputs[0].source.config_path)
+        self.assertIsNone(collection.source_inputs[0].source.source_record_path)
+        self.assertEqual(collection.manifest_extras["retry_source"]["selected_run_ids"], ["r2"])
+        self.assertEqual(collection.manifest_extras["retry_source"]["selected_failure_counts"], {"script_error": 1})
+        self.assertFalse((batch_root / "records").exists())
+        self.assertFalse((run_dir_2 / "meta" / "run_snapshot.json").exists())
+
     def test_build_retry_planned_batch_rebuilds_failed_runs_and_applies_overrides(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -163,6 +291,7 @@ class RetryTests(unittest.TestCase):
             batch_root = tmp_path / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
 
             source_plan = sample_run_plan(
                 run_index=2,
@@ -251,6 +380,7 @@ class RetryTests(unittest.TestCase):
             batch_root = tmp_path / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
             (tmp_path / "train.py").write_text("print('ok')\n", encoding="utf-8")
 
             plan1 = sample_run_plan(
@@ -350,6 +480,7 @@ class RetryTests(unittest.TestCase):
             batch_root = tmp_path / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
             (tmp_path / "train.py").write_text(
                 "\n".join(
                     [
@@ -441,6 +572,7 @@ class RetryTests(unittest.TestCase):
             batch_root = tmp_path / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
             (tmp_path / "train.py").write_text("print('ok')\n", encoding="utf-8")
 
             source_plan = sample_run_plan(
@@ -527,6 +659,7 @@ class RetryTests(unittest.TestCase):
             moved_batch = tmp_path / "moved_batch"
             manifest_path = moved_batch / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(moved_batch)
 
             source_plan = sample_run_plan(
                 run_index=1,
@@ -577,6 +710,7 @@ class RetryTests(unittest.TestCase):
             batch_root = tmp_path / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
 
             source_plan = sample_run_plan(
                 run_index=1,
@@ -653,6 +787,7 @@ class RetryTests(unittest.TestCase):
             batch_root = tmp_path / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
 
             source_plan = sample_run_plan(
                 run_index=1,

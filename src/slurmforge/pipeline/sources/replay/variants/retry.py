@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Sequence
 
-from ....records import load_batch_run_plans
+from slurmforge.storage import open_batch_storage
 from ...failures import source_diagnostic
 from ...models import FailedCompiledRun, SourceInputBatch, SourceRunInput
 from ..resume_patch import prepare_retry_cfg
@@ -20,8 +20,10 @@ def collect_retry_batch_source(
     resolved_batch_root = source_batch_root.expanduser().resolve()
     manifest_extras = {"retry_source": {"source_batch_root": str(resolved_batch_root), "status_query": status_query}}
     source_summary = f"batch={resolved_batch_root} status={status_query}"
+
+    handle = open_batch_storage(resolved_batch_root)
     try:
-        plans = load_batch_run_plans(resolved_batch_root)
+        plans = handle.planning.load_batch_run_plans(resolved_batch_root)
     except (FileNotFoundError, ValueError) as exc:
         return SourceInputBatch(
             source_inputs=(),
@@ -30,8 +32,14 @@ def collect_retry_batch_source(
             source_summary=source_summary,
         )
 
+    plans_by_run_id = {plan.run_id: plan for plan in plans}
+    views = handle.list_batch_run_views()
+
     selection = select_retry_candidates(
-        plans=plans,
+        batch_root=resolved_batch_root,
+        planning_store=handle.planning,
+        plans_by_run_id=plans_by_run_id,
+        views=views,
         status_query=status_query,
     )
 

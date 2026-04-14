@@ -7,6 +7,32 @@
 
 They are related, but they are not interchangeable.
 
+## Storage Layer
+
+All planning and execution I/O goes through the unified storage layer in
+[`src/slurmforge/storage/`](src/slurmforge/storage/):
+
+- **`PlanningStore`** — writes and reads planning artefacts (`RunPlan`, `RunSnapshot`, manifests)
+- **`ExecutionStore`** — writes runtime artefacts (execution status, attempt results, checkpoints)
+
+Two backends exist:
+
+| Engine | Config | Source of truth |
+|--------|--------|-----------------|
+| `none` (default) | `storage.backend.engine: none` | Filesystem JSON files |
+| `sqlite` | `storage.backend.engine: sqlite` | Files + per-batch SQLite at `meta/slurmforge.sqlite3` |
+
+The SQLite backend mirrors all planning data into indexed DB tables. Runtime writes
+(from compute nodes over NFS) always produce files regardless of engine; the DB is
+reconciled lazily via `ExecutionStore.reconcile_batch()`.
+
+### `planning_exports`
+
+`storage.exports.planning_exports: false` (default) suppresses copying the run
+record JSON (`execution_plan.json`) into each job result directory during finalization.
+The canonical record locations (`records/group_xx/task_*.json`, `meta/runs_manifest.jsonl`)
+remain the source of truth and are unaffected by this setting.
+
 ## Persistence Boundaries
 
 ### `RunPlan`
@@ -14,29 +40,52 @@ They are related, but they are not interchangeable.
 `RunPlan` is serialized by `serialize_run_plan()` and deserialized by `deserialize_run_plan()` in
 [`src/slurmforge/pipeline/records/codecs/run_plan.py`](src/slurmforge/pipeline/records/codecs/run_plan.py).
 
-Batch-level loading reads the same payloads back from manifest or per-record files via
-[`src/slurmforge/pipeline/records/batch_io.py`](src/slurmforge/pipeline/records/batch_io.py).
+Batch-level loading goes through `PlanningStore.load_batch_run_plans()`, which reads:
 
-Equivalent persisted forms:
+- `meta/runs_manifest.jsonl` (fast path, written during materialization)
+- `records/group_xx/task_*.json` (fallback for legacy batches without a manifest)
+
+Equivalent persisted forms (filesystem engine):
 
 - `records/group_xx/task_000000.json`
 - `meta/runs_manifest.jsonl`
+
+In the SQLite engine, the same payloads are also stored as `payload_json` in the `runs` table.
 
 ### `RunSnapshot`
 
 `RunSnapshot` is serialized by `serialize_run_snapshot()` and deserialized by `deserialize_run_snapshot()` in
 [`src/slurmforge/pipeline/records/codecs/run_snapshot.py`](src/slurmforge/pipeline/records/codecs/run_snapshot.py).
 
-Run-directory loading uses
-[`src/slurmforge/pipeline/records/snapshot_io.py`](src/slurmforge/pipeline/records/snapshot_io.py).
+Run-directory loading uses `PlanningStore.load_run_snapshot()`.
 
-Persisted form:
+Persisted form (filesystem):
 
 - `runs/run_xxx_<hash>/meta/run_snapshot.json`
 
+In the SQLite engine, also mirrored in the `run_snapshots` table.
+
+## Executor Locator
+
+The executor (`sforge-run-plan-executor`) is invoked with logical locators instead of a
+file path:
+
+```
+sforge-run-plan-executor \
+  --batch-root  <batch_root>  \
+  --group-index <group_index> \
+  --task-index  <task_index>
+```
+
+`load_plan(batch_root, group_index, task_index)` resolves the `RunPlan` via
+`create_planning_store_for_read(batch_root)`, which auto-detects the engine from
+the on-disk layout (presence of `meta/slurmforge.sqlite3`).
+
+This replaces the legacy `--record PATH` interface.
+
 ## Non-Contract Runtime Files
 
-These files are runtime artifacts, not planning contract:
+These files are runtime artefacts, not planning contract:
 
 - `runs/run_xxx_<hash>/resolved_config.yaml`
 - `job-<job_key>/meta/execution_status.json`
@@ -44,7 +93,7 @@ These files are runtime artifacts, not planning contract:
 - `job-<job_key>/meta/checkpoint_state.json`
 - `job-<job_key>/meta/train_outputs.json`
 - `job-<job_key>/meta/train_outputs.env`
-- `job-<job_key>/meta/execution_plan.json`
+- `job-<job_key>/execution_plan.json` (only written when `planning_exports: true`)
 - train / eval logs
 - Slurm stdout / stderr
 
@@ -55,6 +104,7 @@ These files are runtime artifacts, not planning contract:
 - train→eval checkpoint handoff uses `eval_train_outputs`, not ad hoc shell flags
 - replay rebuilds from `RunSnapshot.replay_spec`
 - diagnostics are persisted as structured records
+- runtime writes always produce files regardless of storage engine (NFS safety)
 
 ## `RunPlan` Contract
 

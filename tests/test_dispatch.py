@@ -14,6 +14,7 @@ from slurmforge.pipeline.materialization import materialize_batch
 from slurmforge.pipeline.planning import BatchIdentity, PlannedBatch, PlannedRun
 from slurmforge.pipeline.planning.contracts import AllocationRequest, ExecutionTopology
 from slurmforge.pipeline.records import DispatchInfo, serialize_run_plan
+from slurmforge.storage.backends.filesystem import FileSystemPlanningStore
 from tests._support import (
     make_template_env,
     sample_run_plan,
@@ -107,7 +108,7 @@ class DispatchTests(unittest.TestCase):
 
             result = materialize_batch(
                 planned_batch=_planned_batch(*planned_runs, batch_root=batch_root),
-                env=make_template_env(),
+                planning_store=FileSystemPlanningStore(make_template_env()),
             )
 
             self.assertEqual(len(result.array_groups_meta), 1)
@@ -145,6 +146,7 @@ class DispatchTests(unittest.TestCase):
             self.assertIn("#SBATCH --array=0-1", sbatch_text)
             self.assertIn("sforge-run-plan-executor", sbatch_text)
             self.assertNotIn("-m slurmforge.execution.run_plan_executor", sbatch_text)
+            self.assertIn('export AI_INFRA_BATCH_ROOT="${BATCH_ROOT}"', sbatch_text)
             submit_text = result.submit_script.read_text()
             self.assertIn("[BATCH] array_groups=1", submit_text)
             self.assertIn("sbatch --parsable", submit_text)
@@ -172,7 +174,7 @@ class DispatchTests(unittest.TestCase):
                     batch_root=batch_root,
                     notify_cfg=normalize_notify({"enabled": True, "email": "you@example.com", "when": "afterany"}),
                 ),
-                env=make_template_env(),
+                planning_store=FileSystemPlanningStore(make_template_env()),
             )
 
             submit_text = result.submit_script.read_text()
@@ -209,7 +211,7 @@ class DispatchTests(unittest.TestCase):
 
             result = materialize_batch(
                 planned_batch=_planned_batch(*planned_runs, batch_root=batch_root),
-                env=make_template_env(),
+                planning_store=FileSystemPlanningStore(make_template_env()),
             )
 
             self.assertEqual(len(result.array_groups_meta), 2)
@@ -232,7 +234,7 @@ class DispatchTests(unittest.TestCase):
                     batch_root=batch_root,
                     submit_dependencies={"afterok": ["101", "202"], "afterany": ["303"]},
                 ),
-                env=make_template_env(),
+                planning_store=FileSystemPlanningStore(make_template_env()),
             )
 
             submit_text = result.submit_script.read_text(encoding="utf-8")
@@ -264,7 +266,7 @@ class DispatchTests(unittest.TestCase):
                 ) as move_mock:
                     result = materialize_batch(
                         planned_batch=_planned_batch(planned_run, batch_root=batch_root),
-                        env=make_template_env(),
+                        planning_store=FileSystemPlanningStore(make_template_env()),
                     )
             self.assertTrue(move_mock.called)
             self.assertTrue(result.manifest_path.exists())

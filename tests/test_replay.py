@@ -13,12 +13,16 @@ from slurmforge.pipeline.compiler.reports import (
     report_total_runs,
     require_success,
 )
+from slurmforge.pipeline.config.codecs import normalize_storage_config
+from slurmforge.pipeline.materialization import materialize_batch
+from slurmforge.pipeline.planning import BatchIdentity, PlannedBatch, PlannedRun
 from slurmforge.pipeline.records import DispatchInfo, build_replay_spec, serialize_run_plan, serialize_run_snapshot
 from slurmforge.pipeline.sources.replay import (
     collect_replay_source_inputs,
 )
 from slurmforge.pipeline.sources.models import SourceInputBatch, SourceRef, SourceRunInput
-from tests._support import sample_run_plan, sample_run_snapshot
+from slurmforge.storage import create_planning_store
+from tests._support import make_template_env, sample_run_plan, sample_run_snapshot, sample_stage_plan, write_test_descriptor
 
 
 def _command_replay_cfg(*, lr: float = 0.001) -> dict:
@@ -56,7 +60,6 @@ def _load_replay_inputs_from_batch_root(
 ) -> list[SourceRunInput]:
     collection = collect_replay_source_inputs(
         source_run_dir=None,
-        source_snapshot_path=None,
         source_batch_root=batch_root,
         run_ids=run_ids,
         run_indices=run_indices,
@@ -95,6 +98,53 @@ def _compile_replay_planned_batch(
         )
 
 
+def _materialize_replay_batch(
+    tmp_path: Path,
+    *,
+    storage_cfg_dict: dict | None = None,
+) -> tuple[Path, Path]:
+    storage_config = normalize_storage_config(storage_cfg_dict)
+    identity = BatchIdentity(
+        project_root=tmp_path,
+        base_output_dir=tmp_path / "runs",
+        project="demo",
+        experiment_name="exp",
+        batch_name="replay_src",
+    )
+    batch_root = identity.batch_root
+    run_dir = batch_root / "runs" / "run_001_r1"
+    plan = sample_run_plan(
+        run_index=1,
+        total_runs=1,
+        run_id="r1",
+        run_dir=str(run_dir),
+        run_dir_rel="runs/run_001_r1",
+        dispatch=DispatchInfo(record_path_rel="records/group_01/task_000000.json"),
+        train_stage=sample_stage_plan(workdir=tmp_path),
+    )
+    snapshot = sample_run_snapshot(
+        run_index=1,
+        total_runs=1,
+        run_id="r1",
+        replay_spec=build_replay_spec(
+            _command_replay_cfg(lr=0.001),
+            planning_root=str(tmp_path),
+            source_batch_root=str(batch_root),
+            source_run_id="r1",
+            source_record_path=str(batch_root / "records" / "group_01" / "task_000000.json"),
+        ),
+    )
+    planned_batch = PlannedBatch(
+        identity=identity,
+        planned_runs=(PlannedRun(plan=plan, snapshot=snapshot),),
+        storage_config=storage_config,
+    )
+    env = make_template_env()
+    store = create_planning_store(storage_config, env)
+    materialize_batch(planned_batch=planned_batch, planning_store=store)
+    return batch_root, run_dir
+
+
 class ReplayTests(unittest.TestCase):
     def test_load_replay_inputs_from_batch_root_filters_selected_run_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -102,6 +152,7 @@ class ReplayTests(unittest.TestCase):
             batch_root = tmp_path / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
 
             plan1 = sample_run_plan(
                 run_index=1,
@@ -163,6 +214,63 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(replay_inputs[0].source.source_batch_root, batch_root.resolve())
         self.assertTrue(str(replay_inputs[0].source.config_label).startswith("replay run r2"))
 
+    def test_load_replay_inputs_from_run_dir_uses_storage_in_sqlite_pure_db_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            batch_root, run_dir = _materialize_replay_batch(
+                tmp_path,
+                storage_cfg_dict={
+                    "backend": {"engine": "sqlite"},
+                    "exports": {"planning_recovery": False},
+                },
+            )
+
+            collection = collect_replay_source_inputs(
+                source_run_dir=run_dir,
+                source_batch_root=None,
+                run_ids=[],
+                run_indices=[],
+            )
+
+        self.assertEqual(collection.checked_inputs, 1)
+        self.assertEqual(len(collection.failed_runs), 0)
+        self.assertEqual(len(collection.source_inputs), 1)
+        self.assertEqual(collection.source_inputs[0].source.source_batch_root, batch_root.resolve())
+        self.assertEqual(collection.source_inputs[0].source.source_run_id, "r1")
+        self.assertIsNone(collection.source_inputs[0].source.config_path)
+        self.assertFalse((run_dir / "meta" / "run_snapshot.json").exists())
+
+    def test_load_replay_inputs_from_batch_root_uses_storage_in_sqlite_pure_db_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            batch_root, run_dir = _materialize_replay_batch(
+                tmp_path,
+                storage_cfg_dict={
+                    "backend": {"engine": "sqlite"},
+                    "exports": {"planning_recovery": False},
+                },
+            )
+
+            collection = collect_replay_source_inputs(
+                source_run_dir=None,
+                source_batch_root=batch_root,
+                run_ids=["r1"],
+                run_indices=[],
+            )
+
+        self.assertEqual(collection.checked_inputs, 1)
+        self.assertEqual(len(collection.failed_runs), 0)
+        self.assertEqual(len(collection.source_inputs), 1)
+        self.assertEqual(collection.source_inputs[0].source.source_batch_root, batch_root.resolve())
+        self.assertEqual(collection.source_inputs[0].source.source_run_id, "r1")
+        # In pure DB mode (planning_recovery=false), record files don't exist.
+        # source_record_path and config_path must be None, not dangling paths.
+        self.assertIsNone(collection.source_inputs[0].source.config_path)
+        self.assertIsNone(collection.source_inputs[0].source.source_record_path)
+        self.assertTrue(str(collection.source_inputs[0].source.config_label).startswith("replay run r1"))
+        self.assertFalse((batch_root / "records").exists())
+        self.assertFalse((run_dir / "meta" / "run_snapshot.json").exists())
+
     def test_build_replay_planned_batch_applies_overrides_and_augments_manifest_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -204,6 +312,7 @@ class ReplayTests(unittest.TestCase):
             batch_root = tmp_path / "batch_src"
             manifest_path = batch_root / "meta" / "runs_manifest.jsonl"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            write_test_descriptor(batch_root)
 
             plan1 = sample_run_plan(
                 run_index=1,
@@ -257,7 +366,6 @@ class ReplayTests(unittest.TestCase):
 
             collection = collect_replay_source_inputs(
                 source_run_dir=None,
-                source_snapshot_path=None,
                 source_batch_root=batch_root,
                 run_ids=[],
                 run_indices=[],

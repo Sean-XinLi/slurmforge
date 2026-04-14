@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ...config.runtime import EnvConfig
 from ...records import RunPlan
 from .common import q, sanitize_activate_command
+
+if TYPE_CHECKING:
+    from ...config.api import StorageConfigSpec
 
 
 def runtime_environment_setup_lines(env_cfg: EnvConfig) -> list[str]:
@@ -23,10 +28,27 @@ def runtime_environment_setup_lines(env_cfg: EnvConfig) -> list[str]:
     return lines
 
 
-def append_env_setup(lines: list[str], plan: RunPlan) -> None:
+def append_env_setup(
+    lines: list[str],
+    plan: RunPlan,
+    *,
+    storage_config: StorageConfigSpec | None = None,
+) -> None:
     train_runtime = plan.train_stage.runtime
-    execution_plan_json_path = q(str(plan.dispatch.record_path or ""))
-    run_snapshot_json_path = q(f"{plan.run_dir}/meta/run_snapshot.json")
+
+    # When planning_recovery=False (pure DB mode), planning files don't exist.
+    # Export empty strings so user scripts see the env var but skip gracefully.
+    planning_recovery = True
+    if storage_config is not None:
+        planning_recovery = storage_config.exports.planning_recovery
+
+    if planning_recovery:
+        execution_plan_json_path = q(str(plan.dispatch.record_path or ""))
+        run_snapshot_json_path = q(f"{plan.run_dir}/meta/run_snapshot.json")
+    else:
+        execution_plan_json_path = q("")
+        run_snapshot_json_path = q("")
+
     resolved_config_yaml_path = q(f"{plan.run_dir}/resolved_config.yaml")
     lines.extend(runtime_environment_setup_lines(plan.env))
     lines.append("")

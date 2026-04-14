@@ -37,6 +37,7 @@ def materialize_resolved_experiment_spec(
         output=contract.output,
         notify=contract.notify,
         validation=contract.validation,
+        storage=contract.storage,
         hints=contract.hints,
     )
 

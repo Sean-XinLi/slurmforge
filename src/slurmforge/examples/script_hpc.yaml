@@ -13,6 +13,14 @@ output:
   base_output_dir: "./runs"
   batch_name: "auto"    # set a fixed name to avoid timestamp suffixes
 
+storage:
+  backend:
+    engine: "none"      # "none" = filesystem only; change to "sqlite" to enable SQLite metadata storage
+    sqlite:
+      path: "auto"      # sqlite mode only; "auto" = <batch_root>/meta/slurmforge.sqlite3
+  exports:
+    planning_recovery: true  # sqlite mode only; keep planning export files for recovery/debugging
+
 # ───────────────────────────────────────────────────────────────────
 # STEP 1 · REQUIRED  (replace every ~ before running)
 # ───────────────────────────────────────────────────────────────────

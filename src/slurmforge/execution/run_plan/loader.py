@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import json
 import warnings
 from pathlib import Path
 
 from ...identity import PACKAGE_NAME, __version__, version_mismatch_warning
-from ...pipeline.records import (
-    RunPlan,
-    batch_root_from_record_path,
-    bind_run_plan_to_batch,
-    deserialize_run_plan,
-)
+from ...pipeline.records import RunPlan
+from ...storage import open_batch_storage
 
 
 def validate_record_generator(plan: RunPlan) -> None:
@@ -29,19 +24,20 @@ def validate_record_generator(plan: RunPlan) -> None:
         )
 
 
-def load_plan(record_path: Path) -> RunPlan:
-    if not record_path.exists():
-        raise FileNotFoundError(f"Run record not found: {record_path}")
+def load_plan(batch_root: Path, *, group_index: int, task_index: int) -> RunPlan:
+    """Load a RunPlan by its logical locator (batch_root, group_index, task_index).
 
-    payload = json.loads(record_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError(f"Invalid run record format: {record_path}")
-    resolved_plan = deserialize_run_plan(payload)
-    try:
-        batch_root = batch_root_from_record_path(record_path)
-    except ValueError:
-        bound_plan = resolved_plan
-    else:
-        bound_plan = bind_run_plan_to_batch(batch_root, resolved_plan)
-    validate_record_generator(bound_plan)
-    return bound_plan
+    Uses ``open_batch_storage`` to auto-detect the storage engine
+    (filesystem or SQLite) from the batch's on-disk layout. This replaces the
+    legacy ``--record PATH`` approach and decouples the executor from the
+    physical file layout.
+    """
+    store = open_batch_storage(batch_root).planning
+    plan = store.load_plan_for_array_task(batch_root, group_index, task_index)
+    if plan is None:
+        raise FileNotFoundError(
+            f"No run plan found for batch_root={batch_root} "
+            f"group_index={group_index} task_index={task_index}"
+        )
+    validate_record_generator(plan)
+    return plan

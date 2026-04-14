@@ -233,6 +233,10 @@ Export one example:
 sforge examples export script_hpc --out ./experiment.yaml
 ```
 
+The shipped examples default to filesystem mode. To enable SQLite metadata
+storage, you usually only need to change `storage.backend.engine` from
+`"none"` to `"sqlite"`.
+
 `examples` is the raw YAML layer. `init` is the recommended starter-project layer built around those YAML definitions.
 
 ## Runtime Internals
@@ -270,6 +274,122 @@ sforge generate \
   --set cluster.mem=80G
 ```
 
+## Storage Modes
+
+Choose the planning metadata backend in your experiment YAML.
+
+The user-facing CLI does not change across storage modes:
+
+- `sforge generate`
+- `sforge status`
+- `sforge replay`
+- `sforge rerun`
+
+What changes is how planning metadata is persisted for each batch.
+
+In practice, switching from filesystem mode to SQLite mode usually means
+changing `storage.backend.engine` from `"none"` to `"sqlite"`. Keep
+`storage.backend.sqlite.path: "auto"` unless you want a custom relative path
+under the batch root.
+
+### Filesystem Mode
+
+Use filesystem mode when you want the simplest layout and the most obvious
+on-disk files.
+
+```yaml
+storage:
+  backend:
+    engine: "none"      # change to "sqlite" to enable SQLite metadata storage
+    sqlite:
+      path: "auto"      # sqlite mode only; "auto" = <batch_root>/meta/slurmforge.sqlite3
+  exports:
+    planning_recovery: true  # sqlite mode only; keep planning export files for recovery/debugging
+```
+
+Effect:
+
+- planning metadata is stored in the batch filesystem layout
+- this is the default mode
+- easiest mode to inspect manually
+
+Recommended for:
+
+- first-time users
+- small and medium batches
+- teams that prefer direct file inspection
+
+### SQLite Mode
+
+Use SQLite mode when you want a batch-local metadata database for planning
+state and indexed reads.
+
+```yaml
+storage:
+  backend:
+    engine: "sqlite"
+    sqlite:
+      path: "auto"   # sqlite mode only; "auto" = <batch_root>/meta/slurmforge.sqlite3
+  exports:
+    planning_recovery: true  # keep planning export files for recovery/debugging
+```
+
+Rules:
+
+- `storage.backend.sqlite.path` must be `"auto"` or a relative path
+- `path: "auto"` means `"<batch_root>/meta/slurmforge.sqlite3"`
+- runtime journal files still land in the batch result directories
+
+Effect:
+
+- planning metadata is persisted in SQLite
+- `status / replay / rerun` keep the same CLI surface
+- batch-level storage metadata is also written to `meta/storage.json`
+
+### `planning_recovery`
+
+`planning_recovery` only matters in SQLite mode.
+
+```yaml
+storage:
+  backend:
+    engine: "sqlite"
+  exports:
+    planning_recovery: true
+```
+
+When `planning_recovery: true`:
+
+- planning metadata is stored in SQLite
+- planning export files are also kept for recovery and manual inspection
+
+```yaml
+storage:
+  backend:
+    engine: "sqlite"
+  exports:
+    planning_recovery: false
+```
+
+When `planning_recovery: false`:
+
+- planning metadata lives only in SQLite
+- planning recovery/export files are omitted
+- runtime journal files are still written normally
+
+Recommended default:
+
+- start with `planning_recovery: true`
+- switch to `false` only after you are sure your workflow does not rely on
+  those planning files
+
+### What Users Will See
+
+- `experiment.yaml` contains the `storage` section
+- each batch writes `meta/storage.json`
+- run-level `resolved_config.yaml` remains focused on run configuration and
+  does not duplicate batch storage settings
+
 Retry failed runs from an existing batch:
 
 ```bash
@@ -280,12 +400,6 @@ Replay a specific persisted run:
 
 ```bash
 sforge replay --from-run /path/to/batch_root/runs/run_001_abcd1234
-```
-
-Replay directly from a snapshot file:
-
-```bash
-sforge replay --from-snapshot /path/to/run_snapshot.json
 ```
 
 Replay selected runs from a batch:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Sequence
 
+from ...config.api import StorageConfigSpec
 from ...config.runtime import NotifyConfig
 from ...planning import BatchIdentity, PlannedRun
 from ...planning.contracts import PlanDiagnostic
@@ -22,6 +23,7 @@ def build_report(
     submit_dependencies: dict[str, list[str]] | None,
     manifest_extras: dict[str, Any],
     source_summary: str,
+    storage_config: StorageConfigSpec | None = None,
 ) -> BatchCompileReport:
     return validate_compile_report(
         BatchCompileReport(
@@ -34,6 +36,7 @@ def build_report(
             submit_dependencies={} if submit_dependencies is None else submit_dependencies,
             manifest_extras=manifest_extras,
             source_summary=source_summary,
+            storage_config=storage_config if storage_config is not None else StorageConfigSpec(),
         )
     )
 
@@ -48,6 +51,7 @@ def build_materialized_report(
     checked_runs: int,
     notify_cfg: NotifyConfig | None,
     submit_dependencies: dict[str, list[str]] | None,
+    storage_config: StorageConfigSpec | None = None,
 ) -> BatchCompileReport:
     return build_report(
         identity=identity,
@@ -59,6 +63,7 @@ def build_materialized_report(
         submit_dependencies=submit_dependencies,
         manifest_extras=materialized.manifest_extras,
         source_summary=materialized.report.source_summary,
+        storage_config=storage_config,
     )
 
 

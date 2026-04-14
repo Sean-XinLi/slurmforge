@@ -4,6 +4,7 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any
 
+from ...config.api import StorageConfigSpec
 from ...config.runtime import NotifyConfig
 from ...planning import BatchIdentity, PlannedRun
 from ...planning.contracts import PlanDiagnostic, ensure_plan_diagnostic
@@ -59,6 +60,7 @@ class BatchCompileReport:
     submit_dependencies: dict[str, list[str]] = field(default_factory=dict)
     manifest_extras: dict[str, Any] = field(default_factory=dict)
     source_summary: str = ""
+    storage_config: StorageConfigSpec = field(default_factory=StorageConfigSpec)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "successful_runs", tuple(self.successful_runs))

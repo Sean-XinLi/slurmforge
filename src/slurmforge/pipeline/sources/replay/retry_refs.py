@@ -13,7 +13,7 @@ def build_retry_source_ref(
     candidate: RetryCandidate,
 ) -> SourceRef:
     resolved_record_path = resolve_dispatch_record_path(source_batch_root, candidate.plan.dispatch)
-    if resolved_record_path is not None:
+    if resolved_record_path is not None and resolved_record_path.exists():
         record_path = resolved_record_path.resolve()
         return SourceRef(
             config_path=record_path,

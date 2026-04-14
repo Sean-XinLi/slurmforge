@@ -37,6 +37,7 @@ def accept_replay_spec(
             notify_cfg=spec.notify,
             submit_dependencies=copy.deepcopy(spec.output.dependencies),
             batch_diagnostics=state.batch_diagnostics,
+            storage_config=spec.storage,
         )
     if candidate_identity != state.identity:
         raise InternalCompilerError("Replay batch must resolve to a single canonical batch identity")
