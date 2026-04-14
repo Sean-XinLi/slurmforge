@@ -20,7 +20,6 @@ from slurmforge.pipeline.records import DispatchInfo
 from tests._support import sample_run_plan, sample_stage_plan
 
 from slurmforge.execution import run_plan
-from slurmforge.execution import write_attempt_result as attempt_result_writer
 from slurmforge.pipeline.materialization.blocks.common import q
 from slurmforge.pipeline.status import (
     attempt_result_path_for_result_dir,

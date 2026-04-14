@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ...pipeline.materialization import build_shell_script
 from ...pipeline.records import RunPlan
-from ...storage import ExecutionLifecycle, open_batch_storage
+from ...storage import open_batch_storage
 from .post_run import persist_checkpoint_state
 from .shell_runner import execute_script
 

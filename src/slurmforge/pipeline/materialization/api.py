@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import shutil
-
 from ...errors import InternalCompilerError
 from ...storage.contracts import PlanningStore
 from ...storage.models import MaterializedBatchBundle

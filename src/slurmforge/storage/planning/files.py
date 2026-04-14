@@ -17,7 +17,7 @@ from ...pipeline.records.codecs.run_plan import deserialize_run_plan
 from ...pipeline.records.codecs.run_snapshot import deserialize_run_snapshot
 from ...pipeline.records.models.run_plan import RunPlan
 from ...pipeline.records.models.run_snapshot import RunSnapshot
-from .paths import run_snapshot_path, runs_manifest_path, task_record_path
+from .paths import run_snapshot_path, runs_manifest_path
 
 
 def load_batch_run_plans(batch_root: Path) -> list[RunPlan]:

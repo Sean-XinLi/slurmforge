@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from ...execution.journal import (
     read_attempt_result,
@@ -25,7 +25,6 @@ from .schema import create_schema
 
 if TYPE_CHECKING:
     from ....pipeline.config.api import StorageConfigSpec
-    from ....pipeline.status.models import ExecutionStatus
     from ....storage.models import LatestAttemptRecord
 
 from ....pipeline.status.codecs import (

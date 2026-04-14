@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 from typing import Any
 
 from ....errors import ConfigContractError

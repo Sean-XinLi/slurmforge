@@ -450,14 +450,11 @@ class LauncherTests(unittest.TestCase):
     def test_render_status_prints_summary_and_filtered_rows(self) -> None:
         from slurmforge.cli import status
         from slurmforge.pipeline.status import ExecutionStatus
-        from tests._support import sample_run_plan
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             batch_root = tmp_path / "batch_src"
             batch_root.mkdir(parents=True, exist_ok=True)
-            failed_plan = sample_run_plan(run_dir=str(batch_root / "runs" / "run_001"), run_id="r1")
-            success_plan = sample_run_plan(run_dir=str(batch_root / "runs" / "run_002"), run_id="r2")
             statuses = [
                 ExecutionStatus(
                     state="failed",

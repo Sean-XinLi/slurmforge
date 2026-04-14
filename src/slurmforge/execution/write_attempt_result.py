@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Mapping
 
 from ..pipeline.status import (
-    attempt_result_path_for_result_dir,
     build_attempt_result,
 )
 from ..storage.execution.paths import attempt_result_path

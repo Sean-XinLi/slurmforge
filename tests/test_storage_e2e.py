@@ -9,7 +9,6 @@ Each flow: generate → load_plan → status (list_batch_run_views) → replay d
 """
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -78,7 +77,7 @@ class EngineNoneE2ETests(unittest.TestCase):
             # Generate
             env = make_template_env()
             store = create_planning_store(planned_batch.storage_config, env)
-            result = materialize_batch(planned_batch=planned_batch, planning_store=store)
+            materialize_batch(planned_batch=planned_batch, planning_store=store)
             self.assertTrue(batch_root.exists())
 
             # Descriptor written
@@ -127,7 +126,7 @@ class EngineSqliteRecoveryE2ETests(unittest.TestCase):
             # Generate
             env = make_template_env()
             store = create_planning_store(planned_batch.storage_config, env)
-            result = materialize_batch(planned_batch=planned_batch, planning_store=store)
+            materialize_batch(planned_batch=planned_batch, planning_store=store)
             self.assertTrue(batch_root.exists())
 
             # DB exists
@@ -182,7 +181,7 @@ class EngineSqlitePureDBE2ETests(unittest.TestCase):
             # Generate
             env = make_template_env()
             store = create_planning_store(planned_batch.storage_config, env)
-            result = materialize_batch(planned_batch=planned_batch, planning_store=store)
+            materialize_batch(planned_batch=planned_batch, planning_store=store)
             self.assertTrue(batch_root.exists())
 
             # DB exists
