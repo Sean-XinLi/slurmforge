@@ -13,6 +13,7 @@ from pathlib import Path
 import jinja2
 import markupsafe
 import packaging
+import setuptools
 import yaml
 
 from slurmforge.starter_catalog import list_starter_specs
@@ -62,8 +63,11 @@ _REQUIRED_SETS_BY_TYPE: dict[str, list[str]] = {
 
 
 class InstalledPackageIntegrationTests(unittest.TestCase):
-    SEEDED_DISTRIBUTIONS = ("Jinja2", "MarkupSafe", "packaging", "PyYAML")
-    SEEDED_MODULES = (jinja2, markupsafe, packaging, yaml)
+    SEEDED_DISTRIBUTIONS = ("Jinja2", "MarkupSafe", "packaging", "PyYAML", "setuptools")
+    SEEDED_MODULES = (jinja2, markupsafe, packaging, yaml, setuptools)
+    SEEDED_EXTRA_TOPLEVEL_BY_DIST = {
+        "setuptools": ("_distutils_hack", "pkg_resources", "distutils-precedence.pth"),
+    }
 
     def _run(
         self,
@@ -110,6 +114,19 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
             if destination.exists():
                 continue
             shutil.copytree(dist_info, destination)
+
+        for dist_name, entry_names in self.SEEDED_EXTRA_TOPLEVEL_BY_DIST.items():
+            dist_info = Path(str(metadata.distribution(dist_name)._path)).resolve()
+            source_site_packages = dist_info.parent
+            for entry_name in entry_names:
+                source = source_site_packages / entry_name
+                destination = site_packages / entry_name
+                if destination.exists() or not source.exists():
+                    continue
+                if source.is_dir():
+                    shutil.copytree(source, destination)
+                else:
+                    shutil.copy2(source, destination)
 
     def _find_supported_python(self) -> Path | None:
         candidates: list[Path] = []
