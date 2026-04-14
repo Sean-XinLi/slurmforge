@@ -13,7 +13,6 @@ from .common import add_common_args, materialize_or_print_batch, print_batch_rea
 def render_replay(
     *,
     source_run_dir: Path | None,
-    source_snapshot_path: Path | None,
     source_batch_root: Path | None,
     run_ids: list[str],
     run_indices: list[int],
@@ -24,7 +23,6 @@ def render_replay(
     default_batch_name = datetime.datetime.now().strftime("replay_%Y%m%d_%H%M%S_%f")
     request = ReplaySourceRequest(
         source_run_dir=source_run_dir,
-        source_snapshot_path=source_snapshot_path,
         source_batch_root=source_batch_root,
         run_ids=tuple(run_ids),
         run_indices=tuple(run_indices),
@@ -54,7 +52,6 @@ def render_replay(
 def handle_replay(args: argparse.Namespace) -> None:
     render_replay(
         source_run_dir=None if args.source_run_dir is None else Path(args.source_run_dir),
-        source_snapshot_path=None if args.source_snapshot_path is None else Path(args.source_snapshot_path),
         source_batch_root=None if args.source_batch_root is None else Path(args.source_batch_root),
         run_ids=args.run_id,
         run_indices=args.run_index,
@@ -67,18 +64,13 @@ def handle_replay(args: argparse.Namespace) -> None:
 def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     replay_parser = subparsers.add_parser(
         "replay",
-        help="Replay one or more persisted runs from a run dir, snapshot, or batch root",
+        help="Replay one or more persisted runs from a run dir or batch root",
     )
     source_group = replay_parser.add_mutually_exclusive_group(required=True)
     source_group.add_argument(
         "--from-run",
         dest="source_run_dir",
-        help="Path to a persisted run directory containing meta/run_snapshot.json",
-    )
-    source_group.add_argument(
-        "--from-snapshot",
-        dest="source_snapshot_path",
-        help="Path to a persisted run_snapshot.json file",
+        help="Path to a persisted run directory under an existing batch_root",
     )
     source_group.add_argument(
         "--from-batch",

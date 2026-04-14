@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from ..config.api import StorageConfigSpec
 from ..config.runtime import NotifyConfig
 from .batch_validator import validate_planned_batch_runs
 from .identity import BatchIdentity
@@ -27,6 +28,7 @@ class PlannedBatch:
     notify_cfg: NotifyConfig | None = None
     submit_dependencies: dict[str, list[str]] = field(default_factory=dict)
     manifest_extras: dict[str, Any] = field(default_factory=dict)
+    storage_config: StorageConfigSpec = field(default_factory=StorageConfigSpec)
 
     def __post_init__(self) -> None:
         identity = self.identity

@@ -15,6 +15,7 @@ def require_success(report: BatchCompileReport) -> PlannedBatch:
         notify_cfg=report.notify_cfg,
         submit_dependencies=report.submit_dependencies,
         manifest_extras=report.manifest_extras,
+        storage_config=report.storage_config,
     )
 
 

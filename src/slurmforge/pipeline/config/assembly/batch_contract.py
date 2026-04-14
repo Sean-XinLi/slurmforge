@@ -18,3 +18,5 @@ def validate_batch_contract(
         raise ConfigContractError(f"{config_path}: sweep run resolved to a different batch output configuration")
     if spec.notify != shared.notify:
         raise ConfigContractError(f"{config_path}: sweep run resolved to a different batch notify configuration")
+    if spec.storage != shared.storage:
+        raise ConfigContractError(f"{config_path}: sweep run resolved to a different batch storage configuration")

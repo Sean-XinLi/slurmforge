@@ -24,6 +24,7 @@ from .models import (
     OutputConfigSpec,
     PlanningHints,
     RunConfigSpec,
+    StorageConfigSpec,
 )
 
 __all__ = [
@@ -39,6 +40,7 @@ __all__ = [
     "OutputConfigSpec",
     "PlanningHints",
     "RunConfigSpec",
+    "StorageConfigSpec",
     "build_batch_spec",
     "build_experiment_spec",
     "build_replay_experiment_spec",

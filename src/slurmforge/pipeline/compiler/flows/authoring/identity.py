@@ -50,4 +50,5 @@ def initialize_authoring_compile_state(
         notify_cfg=context.shared.notify,
         submit_dependencies=copy.deepcopy(context.shared.output.dependencies),
         batch_diagnostics=materialized.batch_diagnostics,
+        storage_config=context.shared.storage,
     )

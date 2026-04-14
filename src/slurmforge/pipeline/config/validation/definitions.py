@@ -27,6 +27,7 @@ BATCH_SCOPED_SWEEP_PREFIXES = (
     "experiment_name",
     "output",
     "notify",
+    "storage",
 )
 
 MODEL_SCHEMA = ObjectSchema(
@@ -190,6 +191,36 @@ VALIDATION_SCHEMA = ObjectSchema(
         "runtime_preflight": SCALAR,
     }
 )
+SQLITE_OPTIONS_SCHEMA = ObjectSchema(
+    {
+        "busy_timeout_ms": SCALAR,
+        "journal_mode": SCALAR,
+        "synchronous": SCALAR,
+    }
+)
+SQLITE_BACKEND_SCHEMA = ObjectSchema(
+    {
+        "path": SCALAR,
+        "options": SQLITE_OPTIONS_SCHEMA,
+    }
+)
+STORAGE_BACKEND_SCHEMA = ObjectSchema(
+    {
+        "engine": SCALAR,
+        "sqlite": SQLITE_BACKEND_SCHEMA,
+    }
+)
+STORAGE_EXPORTS_SCHEMA = ObjectSchema(
+    {
+        "planning_recovery": SCALAR,
+    }
+)
+STORAGE_SCHEMA = ObjectSchema(
+    {
+        "backend": STORAGE_BACKEND_SCHEMA,
+        "exports": STORAGE_EXPORTS_SCHEMA,
+    }
+)
 COMMON_EXPERIMENT_SCHEMA = ObjectSchema(
     {
         "project": SCALAR,
@@ -205,6 +236,7 @@ COMMON_EXPERIMENT_SCHEMA = ObjectSchema(
         "output": OUTPUT_SCHEMA,
         "notify": NOTIFY_SCHEMA,
         "validation": VALIDATION_SCHEMA,
+        "storage": STORAGE_SCHEMA,
     }
 )
 

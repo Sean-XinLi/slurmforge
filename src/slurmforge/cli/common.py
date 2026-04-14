@@ -10,6 +10,7 @@ from ..errors import ConfigContractError
 from ..identity import __version__, regenerate_after_upgrade_note
 from ..pipeline.materialization import MaterializationResult, materialize_batch, print_dry_run
 from ..pipeline.planning import PlannedBatch
+from ..storage import create_planning_store
 from ..sweep import deep_set, parse_override
 from ..templating import build_template_env
 
@@ -78,9 +79,10 @@ def materialize_or_print_batch(
         return None
 
     env = build_template_env()
+    planning_store = create_planning_store(planned_batch.storage_config, env)
     return materialize_batch(
         planned_batch=planned_batch,
-        env=env,
+        planning_store=planning_store,
     )
 
 

@@ -52,6 +52,14 @@ env:
 output:
   base_output_dir: "./runs"
 
+storage:
+  backend:
+    engine: "none"      # "none" = filesystem only; change to "sqlite" to enable SQLite metadata storage
+    sqlite:
+      path: "auto"      # sqlite mode only; "auto" = <batch_root>/meta/slurmforge.sqlite3
+  exports:
+    planning_recovery: true  # sqlite mode only; keep planning export files for recovery/debugging
+
 # ───────────────────────────────────────────────────────────────────
 # STEP 3 · ADVANCED  (leave as-is for your first run)
 # ───────────────────────────────────────────────────────────────────

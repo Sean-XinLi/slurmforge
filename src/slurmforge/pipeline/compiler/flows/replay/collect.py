@@ -11,7 +11,6 @@ def collect_replay_source_bundle(source: ReplaySourceRequest) -> CollectedSource
     try:
         batch = collect_replay_source_inputs(
             source_run_dir=source.source_run_dir,
-            source_snapshot_path=source.source_snapshot_path,
             source_batch_root=source.source_batch_root,
             run_ids=source.run_ids,
             run_indices=source.run_indices,

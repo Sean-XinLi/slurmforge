@@ -24,7 +24,6 @@ class AuthoringSourceRequest:
 @dataclass(frozen=True)
 class ReplaySourceRequest:
     source_run_dir: Path | None = None
-    source_snapshot_path: Path | None = None
     source_batch_root: Path | None = None
     run_ids: tuple[str, ...] = field(default_factory=tuple)
     run_indices: tuple[int, ...] = field(default_factory=tuple)
@@ -34,11 +33,6 @@ class ReplaySourceRequest:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "source_run_dir", None if self.source_run_dir is None else Path(self.source_run_dir))
-        object.__setattr__(
-            self,
-            "source_snapshot_path",
-            None if self.source_snapshot_path is None else Path(self.source_snapshot_path),
-        )
         object.__setattr__(
             self,
             "source_batch_root",

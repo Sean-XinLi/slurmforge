@@ -4,6 +4,14 @@ experiment_name: "hello_adapter"
 output:
   base_output_dir: "./runs"
 
+storage:
+  backend:
+    engine: "none"      # change to "sqlite" to enable SQLite metadata storage
+    sqlite:
+      path: "auto"      # sqlite mode only; "auto" = <batch_root>/meta/slurmforge.sqlite3
+  exports:
+    planning_recovery: true  # sqlite mode only; keep planning export files for recovery/debugging
+
 run:
   adapter:
     script: "train_adapter.py"

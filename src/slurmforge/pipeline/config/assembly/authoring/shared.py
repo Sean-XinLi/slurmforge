@@ -9,6 +9,7 @@ from ...normalize import normalize_notify
 from ...utils import ensure_dict, ensure_path_segment, resolve_spec_project_root
 from ...validation.authoring import normalize_authoring_sweep_spec
 from ..output import normalize_output_config
+from ..storage import normalize_storage_config
 from .models import PreparedAuthoringBatchInput
 
 
@@ -33,6 +34,7 @@ def build_batch_shared_spec(
         experiment_name=experiment_name,
         output=normalize_output_config(ensure_dict(cfg.get("output"), "output"), config_path=config_path),
         notify=normalize_notify(cfg.get("notify")),
+        storage=normalize_storage_config(cfg.get("storage")),
     )
 
 

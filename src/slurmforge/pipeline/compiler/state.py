@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from ...model_support.catalog import ModelCatalogResolver
+from ..config.api import StorageConfigSpec
 from ..config.runtime import NotifyConfig
 from ..planning import BatchIdentity
 from ..planning.contracts import PlanDiagnostic
@@ -57,3 +58,4 @@ class CompileState:
     notify_cfg: NotifyConfig | None = None
     submit_dependencies: dict[str, list[str]] | None = None
     batch_diagnostics: tuple[PlanDiagnostic, ...] = ()
+    storage_config: StorageConfigSpec = field(default_factory=StorageConfigSpec)

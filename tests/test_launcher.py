@@ -250,7 +250,6 @@ class LauncherTests(unittest.TestCase):
                             with redirect_stdout(output):
                                 replay.render_replay(
                                     source_run_dir=run_dir,
-                                    source_snapshot_path=None,
                                     source_batch_root=None,
                                     run_ids=[],
                                     run_indices=[],
@@ -261,7 +260,6 @@ class LauncherTests(unittest.TestCase):
 
         request = compile_mock.call_args.args[0]
         self.assertEqual(request.source_run_dir, run_dir)
-        self.assertIsNone(request.source_snapshot_path)
         self.assertIsNone(request.source_batch_root)
         self.assertEqual(request.run_ids, ())
         self.assertEqual(request.run_indices, ())
@@ -452,14 +450,11 @@ class LauncherTests(unittest.TestCase):
     def test_render_status_prints_summary_and_filtered_rows(self) -> None:
         from slurmforge.cli import status
         from slurmforge.pipeline.status import ExecutionStatus
-        from tests._support import sample_run_plan
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             batch_root = tmp_path / "batch_src"
             batch_root.mkdir(parents=True, exist_ok=True)
-            failed_plan = sample_run_plan(run_dir=str(batch_root / "runs" / "run_001"), run_id="r1")
-            success_plan = sample_run_plan(run_dir=str(batch_root / "runs" / "run_002"), run_id="r2")
             statuses = [
                 ExecutionStatus(
                     state="failed",
@@ -474,11 +469,26 @@ class LauncherTests(unittest.TestCase):
                     job_key="124",
                 ),
             ]
+            from slurmforge.storage.models import RunExecutionView
+
+            views = (
+                RunExecutionView(
+                    run_id="r1", run_index=1, group_index=1, task_index=0,
+                    run_dir_rel="runs/run_001", run_dir=str(batch_root / "runs" / "run_001"),
+                    latest_result_dir="", latest_status=statuses[0],
+                ),
+                RunExecutionView(
+                    run_id="r2", run_index=2, group_index=1, task_index=1,
+                    run_dir_rel="runs/run_002", run_dir=str(batch_root / "runs" / "run_002"),
+                    latest_result_dir="", latest_status=statuses[1],
+                ),
+            )
+            mock_handle = SimpleNamespace(list_batch_run_views=lambda: views)
+
             output = io.StringIO()
-            with patch("slurmforge.cli.status.load_batch_run_plans", return_value=[failed_plan, success_plan]):
-                with patch("slurmforge.cli.status.load_or_infer_execution_status", side_effect=statuses):
-                    with redirect_stdout(output):
-                        status.render_status(batch_root=batch_root, status_query="failed")
+            with patch("slurmforge.cli.status.open_batch_storage", return_value=mock_handle):
+                with redirect_stdout(output):
+                    status.render_status(batch_root=batch_root, status_query="failed")
 
         rendered = output.getvalue()
         self.assertIn("total_runs=2 matched=1 query=failed", rendered)

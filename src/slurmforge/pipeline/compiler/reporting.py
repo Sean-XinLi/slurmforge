@@ -43,4 +43,5 @@ def build_compile_report(
         checked_runs=checked_runs,
         notify_cfg=state.notify_cfg,
         submit_dependencies=state.submit_dependencies,
+        storage_config=state.storage_config,
     )

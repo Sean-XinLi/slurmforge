@@ -19,6 +19,7 @@ from .model import ModelConfigSpec
 from .output import OutputConfigSpec
 from .run import RunConfigSpec
 from .runtime import PlanningHints
+from .storage import StorageConfigSpec
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,7 @@ class ExperimentSpec:
     output: OutputConfigSpec
     notify: NotifyConfig
     validation: ValidationConfig
+    storage: StorageConfigSpec = field(default_factory=StorageConfigSpec)
     model: ModelConfigSpec | None = None
     model_catalog: ResolvedModelCatalog = field(default_factory=ResolvedModelCatalog)
     hints: PlanningHints = field(default_factory=PlanningHints)
@@ -48,6 +50,7 @@ class BatchSharedSpec:
     experiment_name: str
     output: OutputConfigSpec
     notify: NotifyConfig
+    storage: StorageConfigSpec = field(default_factory=StorageConfigSpec)
 
 
 @dataclass(frozen=True)

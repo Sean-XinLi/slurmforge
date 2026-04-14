@@ -13,6 +13,7 @@ from pathlib import Path
 import jinja2
 import markupsafe
 import packaging
+import setuptools
 import yaml
 
 from slurmforge.starter_catalog import list_starter_specs
@@ -62,8 +63,11 @@ _REQUIRED_SETS_BY_TYPE: dict[str, list[str]] = {
 
 
 class InstalledPackageIntegrationTests(unittest.TestCase):
-    SEEDED_DISTRIBUTIONS = ("Jinja2", "MarkupSafe", "packaging", "PyYAML")
-    SEEDED_MODULES = (jinja2, markupsafe, packaging, yaml)
+    SEEDED_DISTRIBUTIONS = ("Jinja2", "MarkupSafe", "packaging", "PyYAML", "setuptools")
+    SEEDED_MODULES = (jinja2, markupsafe, packaging, yaml, setuptools)
+    SEEDED_EXTRA_TOPLEVEL_BY_DIST = {
+        "setuptools": ("_distutils_hack", "pkg_resources", "distutils-precedence.pth"),
+    }
 
     def _run(
         self,
@@ -111,6 +115,19 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
                 continue
             shutil.copytree(dist_info, destination)
 
+        for dist_name, entry_names in self.SEEDED_EXTRA_TOPLEVEL_BY_DIST.items():
+            dist_info = Path(str(metadata.distribution(dist_name)._path)).resolve()
+            source_site_packages = dist_info.parent
+            for entry_name in entry_names:
+                source = source_site_packages / entry_name
+                destination = site_packages / entry_name
+                if destination.exists() or not source.exists():
+                    continue
+                if source.is_dir():
+                    shutil.copytree(source, destination)
+                else:
+                    shutil.copy2(source, destination)
+
     def _find_supported_python(self) -> Path | None:
         candidates: list[Path] = []
         if sys.version_info >= (3, 10):
@@ -149,8 +166,12 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
         self._seed_active_runtime_dependencies(self._site_packages_dir(venv_python))
         return venv_python
 
-    def _first_record_path(self, batch_root: Path) -> Path:
-        return next(batch_root.glob("records/group_*/task_*.json"))
+    def _first_record_locator(self, batch_root: Path) -> tuple[Path, int, int]:
+        """Return (batch_root, group_index, task_index) for the first task record."""
+        first_record = next(batch_root.glob("records/group_*/task_*.json"))
+        group_index = int(first_record.parent.name.replace("group_", ""))
+        task_index = int(first_record.stem.replace("task_", ""))
+        return batch_root, group_index, task_index
 
     def _first_result_dir(self, batch_root: Path) -> Path:
         return next((batch_root / "runs").glob("run_*/job-*"))
@@ -167,7 +188,15 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
 
             venv_python = self._create_install_env(tmp_path / "venv")
             subprocess.run(
-                [str(venv_python), "-m", "pip", "install", str(checkout_root)],
+                [
+                    str(venv_python),
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-build-isolation",
+                    "--no-deps",
+                    str(checkout_root),
+                ],
                 check=True,
             )
 
@@ -214,6 +243,8 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
             show_hpc = self._run([str(cli_path), "examples", "show", "script_hpc"], cwd=work_root)
             self.assertIn('project: "my_project"', show_hpc.stdout)
             self.assertIn('script: "eval.py"', show_hpc.stdout)
+            self.assertIn("storage:", show_hpc.stdout)
+            self.assertIn('engine: "none"', show_hpc.stdout)
             # new templates use null sentinels, not placeholder strings
             self.assertIn('account: ~', show_hpc.stdout)
 
@@ -323,8 +354,14 @@ class InstalledPackageIntegrationTests(unittest.TestCase):
             self.assertIn("selected_runs=1", rerun_preview.stdout)
 
             # ── executor: run the record from script_starter batch ───────────
+            _batch_root, _group_idx, _task_idx = self._first_record_locator(primary_batch_root)
             executor_result = self._run(
-                [str(executor_path), "--record", str(self._first_record_path(primary_batch_root))],
+                [
+                    str(executor_path),
+                    "--batch-root", str(_batch_root),
+                    "--group-index", str(_group_idx),
+                    "--task-index", str(_task_idx),
+                ],
                 cwd=primary_project_root,
             )
             self.assertIn("training finished", executor_result.stdout)

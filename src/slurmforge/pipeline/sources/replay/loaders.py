@@ -1,17 +1,12 @@
 from __future__ import annotations
 
 import copy
-import json
 from pathlib import Path
 from typing import Any
 
 from ...config.utils import ensure_dict
 from ...records import (
-    deserialize_run_snapshot,
-    load_batch_run_plans,
-    load_run_snapshot,
     resolve_dispatch_record_path,
-    run_snapshot_path_for_run,
 )
 from ..models import SourceRef, SourceRunInput
 
@@ -20,45 +15,12 @@ def base_replay_cfg(snapshot: Any) -> dict[str, Any]:
     return copy.deepcopy(ensure_dict(snapshot.replay_spec.replay_cfg, "replay_spec.replay_cfg"))
 
 
-def load_snapshot_from_file(snapshot_path: Path):
-    resolved_path = snapshot_path.expanduser().resolve()
-    if not resolved_path.exists():
-        raise FileNotFoundError(f"Replay snapshot does not exist: {resolved_path}")
-    payload = json.loads(resolved_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise TypeError(f"Replay snapshot must be a mapping: {resolved_path}")
-    return deserialize_run_snapshot(payload)
-
-
 def guess_batch_root_from_run_dir(run_dir: Path) -> Path | None:
     resolved_run_dir = run_dir.expanduser().resolve()
     parent = resolved_run_dir.parent
     if parent.name != "runs":
         return None
     return parent.parent.resolve()
-
-
-def resolve_record_path_for_run(
-    *,
-    batch_root: Path | None,
-    run_dir: Path | None,
-    run_id: str,
-) -> Path | None:
-    if batch_root is None or not batch_root.exists():
-        return None
-    try:
-        plans = load_batch_run_plans(batch_root)
-    except FileNotFoundError:
-        return None
-
-    resolved_run_dir = None if run_dir is None else run_dir.resolve()
-    for plan in plans:
-        plan_run_dir = Path(plan.run_dir).resolve()
-        if resolved_run_dir is not None and plan_run_dir == resolved_run_dir:
-            return resolve_dispatch_record_path(batch_root, plan.dispatch)
-        if plan.run_id == run_id:
-            return resolve_dispatch_record_path(batch_root, plan.dispatch)
-    return None
 
 
 def replay_input_from_snapshot(
@@ -91,39 +53,38 @@ def replay_input_from_snapshot(
 
 
 def load_replay_input_from_run_dir(run_dir: Path) -> SourceRunInput:
+    from slurmforge.storage import open_batch_storage
+
     resolved_run_dir = run_dir.expanduser().resolve()
-    snapshot = load_run_snapshot(resolved_run_dir)
-    snapshot_path = run_snapshot_path_for_run(resolved_run_dir).resolve()
     batch_root = guess_batch_root_from_run_dir(resolved_run_dir)
-    record_path = resolve_record_path_for_run(
-        batch_root=batch_root,
-        run_dir=resolved_run_dir,
-        run_id=snapshot.run_id,
-    )
+    if batch_root is None or not batch_root.exists():
+        raise FileNotFoundError(
+            f"Replay run is not under a valid batch_root/runs layout: {resolved_run_dir}"
+        )
+
+    handle = open_batch_storage(batch_root)
+    planning_store = handle.planning
+    plans = planning_store.load_batch_run_plans(batch_root)
+
+    matched_plan = None
+    for plan in plans:
+        if Path(plan.run_dir).resolve() == resolved_run_dir:
+            matched_plan = plan
+            break
+    if matched_plan is None:
+        raise FileNotFoundError(f"No RunPlan found for run_dir={resolved_run_dir}")
+
+    snapshot = planning_store.load_run_snapshot(batch_root, matched_plan.run_id)
+    if snapshot is None:
+        raise FileNotFoundError(f"No snapshot found for run_id={matched_plan.run_id}")
+
+    record_path = resolve_dispatch_record_path(batch_root, matched_plan.dispatch)
+    if record_path is not None and not record_path.exists():
+        record_path = None
     return replay_input_from_snapshot(
         snapshot,
-        config_path=snapshot_path,
+        config_path=None,
         config_label=f"replay run {resolved_run_dir}",
-        source_batch_root=batch_root,
-        source_record_path=record_path,
-        selected_index=1,
-    )
-
-
-def load_replay_input_from_snapshot_path(snapshot_path: Path) -> SourceRunInput:
-    resolved_snapshot_path = snapshot_path.expanduser().resolve()
-    snapshot = load_snapshot_from_file(resolved_snapshot_path)
-    run_dir = resolved_snapshot_path.parent.parent
-    batch_root = guess_batch_root_from_run_dir(run_dir)
-    record_path = resolve_record_path_for_run(
-        batch_root=batch_root,
-        run_dir=run_dir if batch_root is not None else None,
-        run_id=snapshot.run_id,
-    )
-    return replay_input_from_snapshot(
-        snapshot,
-        config_path=resolved_snapshot_path,
-        config_label=f"replay snapshot {resolved_snapshot_path}",
         source_batch_root=batch_root,
         source_record_path=record_path,
         selected_index=1,

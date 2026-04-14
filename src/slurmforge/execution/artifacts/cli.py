@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from typing import Sequence
 
@@ -27,9 +28,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
+    result_dir = Path(args.result_dir)
     summary = sync_artifacts(
         workdir=args.workdir,
-        result_dir=Path(args.result_dir),
+        result_dir=result_dir,
         category_patterns={
             "checkpoints": list(args.checkpoint_glob or []),
             "eval_csv": list(args.eval_csv_glob or []),
@@ -40,7 +42,13 @@ def main(argv: Sequence[str] | None = None) -> None:
         warn_prefix="artifact_sync",
     )
 
-    summary_path = Path(args.result_dir).resolve() / "meta" / "artifact_manifest.json"
+    batch_root_env = (os.environ.get("AI_INFRA_BATCH_ROOT") or "").strip()
+    if batch_root_env:
+        from ...storage import open_batch_storage
+        handle = open_batch_storage(Path(batch_root_env))
+        handle.execution.write_artifact_manifest(result_dir.resolve(), summary)
+
+    summary_path = result_dir.resolve() / "meta" / "artifact_manifest.json"
     print(f"[artifact_sync] wrote manifest: {summary_path}")
     failure_count = int(summary["failure_count"])
     if failure_count:

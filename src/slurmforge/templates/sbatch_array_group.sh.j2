@@ -22,21 +22,15 @@ set -euo pipefail
 TASK_ID="${SLURM_ARRAY_TASK_ID}"
 TOTAL={{ array_size }}
 BATCH_ROOT={{ batch_root|shellquote }}
-RECORDS_DIR={{ records_dir|shellquote }}
+GROUP_INDEX={{ group_index }}
 ARRAY_LOG_DIR={{ array_log_dir|shellquote }}
 RUN_PLAN_EXECUTOR_BIN={{ run_plan_executor_bin|shellquote }}
-RUN_RECORD="${RECORDS_DIR}/task_$(printf "%06d" "${TASK_ID}").json"
 
 printf '%s\n' "[ARRAY] batch_root=${BATCH_ROOT}"
-printf '%s\n' "[ARRAY] group_index={{ group_index }}"
+printf '%s\n' "[ARRAY] group_index=${GROUP_INDEX}"
 printf '%s\n' "[ARRAY] total_tasks=${TOTAL}"
 printf '%s\n' "[ARRAY] task_id=${TASK_ID}"
-printf '%s\n' "[ARRAY] run_record=${RUN_RECORD}"
 
-if [[ ! -f "${RUN_RECORD}" ]]; then
-  echo "[ERROR] run record not found: ${RUN_RECORD}"
-  exit 3
-fi
-
+export AI_INFRA_BATCH_ROOT="${BATCH_ROOT}"
 export AI_INFRA_ARRAY_LOG_DIR="${ARRAY_LOG_DIR}"
-"${RUN_PLAN_EXECUTOR_BIN}" --record "${RUN_RECORD}"
+"${RUN_PLAN_EXECUTOR_BIN}" --batch-root "${BATCH_ROOT}" --group-index "${GROUP_INDEX}" --task-index "${TASK_ID}"

@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from typing import Mapping
 
 from ..pipeline.status import (
-    attempt_result_path_for_result_dir,
     build_attempt_result,
-    write_attempt_result,
 )
+from ..storage.execution.paths import attempt_result_path
 
 
 def write_attempt_result_for_result_dir(
@@ -27,9 +27,17 @@ def write_attempt_result_for_result_dir(
         eval_exit_code=eval_exit_code,
         env=env,
     )
-    path = attempt_result_path_for_result_dir(resolved_result_dir)
-    write_attempt_result(path, attempt)
-    return path
+
+    batch_root_env = os.environ.get("AI_INFRA_BATCH_ROOT", "").strip()
+    if not batch_root_env:
+        raise RuntimeError(
+            "AI_INFRA_BATCH_ROOT environment variable is required. "
+            "This command must be invoked from a slurmforge-generated batch script."
+        )
+    from ..storage import open_batch_storage
+    handle = open_batch_storage(Path(batch_root_env))
+    handle.execution.write_attempt_result(resolved_result_dir, attempt)
+    return attempt_result_path(resolved_result_dir)
 
 
 def parse_args() -> argparse.Namespace:

@@ -5,10 +5,11 @@ from pathlib import Path
 from .common import q
 
 
-def append_finalize_block(lines: list[str], run_dir: Path) -> None:
-    lines.append('if [[ -n "${AI_INFRA_EXECUTION_PLAN_JSON_PATH:-}" ]]; then')
-    lines.append('  cp "${AI_INFRA_EXECUTION_PLAN_JSON_PATH}" "${META_DIR}/execution_plan.json" || true')
-    lines.append("fi")
+def append_finalize_block(lines: list[str], run_dir: Path, *, planning_recovery: bool = True) -> None:
+    if planning_recovery:
+        lines.append('if [[ -n "${AI_INFRA_EXECUTION_PLAN_JSON_PATH:-}" ]]; then')
+        lines.append('  cp "${AI_INFRA_EXECUTION_PLAN_JSON_PATH}" "${META_DIR}/execution_plan.json" || true')
+        lines.append("fi")
     lines.append(f'cp {q(str(run_dir / "resolved_config.yaml"))} "${{META_DIR}}/resolved_config.yaml" || true')
     lines.append(f'cp {q(str(run_dir / "meta" / "run_snapshot.json"))} "${{META_DIR}}/run_snapshot.json" || true')
     lines.append("")

@@ -12,6 +12,7 @@ class RetryCandidate:
     plan: RunPlan
     snapshot: RunSnapshot
     status: ExecutionStatus | None
+    latest_result_dir: str = ""
 
 
 @dataclass(frozen=True)

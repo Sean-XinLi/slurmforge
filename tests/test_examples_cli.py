@@ -59,6 +59,9 @@ class ExampleCliTests(unittest.TestCase):
         output = buf.getvalue()
         self.assertIn('project: "my_project"', output)
         self.assertIn('experiment_name: "experiment_v1"', output)
+        self.assertIn("storage:", output)
+        self.assertIn('engine: "none"', output)
+        self.assertIn('change to "sqlite" to enable SQLite metadata storage', output)
 
     def test_list_examples_prints_name_and_description(self) -> None:
         from slurmforge.cli import examples
@@ -104,6 +107,7 @@ class ExampleCliTests(unittest.TestCase):
         self.assertIn('project: "my_project"', output)
         self.assertIn('script: "eval.py"', output)
         self.assertIn('sweep:', output)
+        self.assertIn("storage:", output)
         # script_hpc uses null sentinels, not placeholder strings
         self.assertIn('partition: ~', output)
         self.assertIn('account: ~', output)
@@ -162,6 +166,9 @@ class ExampleCliTests(unittest.TestCase):
                     self.assertIsInstance(cfg, dict, f"{ttype}+{profile} must produce a valid YAML mapping")
                     self.assertIn("project", cfg)
                     self.assertIn("experiment_name", cfg)
+                    self.assertIn("storage", cfg)
+                    self.assertEqual(cfg["storage"]["backend"]["engine"], "none")
+                    self.assertTrue(cfg["storage"]["exports"]["planning_recovery"])
 
     def test_init_starter_templates_have_null_sentinels(self) -> None:
         from slurmforge.starter_catalog import TEMPLATE_TYPES, PROFILES
