@@ -21,7 +21,7 @@ from .grouping import (
     ensure_cluster_renderable,
 )
 from .layout import map_to_staging
-from .run_assets import write_run_metadata
+from .run_assets import write_run_recovery_artifacts
 
 
 def create_array_group_state(
@@ -93,11 +93,11 @@ def stream_run_records(
     planned_runs: Iterable[PlannedRun],
     *,
     layout: MaterializationLayout,
-    write_files: bool = True,
+    write_planning_files: bool = True,
 ) -> list[ArrayGroupState]:
     """Compute array groups and optionally write planning files.
 
-    When ``write_files=False`` (pure DB mode), the group computation still
+    When ``write_planning_files=False`` (pure DB mode), the group computation still
     runs but no task_*.json, runs_manifest.jsonl, or run_snapshot/
     resolved_config files are written.  The caller writes data directly
     to the DB from the in-memory bundle instead.
@@ -113,15 +113,15 @@ def stream_run_records(
 
     # When not writing files, use a dummy file object to avoid touching disk
     manifest_fp_ctx = (
-        runs_manifest_staging.open("w", encoding="utf-8") if write_files
+        runs_manifest_staging.open("w", encoding="utf-8") if write_planning_files
         else io.StringIO()
     )
 
     with manifest_fp_ctx as runs_manifest_fp:
         for planned_run in planned_runs:
             plan = planned_run.plan
-            if write_files:
-                write_run_metadata(
+            if write_planning_files:
+                write_run_recovery_artifacts(
                     planned_run,
                     final_batch_root=layout.final_batch_root,
                     staging_root=layout.staging_root,
@@ -134,7 +134,7 @@ def stream_run_records(
                     layout=layout,
                     group_index=len(groups_in_order) + 1,
                     group_signature=group_signature,
-                    create_dirs=write_files,
+                    create_dirs=write_planning_files,
                 )
                 group_by_signature[group_signature] = group
                 groups_in_order.append(group)
@@ -142,7 +142,7 @@ def stream_run_records(
             task_idx = group.count
             group.count += 1
             group.run_indices.append(plan.run_index)
-            if write_files:
+            if write_planning_files:
                 write_run_record(
                     plan,
                     layout=layout,
@@ -150,12 +150,12 @@ def stream_run_records(
                     task_idx=task_idx,
                     runs_manifest_fp=runs_manifest_fp,
                 )
-        if write_files:
+        if write_planning_files:
             runs_manifest_fp.flush()
             os.fsync(runs_manifest_fp.fileno())
 
     # Clean up the empty manifest file if we didn't write to it
-    if not write_files and runs_manifest_staging.exists():
+    if not write_planning_files and runs_manifest_staging.exists():
         runs_manifest_staging.unlink()
 
     return groups_in_order

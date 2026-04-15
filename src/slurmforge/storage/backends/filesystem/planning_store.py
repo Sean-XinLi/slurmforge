@@ -53,14 +53,14 @@ class FileSystemPlanningStore:
         layout: MaterializationLayout,
         bundle: MaterializedBatchBundle,
         *,
-        write_recovery_files: bool = True,
+        write_planning_files: bool = True,
     ) -> list[dict[str, Any]]:
         normalized_deps = normalize_dependency_mapping(
             bundle.submit_dependencies, field_name="submit_dependencies",
         )
         submit_lines = build_submit_lines(total_runs=bundle.total_runs, notify_cfg=bundle.notify_cfg)
         groups_in_order = stream_run_records(
-            bundle.planned_runs, layout=layout, write_files=write_recovery_files,
+            bundle.planned_runs, layout=layout, write_planning_files=write_planning_files,
         )
         array_groups_meta = render_array_groups(
             groups_in_order, env=self._env, layout=layout,

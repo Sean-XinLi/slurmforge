@@ -67,7 +67,7 @@ class SqlitePlanningStore(FileSystemPlanningStore):
             # Phase 1: write planning files to staging
             # When planning_recovery=false, skip task_*.json / manifest / snapshots entirely
             array_groups_meta = self._write_planning_to_staging(
-                layout, bundle, write_recovery_files=write_recovery,
+                layout, bundle, write_planning_files=write_recovery,
             )
 
             # Phase 2: write SQLite DB inside staging — compute path from config

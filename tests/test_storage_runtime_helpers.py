@@ -13,6 +13,7 @@ from slurmforge.execution import write_train_outputs as write_train_outputs_cli
 from slurmforge.execution.artifacts import cli as artifact_cli
 from slurmforge.pipeline.config.codecs import normalize_storage_config
 from slurmforge.pipeline.materialization.blocks.env_setup import append_env_setup
+from slurmforge.pipeline.materialization.blocks.finalize import append_finalize_block
 from slurmforge.pipeline.status import (
     build_attempt_result,
     read_execution_status,
@@ -78,12 +79,42 @@ class EnvSetupTests(unittest.TestCase):
         )
 
         lines: list[str] = []
-        append_env_setup(lines, plan, storage_config=storage_config)
+        append_env_setup(
+            lines,
+            plan,
+            planning_recovery=storage_config.exports.planning_recovery,
+        )
         text = "\n".join(lines)
 
         self.assertIn("export AI_INFRA_EXECUTION_PLAN_JSON_PATH=''", text)
         self.assertIn("export AI_INFRA_RUN_SNAPSHOT_JSON_PATH=''", text)
-        self.assertIn("export AI_INFRA_RESOLVED_CONFIG_YAML_PATH=/tmp/batch/runs/run_001_r1/resolved_config.yaml", text)
+        self.assertIn("export AI_INFRA_RESOLVED_CONFIG_YAML_PATH=''", text)
+
+
+class FinalizeBlockTests(unittest.TestCase):
+    def test_append_finalize_block_keeps_recovery_copies_when_enabled(self) -> None:
+        lines: list[str] = []
+
+        append_finalize_block(lines, planning_recovery=True)
+        text = "\n".join(lines)
+
+        self.assertIn('if [[ -n "${AI_INFRA_EXECUTION_PLAN_JSON_PATH:-}" ]]; then', text)
+        self.assertIn('cp "${AI_INFRA_EXECUTION_PLAN_JSON_PATH}" "${META_DIR}/execution_plan.json" || true', text)
+        self.assertIn('if [[ -n "${AI_INFRA_RESOLVED_CONFIG_YAML_PATH:-}" ]]; then', text)
+        self.assertIn('cp "${AI_INFRA_RESOLVED_CONFIG_YAML_PATH}" "${META_DIR}/resolved_config.yaml" || true', text)
+        self.assertIn('if [[ -n "${AI_INFRA_RUN_SNAPSHOT_JSON_PATH:-}" ]]; then', text)
+        self.assertIn('cp "${AI_INFRA_RUN_SNAPSHOT_JSON_PATH}" "${META_DIR}/run_snapshot.json" || true', text)
+
+    def test_append_finalize_block_skips_recovery_copies_when_disabled(self) -> None:
+        lines: list[str] = []
+
+        append_finalize_block(lines, planning_recovery=False)
+        text = "\n".join(lines)
+
+        self.assertNotIn("execution_plan.json", text)
+        self.assertNotIn("resolved_config.yaml", text)
+        self.assertNotIn("run_snapshot.json", text)
+        self.assertIn('[FINAL] train_status=${TRAIN_STATUS} eval_status=${EVAL_STATUS}', text)
 
 
 class RuntimeHelperStorageRoutingTests(unittest.TestCase):

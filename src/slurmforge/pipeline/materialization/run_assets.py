@@ -9,11 +9,11 @@ from ..planning import PlannedRun
 from ..records.io_utils import atomic_write_text
 from ..records.batch_paths import resolve_run_dir
 from ..records.codecs.run_snapshot import serialize_run_snapshot
-from ..records.snapshot_io import run_snapshot_path_for_run
 from .layout import map_to_staging
+from .recovery_assets import resolved_config_yaml_path_for_run, run_snapshot_json_path_for_run
 
 
-def write_run_metadata(
+def write_run_recovery_artifacts(
     planned_run: PlannedRun,
     *,
     final_batch_root: Path,
@@ -26,8 +26,11 @@ def write_run_metadata(
     run_dir.mkdir(parents=True, exist_ok=True)
     meta_dir = run_dir / "meta"
     meta_dir.mkdir(exist_ok=True)
-    atomic_write_text(run_dir / "resolved_config.yaml", yaml.safe_dump(snapshot.replay_spec.replay_cfg, sort_keys=False))
-    final_snapshot_path = run_snapshot_path_for_run(final_run_dir)
+    atomic_write_text(
+        resolved_config_yaml_path_for_run(run_dir),
+        yaml.safe_dump(snapshot.replay_spec.replay_cfg, sort_keys=False),
+    )
+    final_snapshot_path = run_snapshot_json_path_for_run(final_run_dir)
     snapshot_staging = map_to_staging(
         final_snapshot_path,
         final_root=final_batch_root,
