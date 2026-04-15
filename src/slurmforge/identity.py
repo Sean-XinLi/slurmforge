@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 PACKAGE_NAME = "slurmforge"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 
 def regenerate_after_upgrade_note() -> str:

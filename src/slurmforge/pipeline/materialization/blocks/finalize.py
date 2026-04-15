@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from .common import q
+from ..recovery_assets import finalize_recovery_artifacts
 
 
-def append_finalize_block(lines: list[str], run_dir: Path, *, planning_recovery: bool = True) -> None:
-    if planning_recovery:
-        lines.append('if [[ -n "${AI_INFRA_EXECUTION_PLAN_JSON_PATH:-}" ]]; then')
-        lines.append('  cp "${AI_INFRA_EXECUTION_PLAN_JSON_PATH}" "${META_DIR}/execution_plan.json" || true')
+def append_finalize_block(lines: list[str], *, planning_recovery: bool = True) -> None:
+    for artifact in finalize_recovery_artifacts(planning_recovery=planning_recovery):
+        lines.append(f'if [[ -n "${{{artifact.env_var}:-}}" ]]; then')
+        lines.append(f'  cp "${{{artifact.env_var}}}" "${{META_DIR}}/{artifact.target_name}" || true')
         lines.append("fi")
-    lines.append(f'cp {q(str(run_dir / "resolved_config.yaml"))} "${{META_DIR}}/resolved_config.yaml" || true')
-    lines.append(f'cp {q(str(run_dir / "meta" / "run_snapshot.json"))} "${{META_DIR}}/run_snapshot.json" || true')
     lines.append("")
     lines.append('printf \'%s\\n\' "[FINAL] train_status=${TRAIN_STATUS} eval_status=${EVAL_STATUS}"')
     lines.append('if [[ "${TRAIN_STATUS}" -ne 0 ]]; then')

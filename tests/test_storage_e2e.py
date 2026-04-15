@@ -15,7 +15,7 @@ from pathlib import Path
 
 from slurmforge.errors import ConfigContractError
 from slurmforge.pipeline.config.codecs import normalize_storage_config
-from slurmforge.pipeline.materialization import materialize_batch
+from slurmforge.pipeline.materialization import build_shell_script, materialize_batch
 from slurmforge.pipeline.planning import BatchIdentity, PlannedBatch, PlannedRun
 from slurmforge.storage import (
     create_planning_store,
@@ -144,6 +144,18 @@ class EngineSqliteRecoveryE2ETests(unittest.TestCase):
             self.assertTrue(
                 (batch_root / "runs" / "run_001_r1" / "meta" / "run_snapshot.json").exists()
             )
+            run_script = build_shell_script(
+                planned_batch.planned_runs[0].plan,
+                storage_config=planned_batch.storage_config,
+            )
+            self.assertIn(
+                'cp "${AI_INFRA_RESOLVED_CONFIG_YAML_PATH}" "${META_DIR}/resolved_config.yaml" || true',
+                run_script,
+            )
+            self.assertIn(
+                'cp "${AI_INFRA_RUN_SNAPSHOT_JSON_PATH}" "${META_DIR}/run_snapshot.json" || true',
+                run_script,
+            )
 
             # Load from DB (even after deleting recovery files)
             import shutil
@@ -197,6 +209,13 @@ class EngineSqlitePureDBE2ETests(unittest.TestCase):
             self.assertFalse(
                 (batch_root / "runs" / "run_001_r1" / "resolved_config.yaml").exists()
             )
+            run_script = build_shell_script(
+                planned_batch.planned_runs[0].plan,
+                storage_config=planned_batch.storage_config,
+            )
+            self.assertNotIn("resolved_config.yaml", run_script)
+            self.assertNotIn("run_snapshot.json", run_script)
+            self.assertNotIn("execution_plan.json", run_script)
 
             # Load from DB — still works
             read_store = create_planning_store_for_read(batch_root)
