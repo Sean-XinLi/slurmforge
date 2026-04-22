@@ -102,7 +102,7 @@ def sample_stage_plan(**overrides):
         cli_args={},
         command_mode=None,
         requested_launcher_mode="auto",
-        max_available_gpus_per_node=8,
+        max_gpus_per_job=8,
     )
     return replace(base, **overrides) if overrides else base
 

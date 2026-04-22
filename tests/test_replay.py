@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from slurmforge.pipeline.compiler import ReplaySourceRequest, compile_source
 from slurmforge.pipeline.compiler.reports import (
+    report_has_failures,
     report_planned_run_count,
     report_total_failed_runs,
     report_total_runs,
@@ -25,8 +26,15 @@ from slurmforge.storage import create_planning_store
 from tests._support import make_template_env, sample_run_plan, sample_run_snapshot, sample_stage_plan, write_test_descriptor
 
 
-def _command_replay_cfg(*, lr: float = 0.001) -> dict:
-    return {
+def _command_replay_cfg(
+    *,
+    lr: float = 0.001,
+    max_available_gpus: int = 2,
+    max_gpus_per_job: int = 2,
+    gpus_per_node: int = 1,
+    dispatch_policy: str = "error",
+) -> dict:
+    cfg = {
         "project": "demo",
         "experiment_name": "exp",
         "resolved_model_catalog": {"models": []},
@@ -40,16 +48,35 @@ def _command_replay_cfg(*, lr: float = 0.001) -> dict:
             "qos": "normal",
             "time_limit": "01:00:00",
             "nodes": 1,
-            "gpus_per_node": 1,
+            "gpus_per_node": gpus_per_node,
             "cpus_per_task": 2,
             "mem": "0",
         },
         "resources": {
             "auto_gpu": False,
-            "max_available_gpus": 2,
-            "max_gpus_per_job": 2,
+            "max_available_gpus": max_available_gpus,
+            "max_gpus_per_job": max_gpus_per_job,
         },
+        "dispatch": {"group_overflow_policy": dispatch_policy},
     }
+    return cfg
+
+
+def _replay_input(tmp_path: Path, *, index: int, run_id: str, run_cfg: dict) -> SourceRunInput:
+    return SourceRunInput(
+        source_kind="replay",
+        source_index=index,
+        run_cfg=run_cfg,
+        source=SourceRef(
+            config_path=None,
+            config_label=f"replay run {run_id}",
+            planning_root=str(tmp_path),
+            source_batch_root=tmp_path / "batch_src",
+            source_run_id=run_id,
+            source_record_path=None,
+        ),
+        original_run_index=index,
+    )
 
 
 def _load_replay_inputs_from_batch_root(
@@ -67,7 +94,7 @@ def _load_replay_inputs_from_batch_root(
     return list(collection.source_inputs)
 
 
-def _compile_replay_planned_batch(
+def _compile_replay_report(
     replay_inputs: list[SourceRunInput] | tuple[SourceRunInput, ...],
     *,
     project_root_override: Path | None,
@@ -77,25 +104,45 @@ def _compile_replay_planned_batch(
     manifest_context_key: str | None = None,
 ):
     del manifest_context_key
+    replay_inputs = tuple(replay_inputs)
     collection = SourceInputBatch(
-        source_inputs=tuple(replay_inputs),
+        source_inputs=replay_inputs,
         failed_runs=(),
-        checked_inputs=len(tuple(replay_inputs)),
+        checked_inputs=len(replay_inputs),
         batch_diagnostics=(),
         manifest_extras={} if manifest_extras is None else manifest_extras,
         source_summary="batch=<patched replay source>",
     )
     with patch("slurmforge.pipeline.compiler.flows.replay.collect.collect_replay_source_inputs", return_value=collection):
-        return require_success(
-            compile_source(
+        return compile_source(
             ReplaySourceRequest(
                 source_batch_root=Path("/patched-replay-source"),
                 cli_overrides=tuple(cli_overrides),
                 project_root=project_root_override,
                 default_batch_name=default_batch_name,
             )
-            )
         )
+
+
+def _compile_replay_planned_batch(
+    replay_inputs: list[SourceRunInput] | tuple[SourceRunInput, ...],
+    *,
+    project_root_override: Path | None,
+    cli_overrides: list[str] | tuple[str, ...],
+    default_batch_name: str,
+    manifest_extras: dict | None = None,
+    manifest_context_key: str | None = None,
+):
+    return require_success(
+        _compile_replay_report(
+            replay_inputs,
+            project_root_override=project_root_override,
+            cli_overrides=cli_overrides,
+            default_batch_name=default_batch_name,
+            manifest_extras=manifest_extras,
+            manifest_context_key=manifest_context_key,
+        )
+    )
 
 
 def _materialize_replay_batch(
@@ -305,6 +352,151 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(planned_batch.manifest_extras["replay_source"]["cli_overrides"], ["cluster.mem=128G"])
         self.assertEqual(planned_batch.manifest_extras["replay_source"]["selected_run_ids"], ["r1"])
         self.assertEqual(planned_batch.manifest_extras["replay_source"]["selected_run_indices"], [7])
+
+    def test_replay_rejects_selected_runs_with_divergent_max_available_gpus_without_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            report = _compile_replay_report(
+                [
+                    _replay_input(
+                        tmp_path,
+                        index=1,
+                        run_id="r1",
+                        run_cfg=_command_replay_cfg(lr=0.001, max_available_gpus=8),
+                    ),
+                    _replay_input(
+                        tmp_path,
+                        index=2,
+                        run_id="r2",
+                        run_cfg=_command_replay_cfg(lr=0.002, max_available_gpus=16),
+                    ),
+                ],
+                project_root_override=None,
+                cli_overrides=[],
+                default_batch_name="replay_batch",
+            )
+
+        self.assertTrue(report_has_failures(report))
+        self.assertEqual(report.successful_runs, ())
+        codes = {diagnostic.code for diagnostic in report.batch_diagnostics}
+        self.assertIn("batch_scope_inconsistent_max_available_gpus", codes)
+        messages = "\n".join(diagnostic.message for diagnostic in report.batch_diagnostics)
+        self.assertIn("--set resources.max_available_gpus=", messages)
+
+    def test_replay_cli_override_unifies_divergent_max_available_gpus_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            planned_batch = _compile_replay_planned_batch(
+                [
+                    _replay_input(
+                        tmp_path,
+                        index=1,
+                        run_id="r1",
+                        run_cfg=_command_replay_cfg(lr=0.001, max_available_gpus=8),
+                    ),
+                    _replay_input(
+                        tmp_path,
+                        index=2,
+                        run_id="r2",
+                        run_cfg=_command_replay_cfg(lr=0.002, max_available_gpus=16),
+                    ),
+                ],
+                project_root_override=None,
+                cli_overrides=["resources.max_available_gpus=32"],
+                default_batch_name="replay_batch",
+            )
+
+        self.assertEqual(planned_batch.max_available_gpus, 32)
+        self.assertEqual(planned_batch.gpu_budget_plan.max_available_gpus, 32)
+        self.assertEqual(
+            {
+                run.snapshot.replay_spec.replay_cfg["resources"]["max_available_gpus"]
+                for run in planned_batch.planned_runs
+            },
+            {32},
+        )
+
+    def test_replay_cli_override_max_gpus_per_job_remains_run_scoped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            planned_batch = _compile_replay_planned_batch(
+                [
+                    _replay_input(
+                        tmp_path,
+                        index=1,
+                        run_id="r1",
+                        run_cfg=_command_replay_cfg(
+                            lr=0.001,
+                            max_available_gpus=16,
+                            max_gpus_per_job=2,
+                        ),
+                    ),
+                    _replay_input(
+                        tmp_path,
+                        index=2,
+                        run_id="r2",
+                        run_cfg=_command_replay_cfg(
+                            lr=0.002,
+                            max_available_gpus=16,
+                            max_gpus_per_job=2,
+                        ),
+                    ),
+                ],
+                project_root_override=None,
+                cli_overrides=["resources.max_gpus_per_job=4"],
+                default_batch_name="replay_batch",
+            )
+
+        self.assertEqual(planned_batch.max_available_gpus, 16)
+        self.assertEqual(
+            {run.plan.train_stage.max_gpus_per_job for run in planned_batch.planned_runs},
+            {4},
+        )
+        self.assertEqual(
+            {
+                run.snapshot.replay_spec.replay_cfg["resources"]["max_gpus_per_job"]
+                for run in planned_batch.planned_runs
+            },
+            {4},
+        )
+
+    def test_replay_rejects_selected_runs_with_divergent_dispatch_policy_without_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            report = _compile_replay_report(
+                [
+                    _replay_input(
+                        tmp_path,
+                        index=1,
+                        run_id="r1",
+                        run_cfg=_command_replay_cfg(
+                            lr=0.001,
+                            max_available_gpus=16,
+                            dispatch_policy="error",
+                        ),
+                    ),
+                    _replay_input(
+                        tmp_path,
+                        index=2,
+                        run_id="r2",
+                        run_cfg=_command_replay_cfg(
+                            lr=0.002,
+                            max_available_gpus=16,
+                            dispatch_policy="serial",
+                        ),
+                    ),
+                ],
+                project_root_override=None,
+                cli_overrides=[],
+                default_batch_name="replay_batch",
+            )
+
+        self.assertTrue(report_has_failures(report))
+        self.assertEqual(report.successful_runs, ())
+        codes = {diagnostic.code for diagnostic in report.batch_diagnostics}
+        self.assertIn("batch_scope_inconsistent_dispatch_policy", codes)
+        messages = "\n".join(diagnostic.message for diagnostic in report.batch_diagnostics)
+        self.assertIn("--set dispatch.group_overflow_policy=", messages)
 
     def test_collect_replay_source_inputs_keeps_loading_after_bad_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

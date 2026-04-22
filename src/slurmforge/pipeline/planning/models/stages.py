@@ -46,7 +46,7 @@ class StageExecutionPlan:
     cli_args: dict[str, Any] = field(default_factory=dict)
     command_mode: str | None = None
     requested_launcher_mode: str | None = None
-    max_available_gpus_per_node: int = 0
+    max_gpus_per_job: int = 0
     diagnostics: tuple[PlanDiagnostic, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
@@ -79,7 +79,7 @@ class StageExecutionPlan:
         object.__setattr__(self, "cli_args", copy.deepcopy(dict(self.cli_args or {})))
         object.__setattr__(self, "command_mode", None if self.command_mode is None else str(self.command_mode))
         object.__setattr__(self, "requested_launcher_mode", None if self.requested_launcher_mode is None else str(self.requested_launcher_mode))
-        object.__setattr__(self, "max_available_gpus_per_node", int(self.max_available_gpus_per_node or 0))
+        object.__setattr__(self, "max_gpus_per_job", int(self.max_gpus_per_job or 0))
         object.__setattr__(
             self,
             "diagnostics",

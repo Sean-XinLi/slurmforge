@@ -22,13 +22,13 @@ class ObjectSchema:
 
 SCALAR = ScalarField()
 DYNAMIC = DynamicMapping()
-BATCH_SCOPED_SWEEP_PREFIXES = (
-    "project",
-    "experiment_name",
-    "output",
-    "notify",
-    "storage",
-)
+
+# Field-scope rules (batch / run / sweep permission / replay merge) live in
+# ``pipeline/config/contracts/fields.py`` as a single source of truth.
+# ``validate_batch_scoped_sweep_paths`` and the replay diagnostics read from
+# there.  A meta-test (``tests/test_contracts.py``) walks this schema and
+# asserts every leaf path has a contract registered, so new schema fields
+# cannot slip through without an explicit scope decision.
 
 MODEL_SCHEMA = ObjectSchema(
     {
@@ -136,6 +136,11 @@ RESOURCES_SCHEMA = ObjectSchema(
         "max_available_gpus": SCALAR,
     }
 )
+DISPATCH_SCHEMA = ObjectSchema(
+    {
+        "group_overflow_policy": SCALAR,
+    }
+)
 ARTIFACTS_SCHEMA = ObjectSchema(
     {
         "checkpoint_globs": SCALAR,
@@ -231,6 +236,7 @@ COMMON_EXPERIMENT_SCHEMA = ObjectSchema(
         "cluster": CLUSTER_SCHEMA,
         "env": ENV_SCHEMA,
         "resources": RESOURCES_SCHEMA,
+        "dispatch": DISPATCH_SCHEMA,
         "artifacts": ARTIFACTS_SCHEMA,
         "eval": EVAL_SCHEMA,
         "output": OUTPUT_SCHEMA,

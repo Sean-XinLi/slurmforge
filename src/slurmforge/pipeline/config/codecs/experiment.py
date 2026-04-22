@@ -10,6 +10,7 @@ from ..replay_payload import canonicalize_replay_payload
 from ..runtime import (
     serialize_artifacts_config,
     serialize_cluster_config,
+    serialize_dispatch_config,
     serialize_env_config,
     serialize_launcher_config,
     serialize_notify_config,
@@ -31,6 +32,7 @@ def serialize_experiment_spec(spec: ExperimentSpec) -> dict[str, Any]:
         "cluster": serialize_cluster_config(spec.cluster),
         "env": serialize_env_config(spec.env),
         "resources": serialize_resources_config(spec.resources),
+        "dispatch": serialize_dispatch_config(spec.dispatch),
         "artifacts": serialize_artifacts_config(spec.artifacts),
         "eval": serialize_eval_config(spec.eval),
         "output": serialize_output_config(spec.output),

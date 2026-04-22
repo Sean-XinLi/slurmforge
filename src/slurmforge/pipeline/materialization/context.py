@@ -31,6 +31,7 @@ class ArrayGroupState:
     records_dir: Path
     count: int = 0
     run_indices: list[int] = field(default_factory=list)
+    array_throttle: int = 0
 
 
 @dataclass(frozen=True)

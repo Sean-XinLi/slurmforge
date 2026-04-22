@@ -75,5 +75,5 @@ def build_eval_script_stage_plan(
         cli_args=eval_args,
         command_mode=None,
         requested_launcher_mode=requested_mode,
-        max_available_gpus_per_node=train_stage.max_available_gpus_per_node,
+        max_gpus_per_job=train_stage.max_gpus_per_job,
     )

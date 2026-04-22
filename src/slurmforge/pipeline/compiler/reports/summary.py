@@ -60,12 +60,18 @@ def report_can_materialize(report: BatchCompileReport | Any) -> bool:
 def report_warning_count(report: BatchCompileReport | Any) -> int:
     if hasattr(report, "warning_count"):
         return int(_attr(report, "warning_count", 0) or 0)
-    return sum(
+    per_run = sum(
         1
         for planned_run in _attr(report, "successful_runs", ())
         for diagnostic in planned_run.plan.planning_diagnostics
         if diagnostic.severity == DiagnosticSeverity.WARNING
     )
+    batch_level = sum(
+        1
+        for diagnostic in _attr(report, "batch_diagnostics", ())
+        if diagnostic.severity == DiagnosticSeverity.WARNING
+    )
+    return per_run + batch_level
 
 
 def report_diagnostics(report: BatchCompileReport | Any) -> tuple[PlanDiagnostic, ...]:

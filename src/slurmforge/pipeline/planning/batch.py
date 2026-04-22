@@ -6,13 +6,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ..config.api import StorageConfigSpec
-from ..config.runtime import NotifyConfig
+from ..config.runtime import DispatchConfig, NotifyConfig
+from ..config.runtime.defaults import DEFAULT_RESOURCES
 from .batch_validator import validate_planned_batch_runs
 from .identity import BatchIdentity
 
 if TYPE_CHECKING:
     from ..records.models.run_plan import RunPlan
     from ..records.models.run_snapshot import RunSnapshot
+    from .gpu_budget import GpuBudgetPlan
 
 
 @dataclass(frozen=True)
@@ -23,12 +25,24 @@ class PlannedRun:
 
 @dataclass(frozen=True)
 class PlannedBatch:
+    """Final planned batch ready for materialization.
+
+    Only batch-scoped GPU fields live here: ``max_available_gpus`` (int)
+    and the resolved ``dispatch_cfg``.  Per-run resource knobs
+    (max_gpus_per_job, auto_gpu, estimator profile, ...) remain on each
+    ``PlannedRun`` via its ``train_stage`` and are not accessible at
+    batch level.
+    """
+
     identity: BatchIdentity
     planned_runs: tuple[PlannedRun, ...]
     notify_cfg: NotifyConfig | None = None
     submit_dependencies: dict[str, list[str]] = field(default_factory=dict)
     manifest_extras: dict[str, Any] = field(default_factory=dict)
     storage_config: StorageConfigSpec = field(default_factory=StorageConfigSpec)
+    max_available_gpus: int = int(DEFAULT_RESOURCES["max_available_gpus"])
+    dispatch_cfg: DispatchConfig = field(default_factory=DispatchConfig)
+    gpu_budget_plan: "GpuBudgetPlan | None" = None
 
     def __post_init__(self) -> None:
         identity = self.identity

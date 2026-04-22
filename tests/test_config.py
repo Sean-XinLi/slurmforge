@@ -107,21 +107,33 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(report.batch_diagnostics[0].code, "batch_identity_error")
         self.assertIn("output.batch_name", report.batch_diagnostics[0].message)
 
-    def test_normalize_resources_clamp_warns(self) -> None:
+    def test_normalize_resources_keeps_gpu_fields_independent(self) -> None:
         with warnings.catch_warnings(record=True) as records:
             warnings.simplefilter("always")
             normalized = normalize_resources(
                 {
-                    "max_available_gpus": 6,
+                    "max_available_gpus": 16,
                     "max_gpus_per_job": 8,
-                    "min_gpus_per_job": 7,
+                    "min_gpus_per_job": 2,
                 }
             )
-        self.assertEqual(normalized.max_gpus_per_job, 6)
-        self.assertEqual(normalized.min_gpus_per_job, 6)
+        self.assertEqual(normalized.max_gpus_per_job, 8)
+        self.assertEqual(normalized.max_available_gpus, 16)
+        self.assertEqual(normalized.min_gpus_per_job, 2)
         messages = [str(w.message) for w in records]
-        self.assertTrue(any("max_gpus_per_job is capped" in m for m in messages))
-        self.assertTrue(any("min_gpus_per_job is capped" in m for m in messages))
+        self.assertFalse(any("max_gpus_per_job is capped" in m for m in messages))
+
+    def test_normalize_resources_allows_max_available_gpus_below_max_gpus_per_job(self) -> None:
+        normalized = normalize_resources({"max_available_gpus": 4, "max_gpus_per_job": 8})
+        self.assertEqual(normalized.max_available_gpus, 4)
+        self.assertEqual(normalized.max_gpus_per_job, 8)
+
+    def test_normalize_resources_caps_min_by_max_gpus_per_job(self) -> None:
+        with warnings.catch_warnings(record=True) as records:
+            warnings.simplefilter("always")
+            normalized = normalize_resources({"max_gpus_per_job": 4, "min_gpus_per_job": 7})
+        self.assertEqual(normalized.min_gpus_per_job, 4)
+        self.assertTrue(any("min_gpus_per_job is capped" in str(w.message) for w in records))
 
     def test_normalize_env_rejects_invalid_key(self) -> None:
         with self.assertRaises(ValueError):

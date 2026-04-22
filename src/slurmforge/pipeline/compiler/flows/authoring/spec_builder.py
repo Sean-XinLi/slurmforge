@@ -31,4 +31,20 @@ def accept_authoring_spec(
     materialized: MaterializedSourceBundle,
     source_input: SourceRunInput,
 ) -> CompileState:
-    return state
+    return _append_batch_scope_candidates(state, spec=spec)
+
+
+def _append_batch_scope_candidates(state: CompileState, *, spec: ExperimentSpec) -> CompileState:
+    """Accumulate this spec's batch-scoped values onto the running state.
+
+    The batch uses these candidates to resolve a single winning value
+    (via ``resolve_batch_scope_unique``) at report-build time.  Authoring
+    and replay flows share this mechanism so they behave identically.
+    """
+    from dataclasses import replace
+
+    return replace(
+        state,
+        max_available_gpus_candidates=state.max_available_gpus_candidates + (int(spec.resources.max_available_gpus),),
+        dispatch_policy_candidates=state.dispatch_policy_candidates + (str(spec.dispatch.group_overflow_policy),),
+    )

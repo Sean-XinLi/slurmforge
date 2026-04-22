@@ -13,6 +13,7 @@ from ...models import (
 from ...runtime import (
     ArtifactsConfig,
     ClusterConfig,
+    DispatchConfig,
     EnvConfig,
     LauncherConfig,
     NotifyConfig,
@@ -33,6 +34,7 @@ class NormalizedExperimentContract:
     cluster: ClusterConfig
     env: EnvConfig
     resources: ResourcesConfig
+    dispatch: DispatchConfig
     artifacts: ArtifactsConfig
     eval: EvalConfigSpec
     output: OutputConfigSpec
@@ -57,6 +59,7 @@ def assemble_experiment_contract(
         cluster=sections.cluster,
         env=sections.env,
         resources=sections.resources,
+        dispatch=sections.dispatch,
         artifacts=sections.artifacts,
         eval=sections.eval,
         output=sections.output,

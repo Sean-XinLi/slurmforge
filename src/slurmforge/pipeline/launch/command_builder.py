@@ -12,11 +12,10 @@ from .strategies import STRATEGIES
 from .types import LaunchRuntime, ShellToken
 
 
-def max_available_gpus(resources_cfg: ResourcesConfig | dict[str, Any]) -> int:
+def max_gpus_per_job(resources_cfg: ResourcesConfig | dict[str, Any]) -> int:
     resources = ensure_resources_config(resources_cfg)
-    default_limit = int(DEFAULT_RESOURCES["max_available_gpus"])
-    value = resources.max_available_gpus or resources.max_gpus_per_job or default_limit
-    return max(1, int(value))
+    default_limit = int(DEFAULT_RESOURCES["max_gpus_per_job"])
+    return max(1, int(resources.max_gpus_per_job or default_limit))
 
 
 def build_stage_command(

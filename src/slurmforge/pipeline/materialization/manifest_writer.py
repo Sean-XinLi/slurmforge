@@ -5,6 +5,7 @@ from typing import Any
 
 from ...identity import PACKAGE_NAME, __version__
 from ..config.runtime import NotifyConfig, serialize_notify_config
+from ..planning import GpuBudgetPlan, serialize_gpu_budget_plan
 from ..records.io_utils import atomic_write_text
 from .context import MaterializationLayout
 from .grouping import summarize_resource_buckets
@@ -22,6 +23,7 @@ def build_batch_manifest(
     notify_cfg: NotifyConfig | None,
     submit_dependencies: dict[str, list[str]],
     manifest_extras: dict[str, Any] | None,
+    gpu_budget_plan: GpuBudgetPlan | None = None,
 ) -> dict[str, Any]:
     manifest = {
         "generated_by": {
@@ -42,6 +44,7 @@ def build_batch_manifest(
         "runs_manifest": str(layout.runs_manifest_path),
         "notify": None if notify_cfg is None else serialize_notify_config(notify_cfg),
         "submit_dependencies": submit_dependencies,
+        "gpu_budget_plan": None if gpu_budget_plan is None else serialize_gpu_budget_plan(gpu_budget_plan),
     }
     if manifest_extras:
         manifest.update(manifest_extras)

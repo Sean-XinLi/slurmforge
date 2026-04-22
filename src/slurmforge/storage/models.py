@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ..pipeline.config.api import StorageConfigSpec
-    from ..pipeline.config.runtime import NotifyConfig
-    from ..pipeline.planning import BatchIdentity, PlannedRun
+    from ..pipeline.config.runtime import DispatchConfig, NotifyConfig
+    from ..pipeline.planning import BatchIdentity, GpuBudgetPlan, PlannedRun
     from ..pipeline.planning.contracts import PlanDiagnostic
     from ..pipeline.status.models import ExecutionStatus
 
@@ -23,6 +23,9 @@ class MaterializedBatchBundle:
     submit_dependencies: dict[str, list[str]]
     manifest_extras: dict[str, Any]
     storage_config: StorageConfigSpec
+    max_available_gpus: int = 0
+    dispatch_cfg: "DispatchConfig | None" = None
+    gpu_budget_plan: "GpuBudgetPlan | None" = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "planned_runs", tuple(self.planned_runs))

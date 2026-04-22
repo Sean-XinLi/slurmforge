@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 
 from .cli import examples, generate, init, replay, rerun, status, validate
+from .identity import PACKAGE_NAME, __version__
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -13,6 +14,12 @@ def build_parser() -> argparse.ArgumentParser:
             "Start with `sforge init` for a starter project scaffold or "
             "`sforge examples` for raw YAML references."
         )
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version=f"{PACKAGE_NAME} {__version__}",
     )
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True

@@ -119,7 +119,7 @@ class PlanningTests(unittest.TestCase):
                 script_path=tmp_path / "train.py",
                 cli_args={},
                 requested_launcher_mode="ddp",
-                max_available_gpus_per_node=8,
+                max_gpus_per_job=8,
             )
 
             eval_stage = build_eval_stage_plan(
@@ -173,7 +173,7 @@ class PlanningTests(unittest.TestCase):
                 script_path=tmp_path / "train.py",
                 cli_args={},
                 requested_launcher_mode="single",
-                max_available_gpus_per_node=8,
+                max_gpus_per_job=8,
             )
 
             with self.assertRaises(PlanningValidationError):
@@ -239,7 +239,7 @@ class PlanningTests(unittest.TestCase):
                 script_path=tmp_path / "train.py",
                 cli_args={},
                 requested_launcher_mode="ddp",
-                max_available_gpus_per_node=8,
+                max_gpus_per_job=8,
             )
 
             eval_stage = build_eval_stage_plan(
@@ -298,7 +298,7 @@ class PlanningTests(unittest.TestCase):
                 script_path=tmp_path / "train.py",
                 cli_args={},
                 requested_launcher_mode="single",
-                max_available_gpus_per_node=8,
+                max_gpus_per_job=8,
             )
 
             eval_stage = build_eval_stage_plan(
@@ -351,7 +351,7 @@ class PlanningTests(unittest.TestCase):
             script_path=None,
             cli_args={},
             requested_launcher_mode="external",
-            max_available_gpus_per_node=8,
+            max_gpus_per_job=8,
         )
 
         suppressed = validate_stage_execution_plan(
