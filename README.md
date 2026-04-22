@@ -173,7 +173,8 @@ eval:
   script: "tools/run_eval.py"
 ```
 
-If you use `model_cli`, make sure the script named by `model.script` accepts the arguments declared under `run.args`.
+If you use `script` or `registry` mode, make sure the script named by
+`model.script` accepts the arguments declared under `run.args`.
 
 ## Starter Modes
 
@@ -349,7 +350,13 @@ Effect:
 
 ### `planning_recovery`
 
-`planning_recovery` only matters in SQLite mode.
+`planning_recovery` controls whether planning recovery files are written for
+manual inspection and disaster recovery.
+
+In SQLite mode it decides whether files such as `records/group_xx/task_*.json`,
+`meta/runs_manifest.jsonl`, per-run `resolved_config.yaml`, and
+`run_snapshot.json` are exported next to the SQLite DB. Per-job recovery copies
+such as `meta/execution_plan.json` also follow this setting.
 
 ```yaml
 storage:
@@ -376,6 +383,7 @@ When `planning_recovery: false`:
 
 - planning metadata lives only in SQLite
 - planning recovery/export files are omitted
+- array sbatch scripts and `batch_manifest.json` are still written
 - runtime journal files are still written normally
 
 Recommended default:
@@ -388,8 +396,8 @@ Recommended default:
 
 - `experiment.yaml` contains the `storage` section
 - each batch writes `meta/storage.json`
-- run-level `resolved_config.yaml` remains focused on run configuration and
-  does not duplicate batch storage settings
+- when planning recovery is enabled, run-level `resolved_config.yaml` remains
+  focused on run configuration and does not duplicate batch storage settings
 
 Retry failed runs from an existing batch:
 
@@ -468,12 +476,12 @@ Fields typically resolved relative to `project_root`:
 - `eval.workdir`
 - `output.base_output_dir`
 
-## Choosing A Train Mode
+## Choosing A Starter Type
 
-The package supports three internal train modes, each corresponding to an `init` type:
+The package exposes three user-facing ways to describe training:
 
 - `command` (`sforge init command`): run an existing command exactly as provided; slurmforge does not rewrite it into `torchrun` or infer a distributed launcher topology from it
-- `model_cli` (`sforge init script` or `sforge init registry`): build the train command from `model` and `run.args`
+- `script` / `registry` (`sforge init script` or `sforge init registry`): build the train command from `model` and `run.args`
 - `adapter` (`sforge init adapter`): call a bridge script that translates slurmforge inputs to some external system
 
 Recommended order for new users:
@@ -594,6 +602,19 @@ resources:
 
 `max_available_gpus` does **not** cap `max_gpus_per_job`, and vice versa —
 they describe different scopes.
+
+Scope rules:
+
+- `resources.max_available_gpus` is batch-scoped. Set it once for the batch; do
+  not use it as a sweep axis.
+- `dispatch.group_overflow_policy` is also batch-scoped and cannot vary per run.
+- `resources.max_gpus_per_job`, `resources.auto_gpu`, and estimator settings are
+  run-scoped and may vary across sweep runs.
+
+When replaying or rerunning selected runs, batch-scoped values from those runs
+must agree. If they do not, pass a CLI override such as
+`--set resources.max_available_gpus=16` or
+`--set dispatch.group_overflow_policy=serial` to define the new batch.
 
 ### Automatic GPU Allocation
 
@@ -753,14 +774,15 @@ Use `command` mode to wrap an arbitrary shell command.
 ```yaml
 run:
   command: "bash scripts/train.sh --config cfg.yaml"
-  command_mode: "argv"      # argv (shell-escaped) / raw (shell expansion enabled)
+  command_mode: "argv"      # argv = safe argv rendering; raw = shell text
   external_runtime:
     nnodes: 1
     nproc_per_node: 4
 ```
 
-`command_mode: raw` passes the command string to bash without escaping — useful for pipes and
-redirects, but disables slurmforge's argument safety checks.
+`command_mode: raw` passes the command string to bash without escaping. It is
+useful for pipes, redirects, and shell expansion, but disables slurmforge's
+argument safety checks.
 
 ---
 

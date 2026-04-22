@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ...models import BatchSharedSpec
-from ...normalize import normalize_notify, normalize_resources
+from ...normalize import normalize_dispatch, normalize_notify, normalize_resources
 from ...utils import ensure_dict, ensure_path_segment, resolve_spec_project_root
 from ...validation.authoring import normalize_authoring_sweep_spec
 from ..output import normalize_output_config
@@ -32,7 +32,8 @@ def build_batch_shared_spec(
     # estimator knobs) is run-scoped and belongs on each run's spec, which
     # may diverge from the top-level via sweep axes.  We normalize the full
     # resources block here strictly to leverage its validation, then project
-    # out the single batch-scoped scalar.
+    # out the single batch-scoped scalar.  ``dispatch`` is batch-scoped in
+    # its entirety today, so we keep the full object.
     base_resources = normalize_resources(ensure_dict(cfg.get("resources"), "resources"))
     return BatchSharedSpec(
         project_root=project_root,
@@ -42,6 +43,7 @@ def build_batch_shared_spec(
         output=normalize_output_config(ensure_dict(cfg.get("output"), "output"), config_path=config_path),
         notify=normalize_notify(cfg.get("notify")),
         max_available_gpus=int(base_resources.max_available_gpus),
+        dispatch_cfg=normalize_dispatch(ensure_dict(cfg.get("dispatch"), "dispatch")),
         storage=normalize_storage_config(cfg.get("storage")),
     )
 

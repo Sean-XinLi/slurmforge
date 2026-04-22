@@ -9,11 +9,25 @@ from ...config.runtime import DispatchConfig, NotifyConfig
 from ...config.runtime.defaults import DEFAULT_RESOURCES
 from ...planning import BatchIdentity, GpuBudgetPlan, PlannedRun, plan_gpu_budget
 from ...planning.contracts import PlanDiagnostic
+from ...planning.enums import DiagnosticSeverity
 from ...sources.models import FailedCompiledRun
 from ..batch_scope import resolve_batch_scope_unique
 from ..state import MaterializedSourceBundle
 from .models import BatchCompileReport
 from .validator import validate_compile_report
+
+
+def _has_error_diagnostic(diagnostics: Sequence[PlanDiagnostic]) -> bool:
+    """Return True when any diagnostic is severity=error.
+
+    Used by ``build_materialized_report`` to decide whether to keep
+    successful_runs / gpu_budget_plan in the final report.  Any batch-level
+    error — contract mismatch, GPU budget overflow, identity mismatch, etc. —
+    invalidates the whole planning output, because the materialized artifacts
+    we would otherwise emit would be inconsistent with the error the user
+    still needs to resolve.
+    """
+    return any(d.severity == DiagnosticSeverity.ERROR for d in diagnostics)
 
 
 def _batch_scope_error_diagnostic(exc: Exception, *, code: str, field_path: str) -> PlanDiagnostic:
@@ -175,13 +189,23 @@ def build_materialized_report(
     )
     if resolve_diagnostics:
         diagnostics_from_bundle = diagnostics_from_bundle + resolve_diagnostics
-        # Inconsistent batch-scoped values ⇒ cannot meaningfully plan the
-        # budget, so mark all successful runs as pending until the user
-        # resolves it.  Same pattern as budget overflow with policy=error.
-        successful_runs = ()
 
+    # ------------------------------------------------------------------
+    # Early error gate — "don't plan on a broken contract".
+    #
+    # If the input bundle already carries an error (e.g. accept_replay_spec
+    # recorded an identity/notify/output/storage mismatch) OR batch-scope
+    # resolution failed, the batch contract is broken and every downstream
+    # planning artifact is meaningless.  We short-circuit BEFORE running
+    # ``_compute_budget_plan`` so the user's validate output is dominated
+    # by the primary error rather than drowned in secondary budget noise
+    # (best_effort warnings, MaxArraySize clamps, serial-chain hints) that
+    # the user cannot act on while the real problem is elsewhere.
+    # ------------------------------------------------------------------
     budget_plan: GpuBudgetPlan | None = None
-    if resolved_max_available_gpus is not None and resolved_dispatch is not None:
+    if _has_error_diagnostic(diagnostics_from_bundle):
+        successful_runs = ()
+    elif resolved_max_available_gpus is not None and resolved_dispatch is not None:
         budget_plan, budget_diagnostics = _compute_budget_plan(
             successful_runs,
             max_available_gpus=resolved_max_available_gpus,
@@ -189,12 +213,19 @@ def build_materialized_report(
         )
         if budget_diagnostics:
             diagnostics_from_bundle = diagnostics_from_bundle + budget_diagnostics
-            successful_runs = ()
         if budget_plan is not None and budget_plan.warnings:
             # Budget warnings flow through the same diagnostic channel as
             # everything else so validate / dry-run / any future consumer
             # surfaces them without a dedicated code path.
             diagnostics_from_bundle = diagnostics_from_bundle + tuple(budget_plan.warnings)
+
+    # Late error gate — budget computation may have surfaced its own
+    # errors (gpus_per_task > max_available_gpus, gpus_per_task <= 0).
+    # The early gate handles upstream errors; this one handles the
+    # budget-originated ones and also acts as an idempotent safety net.
+    if _has_error_diagnostic(diagnostics_from_bundle):
+        successful_runs = ()
+        budget_plan = None
 
     return build_report(
         identity=identity,

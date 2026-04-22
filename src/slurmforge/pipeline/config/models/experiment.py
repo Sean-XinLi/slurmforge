@@ -49,12 +49,17 @@ class ExperimentSpec:
 class BatchSharedSpec:
     """Batch-wide configuration shared by every run in the batch.
 
-    ``resources`` and ``dispatch`` are NOT stored here as full config objects
-    because most of their fields are run-scoped (max_gpus_per_job, auto_gpu,
-    estimator knobs) and must be independently settable per-run (sweep,
-    replay-override).  Only the single batch-scoped GPU budget lives on this
-    struct.  The final resolved ``dispatch.group_overflow_policy`` is
-    resolved later in the compile report, not baked into this struct.
+    Every field here is batch-scoped per the contract registry
+    (``pipeline/config/contracts/fields.py``).  Run-scoped fields like
+    ``resources.max_gpus_per_job`` or ``resources.auto_gpu`` deliberately
+    do NOT live here — they belong on each ``ExperimentSpec`` so that
+    sweep axes and replay-level per-run variation stay meaningful.
+
+    ``resources`` as a whole is NOT present because most of its fields are
+    run-scoped.  Only the single batch-scoped knob ``max_available_gpus``
+    is projected out.  ``dispatch`` contains only one batch-scoped field
+    today (``group_overflow_policy``), so we carry the whole
+    ``DispatchConfig`` for future-proofing.
     """
 
     project_root: Path
@@ -64,6 +69,7 @@ class BatchSharedSpec:
     output: OutputConfigSpec
     notify: NotifyConfig
     max_available_gpus: int = int(DEFAULT_RESOURCES["max_available_gpus"])
+    dispatch_cfg: DispatchConfig = field(default_factory=DispatchConfig)
     storage: StorageConfigSpec = field(default_factory=StorageConfigSpec)
 
 

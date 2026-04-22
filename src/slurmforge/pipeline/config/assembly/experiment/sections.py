@@ -67,14 +67,22 @@ def normalize_experiment_sections(
     launcher = normalize_launcher(inputs.launcher_cfg_raw)
     cluster = normalize_cluster(inputs.cluster_cfg_raw)
     env = normalize_env(inputs.env_cfg_raw)
-    # ``resources`` and ``dispatch`` are ALWAYS normalized from this spec's
-    # own raw cfg, even when a batch_shared is available.  Only the single
-    # ``resources.max_available_gpus`` field is batch-scoped (it lives on
-    # batch_shared.max_available_gpus), every other resources/dispatch
-    # field is run-scoped and must be free to diverge across runs via
-    # sweep axes or replay-level overrides.
+    # ``resources`` is always normalized per-spec because only
+    # ``max_available_gpus`` is batch-scoped (projected onto
+    # ``batch_shared.max_available_gpus``); the remaining fields
+    # (max_gpus_per_job, auto_gpu, estimator knobs) are run-scoped and must
+    # be free to diverge via sweep axes or replay-level per-run variation.
     resources = normalize_resources(inputs.resources_cfg_raw)
-    dispatch = normalize_dispatch(inputs.dispatch_cfg_raw)
+
+    # ``dispatch`` is entirely batch-scoped today (single field
+    # ``group_overflow_policy``).  For authoring runs we inherit it from
+    # ``batch_shared`` so sweep-expansion cannot accidentally produce
+    # per-run divergence.  Replay reconstructs each run's spec from its
+    # stored YAML without a shared anchor, so we normalize from the
+    # per-run raw cfg; batch-level resolver enforces consistency later.
+    dispatch = (
+        batch_shared.dispatch_cfg if batch_shared is not None else normalize_dispatch(inputs.dispatch_cfg_raw)
+    )
     artifacts = normalize_artifacts(inputs.artifacts_cfg_raw)
     validation = normalize_validation(inputs.validation_cfg_raw)
     eval_spec = normalize_eval_config(inputs.eval_cfg, config_path=inputs.config_path)

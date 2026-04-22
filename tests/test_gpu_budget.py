@@ -1076,8 +1076,11 @@ class PlanGpuBudgetSignatureTests(unittest.TestCase):
 
 
 class SweepBatchScopedFieldRejectionTests(unittest.TestCase):
-    """BATCH_SCOPED_SWEEP_EXACT_PATHS must forbid sweeping batch-scoped fields
-    without touching their run-scoped siblings."""
+    """The field contract registry must forbid sweeping batch-scoped fields
+    without touching their run-scoped siblings.  Scope decisions flow from
+    ``pipeline/config/contracts/fields.py`` — not from hand-written constant
+    lists.  ``tests/test_contracts.py`` has the broader coverage; this class
+    spot-checks the resources-block boundary specifically."""
 
     def _validate_paths(
         self,

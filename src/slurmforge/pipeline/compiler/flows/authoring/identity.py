@@ -5,7 +5,12 @@ import copy
 from ....planning import build_batch_identity
 from ...diagnostics import diagnostic_from_exception, raise_internal_compiler_error
 from ...reports import BatchCompileReport, build_compile_failure_report
-from ...state import AuthoringMaterializedState, CompileState, MaterializedSourceBundle
+from ...state import (
+    AuthoringMaterializedState,
+    BatchFirstWinsState,
+    CompileState,
+    MaterializedSourceBundle,
+)
 
 
 def initialize_authoring_compile_state(
@@ -45,14 +50,23 @@ def initialize_authoring_compile_state(
         except Exception as exc:
             raise_internal_compiler_error(exc, context="building batch identity")
 
+    # Authoring seeds first-wins from BatchSharedSpec directly: the whole
+    # batch is defined by a single top-level config, so every sweep-expanded
+    # spec ends up with the same values.  No per-spec disagreement is
+    # possible for these four fields.
+    first_wins: BatchFirstWinsState | None = None
+    if identity is not None:
+        first_wins = BatchFirstWinsState(
+            identity=identity,
+            notify_cfg=context.shared.notify,
+            submit_dependencies=copy.deepcopy(context.shared.output.dependencies),
+            storage_config=context.shared.storage,
+        )
     return CompileState(
-        identity=identity,
-        notify_cfg=context.shared.notify,
-        submit_dependencies=copy.deepcopy(context.shared.output.dependencies),
+        first_wins=first_wins,
         batch_diagnostics=materialized.batch_diagnostics,
-        storage_config=context.shared.storage,
-        # Candidates are populated by accept_authoring_spec as each
-        # sweep-expanded spec is built.  The batch_shared's
-        # ``max_available_gpus`` is not pre-loaded here so authoring
-        # goes through the exact same candidate-resolve path as replay.
+        # max_available_gpus / dispatch candidates are populated by
+        # accept_authoring_spec as each sweep-expanded spec is built — the
+        # authoring path goes through the same candidate-resolve path as
+        # replay so the two flows share diagnostic behavior.
     )

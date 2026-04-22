@@ -22,22 +22,13 @@ class ObjectSchema:
 
 SCALAR = ScalarField()
 DYNAMIC = DynamicMapping()
-BATCH_SCOPED_SWEEP_PREFIXES = (
-    "project",
-    "experiment_name",
-    "output",
-    "notify",
-    "storage",
-)
 
-# Paths that are batch-scoped but live inside a section whose OTHER fields
-# are run-scoped.  These must be matched exactly (not as a prefix) so that
-# e.g. ``resources.max_gpus_per_job`` remains sweepable while
-# ``resources.max_available_gpus`` is rejected.
-BATCH_SCOPED_SWEEP_EXACT_PATHS = (
-    "resources.max_available_gpus",
-    "dispatch.group_overflow_policy",
-)
+# Field-scope rules (batch / run / sweep permission / replay merge) live in
+# ``pipeline/config/contracts/fields.py`` as a single source of truth.
+# ``validate_batch_scoped_sweep_paths`` and the replay diagnostics read from
+# there.  A meta-test (``tests/test_contracts.py``) walks this schema and
+# asserts every leaf path has a contract registered, so new schema fields
+# cannot slip through without an explicit scope decision.
 
 MODEL_SCHEMA = ObjectSchema(
     {

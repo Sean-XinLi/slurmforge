@@ -25,8 +25,8 @@ class CliVersionFlagTests(unittest.TestCase):
                 self.assertEqual(buf.getvalue().strip(), f"{PACKAGE_NAME} {__version__}")
 
 
-class StarterYamlDispatchBlockTests(unittest.TestCase):
-    """Every user-facing starter/HPC YAML must surface `dispatch.group_overflow_policy`.
+class StarterYamlResourceAndDispatchBlockTests(unittest.TestCase):
+    """Every user-facing starter/HPC YAML must surface resource budget controls.
 
     The minimal examples (and the registry definition) are intentionally bare,
     so they're excluded.
@@ -49,6 +49,21 @@ class StarterYamlDispatchBlockTests(unittest.TestCase):
                 self.assertIn("error", text)
                 self.assertIn("serial", text)
                 self.assertIn("best_effort", text)
+
+    def test_all_user_facing_examples_carry_resources_block(self) -> None:
+        from slurmforge.example_configs import list_example_names, read_example_text
+
+        for name in list_example_names():
+            if name in self._SKIP:
+                continue
+            with self.subTest(example=name):
+                text = read_example_text(name)
+                cfg = yaml.safe_load(text)
+                self.assertIn("resources", cfg, f"{name} missing top-level `resources:`")
+                self.assertIn("max_available_gpus", cfg["resources"])
+                self.assertIn("max_gpus_per_job", cfg["resources"])
+                self.assertIn("batch-wide concurrent GPU ceiling", text)
+                self.assertIn("max GPUs one run/job may request", text)
 
 
 class ExampleCliTests(unittest.TestCase):

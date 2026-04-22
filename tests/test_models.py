@@ -244,6 +244,35 @@ class ModelCatalogTests(unittest.TestCase):
         self.assertEqual(replayed.eval.script, "../shared/eval_custom.py")
         self.assertEqual((new_project_root / replayed.eval.workdir).resolve(), new_shared_root.resolve())
 
+    def test_replay_cfg_persists_dispatch_group_overflow_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project_root = Path(tmp)
+            script_path = project_root / "train.py"
+            script_path.write_text("print('ok')\n", encoding="utf-8")
+
+            spec = build_experiment_spec(
+                {
+                    "project": "demo",
+                    "experiment_name": "exp",
+                    "model": {"name": "custom_model", "script": "train.py"},
+                    "run": {"args": {"lr": 0.001}},
+                    "dispatch": {"group_overflow_policy": "serial"},
+                },
+                project_root / "experiment.yaml",
+                project_root=project_root,
+            )
+
+            replay_cfg = serialize_replay_experiment_spec(spec, project_root=project_root)
+            self.assertEqual(replay_cfg["dispatch"]["group_overflow_policy"], "serial")
+
+            replayed = build_replay_experiment_spec(
+                replay_cfg,
+                project_root=project_root,
+                config_path=project_root / "replay.yaml",
+            )
+
+        self.assertEqual(replayed.dispatch.group_overflow_policy, "serial")
+
     def test_build_batch_spec_reuses_model_catalog_for_identical_registry_inputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
