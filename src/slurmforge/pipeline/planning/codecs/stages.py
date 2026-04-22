@@ -68,7 +68,7 @@ def parse_stage_execution_plan(value: Any, *, name: str = "stage_plan") -> Stage
         requested_launcher_mode=None
         if value.get("requested_launcher_mode") in (None, "")
         else str(value.get("requested_launcher_mode")),
-        max_available_gpus_per_node=int(value.get("max_available_gpus_per_node", 0) or 0),
+        max_gpus_per_job=int(value.get("max_gpus_per_job", 0) or 0),
         diagnostics=tuple(
             parse_plan_diagnostic(item, name=f"{name}.diagnostics[]") for item in list(value.get("diagnostics") or [])
         ),
@@ -94,6 +94,6 @@ def serialize_stage_execution_plan(plan: StageExecutionPlan) -> dict[str, Any]:
         "cli_args": copy.deepcopy(plan.cli_args),
         "command_mode": plan.command_mode,
         "requested_launcher_mode": plan.requested_launcher_mode,
-        "max_available_gpus_per_node": plan.max_available_gpus_per_node,
+        "max_gpus_per_job": plan.max_gpus_per_job,
         "diagnostics": [serialize_plan_diagnostic(item) for item in plan.diagnostics],
     }

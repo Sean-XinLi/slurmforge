@@ -66,6 +66,7 @@ class FileSystemPlanningStore:
             groups_in_order, env=self._env, layout=layout,
             project=bundle.project, experiment_name=bundle.experiment_name,
             notify_cfg=bundle.notify_cfg, submit_dependencies=normalized_deps, submit_lines=submit_lines,
+            gpu_budget_plan=bundle.gpu_budget_plan,
         )
         if bundle.notify_cfg is not None and bundle.notify_cfg.enabled:
             render_notify_script(env=self._env, layout=layout, project=bundle.project, experiment_name=bundle.experiment_name)
@@ -79,6 +80,7 @@ class FileSystemPlanningStore:
             batch_name=bundle.batch_name, total_runs=bundle.total_runs,
             array_groups_meta=array_groups_meta, notify_cfg=bundle.notify_cfg,
             submit_dependencies=normalized_deps, manifest_extras=bundle.manifest_extras,
+            gpu_budget_plan=bundle.gpu_budget_plan,
         )
         write_manifest(layout, manifest)
         return array_groups_meta

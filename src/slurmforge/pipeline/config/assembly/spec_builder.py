@@ -32,6 +32,7 @@ def materialize_resolved_experiment_spec(
         cluster=contract.cluster,
         env=contract.env,
         resources=contract.resources,
+        dispatch=contract.dispatch,
         artifacts=contract.artifacts,
         eval=contract.eval,
         output=contract.output,

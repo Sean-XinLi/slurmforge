@@ -13,6 +13,7 @@ from ...models import (
 from ...normalize import (
     normalize_artifacts,
     normalize_cluster,
+    normalize_dispatch,
     normalize_env,
     normalize_launcher,
     normalize_notify,
@@ -22,6 +23,7 @@ from ...normalize import (
 from ...runtime import (
     ArtifactsConfig,
     ClusterConfig,
+    DispatchConfig,
     EnvConfig,
     LauncherConfig,
     NotifyConfig,
@@ -43,6 +45,7 @@ class NormalizedExperimentSections:
     cluster: ClusterConfig
     env: EnvConfig
     resources: ResourcesConfig
+    dispatch: DispatchConfig
     artifacts: ArtifactsConfig
     eval: EvalConfigSpec
     output: OutputConfigSpec
@@ -64,7 +67,14 @@ def normalize_experiment_sections(
     launcher = normalize_launcher(inputs.launcher_cfg_raw)
     cluster = normalize_cluster(inputs.cluster_cfg_raw)
     env = normalize_env(inputs.env_cfg_raw)
+    # ``resources`` and ``dispatch`` are ALWAYS normalized from this spec's
+    # own raw cfg, even when a batch_shared is available.  Only the single
+    # ``resources.max_available_gpus`` field is batch-scoped (it lives on
+    # batch_shared.max_available_gpus), every other resources/dispatch
+    # field is run-scoped and must be free to diverge across runs via
+    # sweep axes or replay-level overrides.
     resources = normalize_resources(inputs.resources_cfg_raw)
+    dispatch = normalize_dispatch(inputs.dispatch_cfg_raw)
     artifacts = normalize_artifacts(inputs.artifacts_cfg_raw)
     validation = normalize_validation(inputs.validation_cfg_raw)
     eval_spec = normalize_eval_config(inputs.eval_cfg, config_path=inputs.config_path)
@@ -99,6 +109,7 @@ def normalize_experiment_sections(
         cluster=cluster,
         env=env,
         resources=resources,
+        dispatch=dispatch,
         artifacts=artifacts,
         eval=eval_spec,
         output=output,

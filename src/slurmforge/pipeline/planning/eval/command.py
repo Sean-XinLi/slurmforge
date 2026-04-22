@@ -55,5 +55,5 @@ def build_eval_command_stage_plan(
         cli_args={},
         command_mode=command_mode,
         requested_launcher_mode="external",
-        max_available_gpus_per_node=train_stage.max_available_gpus_per_node,
+        max_gpus_per_job=train_stage.max_gpus_per_job,
     )

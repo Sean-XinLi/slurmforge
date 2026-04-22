@@ -5,8 +5,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ...config.api import StorageConfigSpec
-from ...config.runtime import NotifyConfig
-from ...planning import BatchIdentity, PlannedRun
+from ...config.runtime import DispatchConfig, NotifyConfig
+from ...config.runtime.defaults import DEFAULT_RESOURCES
+from ...planning import BatchIdentity, GpuBudgetPlan, PlannedRun
 from ...planning.contracts import PlanDiagnostic, ensure_plan_diagnostic
 from ...sources.models import FailedCompiledRun, SourceInputBatch, SourceRunInput
 from ..requests import SourceRequest
@@ -61,6 +62,9 @@ class BatchCompileReport:
     manifest_extras: dict[str, Any] = field(default_factory=dict)
     source_summary: str = ""
     storage_config: StorageConfigSpec = field(default_factory=StorageConfigSpec)
+    max_available_gpus: int = int(DEFAULT_RESOURCES["max_available_gpus"])
+    dispatch_cfg: DispatchConfig = field(default_factory=DispatchConfig)
+    gpu_budget_plan: GpuBudgetPlan | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "successful_runs", tuple(self.successful_runs))

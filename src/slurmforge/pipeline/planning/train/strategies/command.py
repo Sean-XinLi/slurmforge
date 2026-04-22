@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from dataclasses import replace
 
-from ....launch import max_available_gpus
+from ....launch import max_gpus_per_job
 from ...contracts import ExecutionTopology, StageCapabilities, StageExecutionPlan
 from ...enums import InvocationKind, LauncherKind, StageKind
 from ...external_command import resolve_external_command_text
@@ -75,5 +75,5 @@ class CommandTrainStrategy(TrainModeStrategy):
             cli_args={},
             command_mode=command_mode,
             requested_launcher_mode="external",
-            max_available_gpus_per_node=max_available_gpus(ctx.resources_cfg),
+            max_gpus_per_job=max_gpus_per_job(ctx.resources_cfg),
         )

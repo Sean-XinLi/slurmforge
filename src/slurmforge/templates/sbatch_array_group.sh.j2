@@ -4,16 +4,22 @@
 #SBATCH --error={{ array_log_dir }}/slurm-%j.err
 #SBATCH --partition={{ cluster.partition }}
 #SBATCH --account={{ cluster.account }}
-{% if cluster.qos %}#SBATCH --qos={{ cluster.qos }}{% endif %}
+{% if cluster.qos %}
+#SBATCH --qos={{ cluster.qos }}
+{% endif %}
 #SBATCH --time={{ cluster.time_limit }}
 #SBATCH --nodes={{ cluster.nodes }}
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:{{ cluster.gpus_per_node }}
 #SBATCH --cpus-per-task={{ cluster.cpus_per_task }}
-#SBATCH --array=0-{{ array_size - 1 }}
-{% if cluster.mem and cluster.mem != "0" %}#SBATCH --mem={{ cluster.mem }}{% endif %}
-{% if cluster.constraint %}#SBATCH --constraint={{ cluster.constraint }}{% endif %}
-{% for a in cluster.extra_sbatch_args -%}
+#SBATCH --array=0-{{ array_size - 1 }}{{ ('%%%d' % array_throttle) if (array_throttle and array_throttle > 0 and array_throttle < array_size) else '' }}
+{% if cluster.mem and cluster.mem != "0" %}
+#SBATCH --mem={{ cluster.mem }}
+{% endif %}
+{% if cluster.constraint %}
+#SBATCH --constraint={{ cluster.constraint }}
+{% endif %}
+{% for a in cluster.extra_sbatch_args %}
 #SBATCH {{ a }}
 {% endfor %}
 

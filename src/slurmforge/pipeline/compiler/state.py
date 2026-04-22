@@ -54,8 +54,23 @@ class MaterializedSourceBundle:
 
 @dataclass(frozen=True)
 class CompileState:
+    """Running compile-time state, built up as each spec is accepted.
+
+    ``max_available_gpus_candidates`` and ``dispatch_policy_candidates``
+    accumulate one entry per accepted spec.  The final batch-scoped value
+    is resolved to a single winner (or a ConfigContractError) in
+    ``build_materialized_report`` via ``resolve_batch_scope_unique``.
+
+    We never store a full ``ResourcesConfig`` at batch level — most of its
+    fields are run-scoped and must diverge freely across sweep / replay
+    runs; only ``max_available_gpus`` is batch-scoped, and it lives in
+    ``max_available_gpus_candidates`` until it's collapsed to a scalar.
+    """
+
     identity: BatchIdentity | None = None
     notify_cfg: NotifyConfig | None = None
     submit_dependencies: dict[str, list[str]] | None = None
     batch_diagnostics: tuple[PlanDiagnostic, ...] = ()
     storage_config: StorageConfigSpec = field(default_factory=StorageConfigSpec)
+    max_available_gpus_candidates: tuple[int, ...] = ()
+    dispatch_policy_candidates: tuple[str, ...] = ()

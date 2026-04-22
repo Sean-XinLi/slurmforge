@@ -87,6 +87,7 @@ Main CLI:
 
 ```bash
 sforge --help
+sforge --version          # or sforge -V
 ```
 
 Most users only need `sforge`. The low-level runtime helpers are invoked automatically by generated batch scripts.
@@ -575,6 +576,25 @@ notify:
 
 ---
 
+### GPU Budget Semantics
+
+`resources` carries two **independent** GPU budget knobs. They are not
+interchangeable:
+
+| Field                          | Scope          | Used by                                         |
+| ------------------------------ | -------------- | ----------------------------------------------- |
+| `resources.max_gpus_per_job`   | one run / job  | per-run topology, DDP packing, GPU estimator    |
+| `resources.max_available_gpus` | the full batch | array-group throttle (`%K`) + dispatch policy   |
+
+```yaml
+resources:
+  max_available_gpus: 16   # batch-wide concurrent GPU ceiling
+  max_gpus_per_job: 4      # any single run uses at most this many GPUs
+```
+
+`max_available_gpus` does **not** cap `max_gpus_per_job`, and vice versa —
+they describe different scopes.
+
 ### Automatic GPU Allocation
 
 When `resources.auto_gpu: true`, slurmforge estimates the GPU count per job
@@ -587,12 +607,42 @@ resources:
   target_mem_per_gpu_gb: 80    # target memory per GPU in GB
   safety_factor: 1.15          # multiply estimated memory by this factor (>= 1.0)
   min_gpus_per_job: 1
-  max_gpus_per_job: 8
-  max_available_gpus: 8
+  max_gpus_per_job: 8          # per-run cap (see "GPU Budget Semantics")
+  max_available_gpus: 8        # batch-wide budget (see "GPU Budget Semantics")
 
 cluster:
   gpus_per_node: "auto"        # set to "auto" to let resources block drive this
 ```
+
+---
+
+### Dispatch Policy (Array Group Throttling)
+
+A batch is grouped into Slurm array groups by identical resource shape. The
+budget planner sets each group's array throttle (`#SBATCH --array=0-N%K`) so
+that total concurrent GPU consumption respects `resources.max_available_gpus`.
+
+When the minimum concurrent demand of all groups (one task each) exceeds the
+budget, `dispatch.group_overflow_policy` decides what happens:
+
+```yaml
+dispatch:
+  group_overflow_policy: "error"   # error | serial | best_effort
+```
+
+| Policy        | Behavior on overflow                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| `error`       | `validate` / `generate` fail loudly. Default — safest and most transparent.                     |
+| `serial`      | Array groups are auto-chained via Slurm dependency (`afterany`, `--kill-on-invalid-dep=no`).    |
+| `best_effort` | Each group throttles independently to fit the budget; concurrent groups may still oversubscribe. Emits a warning. |
+
+A single task whose `gpus_per_task` exceeds `max_available_gpus` is always a
+hard error regardless of policy.
+
+`generate --dry_run` prints the full budget plan (per-group throttle,
+`limiting_run`, `limiting_model`, `max_estimated_gpus`, and any constraint
+reason) so you can see the throttle decisions before submission. The same
+plan is persisted under `gpu_budget_plan` in the batch manifest.
 
 ---
 

@@ -83,20 +83,20 @@ def build_topology_diagnostics(plan: StageExecutionPlan) -> list[PlanDiagnostic]
             )
         )
 
-    if plan.max_available_gpus_per_node > 0 and allocation.gpus_per_node > plan.max_available_gpus_per_node:
+    if plan.max_gpus_per_job > 0 and allocation.gpus_per_node > plan.max_gpus_per_job:
         diagnostics.append(
             build_diagnostic(
                 severity="error",
                 category="resource",
                 plan=plan,
-                code="allocation_exceeds_cluster_limit",
+                code="allocation_exceeds_per_job_limit",
                 message=(
                     f"allocation gpus_per_node={allocation.gpus_per_node} exceeds "
-                    f"resources.max_available_gpus={plan.max_available_gpus_per_node}"
+                    f"resources.max_gpus_per_job={plan.max_gpus_per_job}"
                 ),
                 field_path="allocation.gpus_per_node",
                 actual=allocation.gpus_per_node,
-                expected=plan.max_available_gpus_per_node,
+                expected=plan.max_gpus_per_job,
             )
         )
 

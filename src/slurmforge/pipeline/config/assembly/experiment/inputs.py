@@ -22,6 +22,7 @@ class ExperimentSectionInputs:
     cluster_cfg_raw: dict[str, Any]
     env_cfg_raw: dict[str, Any]
     resources_cfg_raw: dict[str, Any]
+    dispatch_cfg_raw: dict[str, Any]
     artifacts_cfg_raw: dict[str, Any]
     output_cfg_raw: dict[str, Any]
     notify_cfg_raw: Any
@@ -55,6 +56,7 @@ def gather_experiment_section_inputs(
         cluster_cfg_raw=ensure_dict(cfg.get("cluster"), "cluster"),
         env_cfg_raw=ensure_dict(cfg.get("env"), "env"),
         resources_cfg_raw=ensure_dict(cfg.get("resources"), "resources"),
+        dispatch_cfg_raw=ensure_dict(cfg.get("dispatch"), "dispatch"),
         artifacts_cfg_raw=ensure_dict(cfg.get("artifacts"), "artifacts"),
         output_cfg_raw=ensure_dict(cfg.get("output"), "output"),
         notify_cfg_raw=cfg.get("notify"),

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ....launch import build_stage_command, max_available_gpus
+from ....launch import build_stage_command, max_gpus_per_job
 from ...contracts import ExecutionTopology, StageCapabilities, StageExecutionPlan
 from ...enums import InvocationKind, LauncherKind, StageKind
 from ..allocation import build_resource_estimate, resolve_allocation, resolve_runtime_probe
@@ -83,5 +83,5 @@ def build_scripted_stage_plan(
         cli_args=cli_args,
         command_mode=None,
         requested_launcher_mode=requested_mode,
-        max_available_gpus_per_node=max_available_gpus(ctx.resources_cfg),
+        max_gpus_per_job=max_gpus_per_job(ctx.resources_cfg),
     )

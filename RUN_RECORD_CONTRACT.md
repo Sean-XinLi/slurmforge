@@ -153,7 +153,7 @@ Persisted `StageExecutionPlan` fields:
 - `cli_args`
 - `command_mode`
 - `requested_launcher_mode`
-- `max_available_gpus_per_node`
+- `max_gpus_per_job`
 - `diagnostics`
 
 ### `eval_train_outputs`

@@ -16,6 +16,9 @@ def require_success(report: BatchCompileReport) -> PlannedBatch:
         submit_dependencies=report.submit_dependencies,
         manifest_extras=report.manifest_extras,
         storage_config=report.storage_config,
+        max_available_gpus=report.max_available_gpus,
+        dispatch_cfg=report.dispatch_cfg,
+        gpu_budget_plan=report.gpu_budget_plan,
     )
 
 

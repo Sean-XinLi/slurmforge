@@ -22,6 +22,8 @@ def build_contextless_report(
         checked_runs=checked_runs,
         notify_cfg=state.notify_cfg,
         submit_dependencies=state.submit_dependencies,
+        max_available_gpus_candidates=state.max_available_gpus_candidates,
+        dispatch_policy_candidates=state.dispatch_policy_candidates,
     )
 
 
@@ -44,4 +46,6 @@ def build_compile_report(
         notify_cfg=state.notify_cfg,
         submit_dependencies=state.submit_dependencies,
         storage_config=state.storage_config,
+        max_available_gpus_candidates=state.max_available_gpus_candidates,
+        dispatch_policy_candidates=state.dispatch_policy_candidates,
     )

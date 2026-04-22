@@ -8,7 +8,7 @@ from pathlib import Path
 from ....errors import PlanningError
 from ...config.runtime import LauncherConfig, ResourcesConfig
 from ...config.utils import resolve_path
-from ...launch import build_stage_command, max_available_gpus
+from ...launch import build_stage_command, max_gpus_per_job
 from ..contracts import ExecutionTopology, ResourceEstimate
 from ..enums import LauncherKind
 
@@ -88,7 +88,7 @@ def resolve_topology(
     per_node_limit = (
         int(cluster_cfg.gpus_per_node or 1)
         if cluster_gpus_per_node_explicit and cluster_cfg.gpus_per_node not in {None, ""}
-        else max_available_gpus(resources_cfg)
+        else max_gpus_per_job(resources_cfg)
     )
     desired_total = max(1, int(estimate.recommended_total_gpus))
     configured_nodes = max(1, int(distributed_cfg.nnodes or 1))

@@ -66,3 +66,10 @@ launcher:
 artifacts:
   checkpoint_globs: []
   extra_globs: []
+
+# Optional · how concurrent array groups share resources.max_available_gpus.
+#   error       · fail validate/generate if groups together exceed the budget (default; safest)
+#   serial      · auto-chain array groups with Slurm dependency when over budget
+#   best_effort · per-group throttle only; no global guarantee — emits a warning
+dispatch:
+  group_overflow_policy: "error"

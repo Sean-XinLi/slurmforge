@@ -17,6 +17,7 @@ from .requests import (
 )
 from .state import CollectedSourceBundle, MaterializedSourceBundle
 from ..planning.enums import DiagnosticSeverity
+from ..planning.gpu_budget import GpuBudgetPlan
 from ..planning.validator import format_diagnostic
 
 STRATEGIES = (AUTHORING_FLOW, REPLAY_FLOW)
@@ -53,6 +54,29 @@ def compile_source(
     )
 
 
+def _format_gpu_budget_summary(plan: GpuBudgetPlan) -> list[str]:
+    """Produce a compact validate-style summary block for a GPU budget plan.
+
+    Severity escalates to ``[WARN]`` whenever the plan does not enforce a
+    strict global GPU limit (best_effort) or whenever any group was
+    throttle-constrained by the budget.  Otherwise the block is informational.
+    """
+    constrained = any(g.constrained for g in plan.groups)
+    escalate = (not plan.strict_global_limit) or constrained
+    prefix = "[WARN]" if escalate else "[INFO]"
+    lines: list[str] = [f"{prefix} GPU batch budget:"]
+    lines.append(f"  resources.max_available_gpus={plan.max_available_gpus}")
+    lines.append(f"  array_groups={len(plan.groups)}")
+    lines.append(f"  min_concurrent_gpus={plan.min_concurrent_gpus}")
+    lines.append(f"  max_planned_concurrent_gpus={plan.max_planned_concurrent_gpus}")
+    lines.append(f"  dispatch.group_overflow_policy={plan.group_overflow_policy}")
+    lines.append(f"  policy_applied={plan.policy_applied}")
+    lines.append(f"  strict_global_limit={str(plan.strict_global_limit).lower()}")
+    if plan.policy_applied == "serialized_groups":
+        lines.append("  generate will serialize array groups.")
+    return lines
+
+
 def iter_compile_report_lines(report: BatchCompileReport) -> tuple[str, ...]:
     lines: list[str] = []
     for diagnostic in report.batch_diagnostics:
@@ -79,6 +103,8 @@ def iter_compile_report_lines(report: BatchCompileReport) -> tuple[str, ...]:
         lines.append(f"[WARN] run {planned_run.plan.run_index}/{report_total_runs(report)} {planned_run.plan.run_id}")
         for diagnostic in warnings:
             lines.append(format_diagnostic(diagnostic))
+    if report.gpu_budget_plan is not None:
+        lines.extend(_format_gpu_budget_summary(report.gpu_budget_plan))
     return tuple(lines)
 
 

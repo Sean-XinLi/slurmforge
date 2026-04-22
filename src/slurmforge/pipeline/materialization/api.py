@@ -25,6 +25,9 @@ def materialize_batch(
         submit_dependencies=dict(planned_batch.submit_dependencies),
         manifest_extras=dict(planned_batch.manifest_extras),
         storage_config=planned_batch.storage_config,
+        max_available_gpus=planned_batch.max_available_gpus,
+        dispatch_cfg=planned_batch.dispatch_cfg,
+        gpu_budget_plan=planned_batch.gpu_budget_plan,
     )
 
     layout = resolve_materialization_layout(planned_batch.batch_root)

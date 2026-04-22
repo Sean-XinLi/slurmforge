@@ -13,30 +13,26 @@ from .shared import ensure_normalized_config
 def normalize_resources(cfg: dict[str, Any]) -> ResourcesConfig:
     merged = deep_merge(DEFAULT_RESOURCES, ensure_dict(cfg, "resources"))
 
-    max_available = int(merged.get("max_available_gpus", merged.get("max_gpus_per_job", 8)))
+    max_per_job = int(merged.get("max_gpus_per_job", DEFAULT_RESOURCES["max_gpus_per_job"]))
+    if max_per_job < 1:
+        raise ConfigContractError("resources.max_gpus_per_job must be >= 1")
+    merged["max_gpus_per_job"] = max_per_job
+
+    max_available = int(merged.get("max_available_gpus", DEFAULT_RESOURCES["max_available_gpus"]))
     if max_available < 1:
         raise ConfigContractError("resources.max_available_gpus must be >= 1")
     merged["max_available_gpus"] = max_available
 
-    max_per_job = int(merged.get("max_gpus_per_job", max_available))
-    if max_per_job < 1:
-        raise ConfigContractError("resources.max_gpus_per_job must be >= 1")
-    if max_per_job > max_available:
-        _warn(
-            "resources.max_gpus_per_job is capped by resources.max_available_gpus "
-            f"({max_per_job} -> {max_available})"
-        )
-    merged["max_gpus_per_job"] = min(max_per_job, max_available)
-
     min_per_job = int(merged.get("min_gpus_per_job", 1))
     if min_per_job < 1:
         raise ConfigContractError("resources.min_gpus_per_job must be >= 1")
-    if min_per_job > merged["max_gpus_per_job"]:
+    if min_per_job > max_per_job:
         _warn(
             "resources.min_gpus_per_job is capped by resources.max_gpus_per_job "
-            f"({min_per_job} -> {merged['max_gpus_per_job']})"
+            f"({min_per_job} -> {max_per_job})"
         )
-    merged["min_gpus_per_job"] = min(min_per_job, merged["max_gpus_per_job"])
+        min_per_job = max_per_job
+    merged["min_gpus_per_job"] = min_per_job
 
     return ResourcesConfig(
         auto_gpu=normalize_bool(merged["auto_gpu"], name="resources.auto_gpu"),

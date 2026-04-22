@@ -10,6 +10,47 @@ from unittest.mock import patch
 import yaml
 
 
+class CliVersionFlagTests(unittest.TestCase):
+    def test_version_flag_prints_package_and_version(self) -> None:
+        from slurmforge.identity import PACKAGE_NAME, __version__
+        from slurmforge.launcher import build_parser
+
+        parser = build_parser()
+        for flag in ("--version", "-V"):
+            with self.subTest(flag=flag):
+                buf = io.StringIO()
+                with redirect_stdout(buf), self.assertRaises(SystemExit) as ctx:
+                    parser.parse_args([flag])
+                self.assertEqual(ctx.exception.code, 0)
+                self.assertEqual(buf.getvalue().strip(), f"{PACKAGE_NAME} {__version__}")
+
+
+class StarterYamlDispatchBlockTests(unittest.TestCase):
+    """Every user-facing starter/HPC YAML must surface `dispatch.group_overflow_policy`.
+
+    The minimal examples (and the registry definition) are intentionally bare,
+    so they're excluded.
+    """
+
+    _SKIP = {"adapter_minimal", "command_minimal", "model_registry"}
+
+    def test_all_user_facing_examples_carry_dispatch_block(self) -> None:
+        from slurmforge.example_configs import list_example_names, read_example_text
+
+        for name in list_example_names():
+            if name in self._SKIP:
+                continue
+            with self.subTest(example=name):
+                text = read_example_text(name)
+                cfg = yaml.safe_load(text)
+                self.assertIn("dispatch", cfg, f"{name} missing top-level `dispatch:`")
+                self.assertEqual(cfg["dispatch"].get("group_overflow_policy"), "error")
+                # Comment header must list the three options so users discover them.
+                self.assertIn("error", text)
+                self.assertIn("serial", text)
+                self.assertIn("best_effort", text)
+
+
 class ExampleCliTests(unittest.TestCase):
     def test_list_example_catalog_includes_descriptions(self) -> None:
         from slurmforge.example_configs import list_example_catalog

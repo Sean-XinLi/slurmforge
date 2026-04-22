@@ -8,7 +8,7 @@ import yaml
 
 from ..errors import ConfigContractError
 from ..identity import __version__, regenerate_after_upgrade_note
-from ..pipeline.materialization import MaterializationResult, materialize_batch, print_dry_run
+from ..pipeline.materialization import MaterializationResult, materialize_batch, print_dry_run_batch
 from ..pipeline.planning import PlannedBatch
 from ..storage import create_planning_store
 from ..sweep import deep_set, parse_override
@@ -75,7 +75,7 @@ def materialize_or_print_batch(
     dry_run: bool,
 ) -> MaterializationResult | None:
     if dry_run:
-        print_dry_run(planned_run.plan for planned_run in planned_batch.planned_runs)
+        print_dry_run_batch(planned_batch)
         return None
 
     env = build_template_env()

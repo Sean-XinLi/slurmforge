@@ -6,7 +6,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from slurmforge.pipeline.compiler import BatchCompileError, RetrySourceRequest, compile_source
-from slurmforge.pipeline.compiler.reports import require_success
+from slurmforge.pipeline.compiler.reports import report_has_failures, require_success
 from slurmforge.pipeline.config.api import EvalTrainOutputsConfig
 from slurmforge.pipeline.config.codecs import normalize_storage_config
 from slurmforge.pipeline.materialization import materialize_batch
@@ -24,6 +24,25 @@ from slurmforge.pipeline.status import (
 from slurmforge.pipeline.train_outputs import write_train_outputs_contract
 
 
+def _compile_retry_report(
+    *,
+    source_batch_root: Path,
+    project_root_override: Path | None,
+    status_query: str,
+    cli_overrides: list[str],
+    default_batch_name: str,
+):
+    return compile_source(
+        RetrySourceRequest(
+            source_batch_root=source_batch_root,
+            project_root=project_root_override,
+            status_query=status_query,
+            cli_overrides=tuple(cli_overrides),
+            default_batch_name=default_batch_name,
+        )
+    )
+
+
 def _compile_retry_planned_batch(
     *,
     source_batch_root: Path,
@@ -33,19 +52,24 @@ def _compile_retry_planned_batch(
     default_batch_name: str,
 ):
     return require_success(
-        compile_source(
-            RetrySourceRequest(
-                source_batch_root=source_batch_root,
-                project_root=project_root_override,
-                status_query=status_query,
-                cli_overrides=tuple(cli_overrides),
-                default_batch_name=default_batch_name,
-            )
+        _compile_retry_report(
+            source_batch_root=source_batch_root,
+            project_root_override=project_root_override,
+            status_query=status_query,
+            cli_overrides=cli_overrides,
+            default_batch_name=default_batch_name,
         )
     )
 
 
-def _resolved_cfg(*, lr: float = 0.001) -> dict:
+def _resolved_cfg(
+    *,
+    lr: float = 0.001,
+    max_available_gpus: int = 2,
+    max_gpus_per_job: int = 2,
+    gpus_per_node: int = 1,
+    dispatch_policy: str = "error",
+) -> dict:
     return {
         "project": "demo",
         "experiment_name": "exp",
@@ -60,15 +84,16 @@ def _resolved_cfg(*, lr: float = 0.001) -> dict:
             "qos": "normal",
             "time_limit": "01:00:00",
             "nodes": 1,
-            "gpus_per_node": 1,
+            "gpus_per_node": gpus_per_node,
             "cpus_per_task": 2,
             "mem": "0",
         },
         "resources": {
             "auto_gpu": False,
-            "max_available_gpus": 2,
-            "max_gpus_per_job": 2,
+            "max_available_gpus": max_available_gpus,
+            "max_gpus_per_job": max_gpus_per_job,
         },
+        "dispatch": {"group_overflow_policy": dispatch_policy},
     }
 
 
@@ -155,6 +180,45 @@ def _write_snapshot(run_dir: Path, snapshot) -> None:
     snapshot_path = run_dir / "meta" / "run_snapshot.json"
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
     snapshot_path.write_text(json.dumps(serialize_run_snapshot(snapshot), sort_keys=True), encoding="utf-8")
+
+
+def _materialize_failed_retry_batch_with_cfgs(tmp_path: Path, cfg1: dict, cfg2: dict) -> Path:
+    batch_root, run_dir_1, run_dir_2 = _materialize_retry_batch(tmp_path)
+    (tmp_path / "train.py").write_text("print('ok')\n", encoding="utf-8")
+
+    for index, run_id, run_dir, cfg, job_id in (
+        (1, "r1", run_dir_1, cfg1, "101"),
+        (2, "r2", run_dir_2, cfg2, "102"),
+    ):
+        _write_snapshot(
+            run_dir,
+            sample_run_snapshot(
+                run_index=index,
+                total_runs=2,
+                run_id=run_id,
+                replay_spec=build_replay_spec(
+                    cfg,
+                    planning_root=str(tmp_path),
+                    source_batch_root=str(batch_root),
+                    source_run_id=run_id,
+                    source_record_path=str(batch_root / "records" / "group_01" / f"task_{index - 1:06d}.json"),
+                ),
+            ),
+        )
+        _write_status(
+            run_dir,
+            job_id,
+            ExecutionStatus(
+                state="failed",
+                failure_class="script_error",
+                failed_stage="train",
+                reason="train_exit_code=1",
+                job_key=job_id,
+                slurm_job_id=job_id,
+                result_dir=str(run_dir / f"job-{job_id}"),
+            ),
+        )
+    return batch_root
 
 
 class RetryTests(unittest.TestCase):
@@ -780,6 +844,84 @@ class RetryTests(unittest.TestCase):
         self.assertTrue(planned_batch.notify_cfg.enabled)
         self.assertEqual(planned_batch.notify_cfg.email, "retry@example.com")
         self.assertEqual(planned_batch.submit_dependencies, {"afterok": ["12345"]})
+
+    def test_retry_rejects_selected_runs_with_divergent_max_available_gpus_without_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            batch_root = _materialize_failed_retry_batch_with_cfgs(
+                tmp_path,
+                _resolved_cfg(lr=0.001, max_available_gpus=8),
+                _resolved_cfg(lr=0.002, max_available_gpus=16),
+            )
+            report = _compile_retry_report(
+                source_batch_root=batch_root,
+                project_root_override=tmp_path,
+                status_query="failed",
+                cli_overrides=[],
+                default_batch_name="retry_batch",
+            )
+
+        self.assertTrue(report_has_failures(report))
+        self.assertEqual(report.successful_runs, ())
+        codes = {diagnostic.code for diagnostic in report.batch_diagnostics}
+        self.assertIn("batch_scope_inconsistent_max_available_gpus", codes)
+        messages = "\n".join(diagnostic.message for diagnostic in report.batch_diagnostics)
+        self.assertIn("--set resources.max_available_gpus=", messages)
+
+    def test_retry_cli_override_unifies_divergent_max_available_gpus_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            batch_root = _materialize_failed_retry_batch_with_cfgs(
+                tmp_path,
+                _resolved_cfg(lr=0.001, max_available_gpus=8),
+                _resolved_cfg(lr=0.002, max_available_gpus=16),
+            )
+            planned_batch = _compile_retry_planned_batch(
+                source_batch_root=batch_root,
+                project_root_override=tmp_path,
+                status_query="failed",
+                cli_overrides=["resources.max_available_gpus=32"],
+                default_batch_name="retry_batch",
+            )
+
+        self.assertEqual(planned_batch.max_available_gpus, 32)
+        self.assertEqual(planned_batch.gpu_budget_plan.max_available_gpus, 32)
+        self.assertEqual(
+            {
+                run.snapshot.replay_spec.replay_cfg["resources"]["max_available_gpus"]
+                for run in planned_batch.planned_runs
+            },
+            {32},
+        )
+
+    def test_retry_cli_override_max_gpus_per_job_remains_run_scoped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            batch_root = _materialize_failed_retry_batch_with_cfgs(
+                tmp_path,
+                _resolved_cfg(lr=0.001, max_available_gpus=16, max_gpus_per_job=2),
+                _resolved_cfg(lr=0.002, max_available_gpus=16, max_gpus_per_job=2),
+            )
+            planned_batch = _compile_retry_planned_batch(
+                source_batch_root=batch_root,
+                project_root_override=tmp_path,
+                status_query="failed",
+                cli_overrides=["resources.max_gpus_per_job=4"],
+                default_batch_name="retry_batch",
+            )
+
+        self.assertEqual(planned_batch.max_available_gpus, 16)
+        self.assertEqual(
+            {run.plan.train_stage.max_gpus_per_job for run in planned_batch.planned_runs},
+            {4},
+        )
+        self.assertEqual(
+            {
+                run.snapshot.replay_spec.replay_cfg["resources"]["max_gpus_per_job"]
+                for run in planned_batch.planned_runs
+            },
+            {4},
+        )
 
     def test_build_retry_planned_batch_reports_human_readable_replay_source_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

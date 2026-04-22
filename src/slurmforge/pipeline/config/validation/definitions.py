@@ -30,6 +30,15 @@ BATCH_SCOPED_SWEEP_PREFIXES = (
     "storage",
 )
 
+# Paths that are batch-scoped but live inside a section whose OTHER fields
+# are run-scoped.  These must be matched exactly (not as a prefix) so that
+# e.g. ``resources.max_gpus_per_job`` remains sweepable while
+# ``resources.max_available_gpus`` is rejected.
+BATCH_SCOPED_SWEEP_EXACT_PATHS = (
+    "resources.max_available_gpus",
+    "dispatch.group_overflow_policy",
+)
+
 MODEL_SCHEMA = ObjectSchema(
     {
         "name": SCALAR,
@@ -136,6 +145,11 @@ RESOURCES_SCHEMA = ObjectSchema(
         "max_available_gpus": SCALAR,
     }
 )
+DISPATCH_SCHEMA = ObjectSchema(
+    {
+        "group_overflow_policy": SCALAR,
+    }
+)
 ARTIFACTS_SCHEMA = ObjectSchema(
     {
         "checkpoint_globs": SCALAR,
@@ -231,6 +245,7 @@ COMMON_EXPERIMENT_SCHEMA = ObjectSchema(
         "cluster": CLUSTER_SCHEMA,
         "env": ENV_SCHEMA,
         "resources": RESOURCES_SCHEMA,
+        "dispatch": DISPATCH_SCHEMA,
         "artifacts": ARTIFACTS_SCHEMA,
         "eval": EVAL_SCHEMA,
         "output": OUTPUT_SCHEMA,

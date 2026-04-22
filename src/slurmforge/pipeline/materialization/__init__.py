@@ -11,7 +11,7 @@ from .grouping import (
     resource_request_from_cluster,
     summarize_resource_buckets,
 )
-from .reporting import print_dry_run
+from .reporting import print_dry_run, print_dry_run_batch
 from .shell_builder import build_shell_script
 
 __all__ = [
@@ -23,6 +23,7 @@ __all__ = [
     "ensure_cluster_renderable",
     "materialize_batch",
     "print_dry_run",
+    "print_dry_run_batch",
     "resource_bucket_from_cluster",
     "resource_request_from_cluster",
     "summarize_resource_buckets",

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ...models import BatchSharedSpec
-from ...normalize import normalize_notify
+from ...normalize import normalize_notify, normalize_resources
 from ...utils import ensure_dict, ensure_path_segment, resolve_spec_project_root
 from ...validation.authoring import normalize_authoring_sweep_spec
 from ..output import normalize_output_config
@@ -27,6 +27,13 @@ def build_batch_shared_spec(
 ) -> BatchSharedSpec:
     project = ensure_path_segment(cfg.get("project"), name=f"{config_path}: project")
     experiment_name = ensure_path_segment(cfg.get("experiment_name"), name=f"{config_path}: experiment_name")
+    # Only ``max_available_gpus`` is batch-scoped from the top-level
+    # ``resources:`` block; everything else (max_gpus_per_job, auto_gpu,
+    # estimator knobs) is run-scoped and belongs on each run's spec, which
+    # may diverge from the top-level via sweep axes.  We normalize the full
+    # resources block here strictly to leverage its validation, then project
+    # out the single batch-scoped scalar.
+    base_resources = normalize_resources(ensure_dict(cfg.get("resources"), "resources"))
     return BatchSharedSpec(
         project_root=project_root,
         config_path=config_path,
@@ -34,6 +41,7 @@ def build_batch_shared_spec(
         experiment_name=experiment_name,
         output=normalize_output_config(ensure_dict(cfg.get("output"), "output"), config_path=config_path),
         notify=normalize_notify(cfg.get("notify")),
+        max_available_gpus=int(base_resources.max_available_gpus),
         storage=normalize_storage_config(cfg.get("storage")),
     )
 

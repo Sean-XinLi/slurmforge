@@ -8,12 +8,14 @@ from ....model_support.catalog import ResolvedModelCatalog
 from ..runtime import (
     ArtifactsConfig,
     ClusterConfig,
+    DispatchConfig,
     EnvConfig,
     LauncherConfig,
     NotifyConfig,
     ResourcesConfig,
     ValidationConfig,
 )
+from ..runtime.defaults import DEFAULT_RESOURCES
 from .eval import EvalConfigSpec
 from .model import ModelConfigSpec
 from .output import OutputConfigSpec
@@ -37,6 +39,7 @@ class ExperimentSpec:
     notify: NotifyConfig
     validation: ValidationConfig
     storage: StorageConfigSpec = field(default_factory=StorageConfigSpec)
+    dispatch: DispatchConfig = field(default_factory=DispatchConfig)
     model: ModelConfigSpec | None = None
     model_catalog: ResolvedModelCatalog = field(default_factory=ResolvedModelCatalog)
     hints: PlanningHints = field(default_factory=PlanningHints)
@@ -44,12 +47,23 @@ class ExperimentSpec:
 
 @dataclass(frozen=True)
 class BatchSharedSpec:
+    """Batch-wide configuration shared by every run in the batch.
+
+    ``resources`` and ``dispatch`` are NOT stored here as full config objects
+    because most of their fields are run-scoped (max_gpus_per_job, auto_gpu,
+    estimator knobs) and must be independently settable per-run (sweep,
+    replay-override).  Only the single batch-scoped GPU budget lives on this
+    struct.  The final resolved ``dispatch.group_overflow_policy`` is
+    resolved later in the compile report, not baked into this struct.
+    """
+
     project_root: Path
     config_path: Path
     project: str
     experiment_name: str
     output: OutputConfigSpec
     notify: NotifyConfig
+    max_available_gpus: int = int(DEFAULT_RESOURCES["max_available_gpus"])
     storage: StorageConfigSpec = field(default_factory=StorageConfigSpec)
 
 

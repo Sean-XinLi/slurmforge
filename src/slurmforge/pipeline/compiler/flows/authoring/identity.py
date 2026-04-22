@@ -51,4 +51,8 @@ def initialize_authoring_compile_state(
         submit_dependencies=copy.deepcopy(context.shared.output.dependencies),
         batch_diagnostics=materialized.batch_diagnostics,
         storage_config=context.shared.storage,
+        # Candidates are populated by accept_authoring_spec as each
+        # sweep-expanded spec is built.  The batch_shared's
+        # ``max_available_gpus`` is not pre-loaded here so authoring
+        # goes through the exact same candidate-resolve path as replay.
     )
