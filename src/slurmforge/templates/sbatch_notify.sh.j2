@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-PROJECT_NAME={{ project|shellquote }}
-EXPERIMENT_NAME={{ experiment_name|shellquote }}
-
-printf '%s\n' "[NOTIFY] project=${PROJECT_NAME} experiment=${EXPERIMENT_NAME}"
-true

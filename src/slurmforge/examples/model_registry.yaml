@@ -1,7 +1,0 @@
-models:
-  - name: "my_model"
-    script: "train.py"
-    yaml: null
-    ddp_supported: true
-    ddp_required: false
-    estimator_profile: "default"

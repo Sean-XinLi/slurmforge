@@ -3,16 +3,15 @@ from __future__ import annotations
 
 import argparse
 
-from .cli import examples, generate, init, replay, rerun, status, validate
+from .cli import eval as eval_cmd
+from .cli import plan, resubmit, run, status, train, validate
 from .identity import PACKAGE_NAME, __version__
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Slurm-oriented AI/ML experiment orchestration CLI. "
-            "Start with `sforge init` for a starter project scaffold or "
-            "`sforge examples` for raw YAML references."
+            "Slurm-oriented stage-batch pipeline CLI for training and evaluation workflows."
         )
     )
     parser.add_argument(
@@ -23,13 +22,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True
-    generate.add_subparser(subparsers)
-    examples.add_subparser(subparsers)
-    init.add_subparser(subparsers)
-    replay.add_subparser(subparsers)
-    rerun.add_subparser(subparsers)
-    status.add_subparser(subparsers)
     validate.add_subparser(subparsers)
+    plan.add_subparser(subparsers)
+    train.add_subparser(subparsers)
+    eval_cmd.add_subparser(subparsers)
+    run.add_subparser(subparsers)
+    status.add_subparser(subparsers)
+    resubmit.add_subparser(subparsers)
     return parser
 
 

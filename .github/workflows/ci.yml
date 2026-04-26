@@ -34,6 +34,9 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      - name: Check imports
+        run: lint-imports
+
       - name: Run tests
         run: pytest -q
 

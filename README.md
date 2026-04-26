@@ -1,852 +1,347 @@
 # slurmforge
 
-[![PyPI version](https://img.shields.io/pypi/v/slurmforge.svg)](https://pypi.org/project/slurmforge/)
+`slurmforge` is a Slurm-native stage-batch pipeline system for AI training and evaluation workflows.
 
-## TL;DR
-
-Define experiments in YAML → generate reproducible Slurm jobs.
+The current command model is deliberately small:
 
 ```bash
-sforge init
-sforge validate
-sforge generate
-sbatch runs/.../sbatch/*.sh
+sforge validate --config experiment.yaml
+sforge plan train --config experiment.yaml --dry_run=full --output plan.audit.json
+sforge plan eval --config experiment.yaml --checkpoint /path/to/model.pt --input-name model_input
+sforge plan run --config experiment.yaml
+sforge train --config experiment.yaml --dry_run
+sforge train --config experiment.yaml --dry_run=json
+sforge train --config experiment.yaml --emit_only
+sforge train --config experiment.yaml
+sforge eval --config experiment.yaml --checkpoint /path/to/step_12000.pt
+sforge eval --config experiment.yaml --checkpoint /path/to/model.pt --input-name model_input
+sforge eval --config experiment.yaml --from-train-batch /path/to/train_batch
+sforge run --config experiment.yaml
+sforge status --from /path/to/root
+sforge status --from /path/to/root --reconcile
+sforge resubmit --from /path/to/root --stage eval --query state=failed
 ```
 
+## Model
 
-`slurmforge` is a Slurm-native AI/ML experiment orchestration toolkit designed for large-scale training workflows.
+- `sforge train` submits train stage batches only.
+- `sforge eval` submits eval stage batches only.
+- `sforge run` submits a pipeline controller that advances stages in order.
+- `sforge plan` compiles plans and sbatch files without submitting.
+- `sforge status` reads persisted stage-level status. Add `--reconcile` to query Slurm through submission ledgers and update status before printing.
+- `sforge resubmit` provides one stage-level command for exact re-executions, failed-stage retries, and override-based follow-up runs.
 
-It helps you:
-- expand experiment sweeps from a single config
-- generate reproducible Slurm batch jobs
-- manage training + evaluation pipelines with minimal boilerplate
+The execution atom is a **stage attempt**. One Slurm array task maps to one user stage attempt, and one attempt records one stage exit code.
 
-It takes one experiment config, expands a sweep, resolves train and eval commands, groups runs by final Slurm resource shape, and materializes the batch records and sbatch files needed for execution.
+The programmatic submission boundary is also stage-batch based. External callers prepare a batch with `prepare_stage_submission`, submit only the returned `PreparedSubmission` with `submit_prepared_stage_batch`, and read or reconcile through read-only submission APIs. Ledger mutation and stage sbatch generation helpers are internal implementation details.
 
+Execution mode is uniform across commands:
 
-## Why slurmforge? 
+- `--dry_run` previews the plan only. It writes no files and submits nothing.
+- `--dry_run=json` writes a machine-readable plan audit to stdout or `--output`.
+- `--dry_run=full` adds contract verification and runtime probes to the audit. Deferred upstream inputs in a pipeline preview stay deferred instead of failing the whole plan.
+- `--emit_only` writes plan, sbatch, manifests, and a planned submission ledger, but submits nothing.
+- No execution-mode flag writes files and submits.
+- `sforge plan train|eval|run` defaults to emit mode; `--dry_run` is preview-only.
 
-Compared to ad-hoc bash scripts or manual sbatch workflows:
+## Config Shape
 
-- structured experiment definition (YAML instead of shell glue)
-- deterministic sweep expansion
-- built-in retry and replay support
-- explicit separation of planning vs execution
+Configs are stage-driven:
 
-Unlike general-purpose orchestration tools, slurmforge is designed specifically for Slurm environments.
+```yaml
+project: "demo_project"
+experiment: "finetune_v2"
 
+storage:
+  root: "./runs"
 
-## Architecture (High-Level)
+runtime:
+  executor:
+    python:
+      bin: "python3.11"
+      min_version: "3.10"
+    module: "slurmforge.executor.stage"
+    bootstrap:
+      scope: "sbatch"
+      steps:
+        - type: module_load
+          name: "cuda/12.1"
+        - type: source
+          path: "/shared/miniconda/bin/activate"
+          args: ["myenv"]
+    env:
+      HF_HOME: "/shared/hf"
+  user:
+    default:
+      python:
+        bin: "python3.11"
+        min_version: "3.10"
 
-```mermaid
+artifact_store:
+  strategy: "copy"
+  fallback_strategy: null
+  verify_digest: true
+  fail_on_verify_error: true
 
-flowchart TD
-    A[Config YAML] --> B[Planning - Build Run Graph]
-    B --> C[Materialization - Generate sbatch]
-    C --> D[Execution - Runtime helpers]
-    D --> E[Slurm Cluster]
-    E --> F[Results / Logs]
+matrix:
+  axes:
+    train.entry.args.lr: [1e-4, 5e-5]
+
+stages:
+  train:
+    enabled: true
+    entry:
+      type: python_script
+      script: "train.py"
+      workdir: "."
+      args:
+        epochs: 3
+    launcher:
+      type: torchrun
+      mode: single_node
+      nnodes: 1
+      nproc_per_node: 8
+      rendezvous:
+        backend: c10d
+        endpoint: auto
+        port: 29500
+    resources:
+      partition: "gpu"
+      nodes: 1
+      gpus_per_node: 8
+      cpus_per_task: 12
+      mem: "256G"
+    outputs:
+      checkpoint:
+        kind: file
+        required: true
+        discover:
+          globs: ["checkpoints/**/*.pt"]
+          select: "latest_step"
+      logs:
+        kind: files
+        discover:
+          globs: ["logs/**/*.log"]
+
+  eval:
+    enabled: true
+    depends_on: "train"
+    entry:
+      type: python_script
+      script: "eval.py"
+      workdir: "."
+      args:
+        split: "test"
+    launcher:
+      type: single
+    inputs:
+      checkpoint:
+        source:
+          kind: upstream_output
+          stage: train
+          output: checkpoint
+        expects: path
+        required: true
+        inject:
+          flag: "checkpoint_path"
+          env: "SFORGE_INPUT_CHECKPOINT"
+    resources:
+      partition: "gpu"
+      nodes: 1
+      gpus_per_node: 1
+      cpus_per_task: 8
+      mem: "32G"
+    outputs:
+      accuracy:
+        kind: metric
+        file: "eval/metrics.json"
+        json_path: "$.accuracy"
+        required: true
+      eval_report:
+        kind: manifest
+        file: "eval/manifest.json"
+        required: false
+
+dispatch:
+  max_available_gpus: 32
+  overflow_policy: "serialize_groups"
 ```
 
-This separation ensures reproducibility and easier debugging.
+`matrix.axes` may address stage paths directly, such as `train.entry.args.lr`; this is normalized to `stages.train.entry.args.lr`.
 
+Stage-batch v1 intentionally supports only `stages.train` and `stages.eval`. `eval` may depend on `train`; no other topology is accepted.
 
-## Who This Is For
+Stage inputs are resolved by the contract kernel, not by CLI-specific code paths. `sforge run` resolves structured `source.kind=upstream_output` inputs from successful upstream outputs. `sforge eval --checkpoint`, `--from-run`, and `--from-train-batch` are source shortcuts that bind the selected eval input; use `--input-name` when the eval stage has multiple inputs.
 
-The following section is intended for users who are new to slurmforge.
+`checkpoint` is a conventional input/output name, not a required eval schema field. A config may use another input name as long as the input declares the upstream output source and injection contract explicitly.
 
-You do not need to understand the internal planner or executor model to start. The intended workflow is:
+Runtime bootstrap and user launcher are separate contracts. The generated sbatch bootstraps `runtime.executor`, then calls `python -m slurmforge.executor.stage`; the executor uses `runtime.user.<name>` and the stage launcher to run user code.
 
-1. keep your real training code in your own project directory
-2. generate a starter project with `sforge init`
-3. either edit the generated starter scripts or point the config at your existing train and eval entrypoints
-4. run `sforge validate`
-5. run `sforge generate`
-6. submit the generated `sbatch` files
+`runtime.executor.python.bin` is the executor Python contract. `runtime.user.<name>.python.bin` is the user-stage Python contract. Both are recorded in plans, checked by `--dry_run=full`, and written by the executor to each attempt's `RuntimeContractReport` in `runtime_probe.json`. Executor attempts treat runtime contract failures as `runtime_contract_error` and do not launch user code.
 
+The persisted runtime plan keeps the same shape:
 
-## Install
-
-Install from PyPI:
-
-```bash
-pip install slurmforge
+```json
+{
+  "executor": {
+    "python": {
+      "bin": "python3.11",
+      "min_version": "3.10"
+    },
+    "module": "slurmforge.executor.stage"
+  },
+  "user": {
+    "name": "default",
+    "python": {
+      "bin": "python3.11",
+      "min_version": "3.10"
+    }
+  }
+}
 ```
 
-Or install from source for the latest development version:
+`runtime.executor.bootstrap.scope` is currently `sbatch`. Bootstrap steps run once in the generated sbatch; user runtime env is injected by the executor.
 
-```bash
-git clone https://github.com/Sean-XinLi/slurmforge
-cd slurmforge
-python -m venv ../slurmforge_venv
-source ../slurmforge_venv/bin/activate
-pip install .
-```
+`torchrun` launcher mode is explicit. `single_node` runs one local `torch.distributed.run`; `multi_node` uses `srun` to start one torchrun launcher per node with explicit rendezvous settings.
 
-Main CLI:
+Torchrun validation is intentionally strict: `single_node` must request exactly one Slurm node, explicit `nnodes` must match `resources.nodes`, `nproc_per_node` cannot exceed `resources.gpus_per_node`, and rendezvous ports must be valid TCP ports.
 
-```bash
-sforge --help
-sforge --version          # or sforge -V
-```
+`artifact_store.strategy` controls how produced checkpoints and declared artifacts are managed under each attempt. Supported strategies are `copy`, `hardlink`, `symlink`, and `register_only`; optional `fallback_strategy` handles filesystems that cannot apply the preferred strategy. When `verify_digest` is true, managed outputs are re-hashed after storage; digest mismatch fails the stage when `fail_on_verify_error` is true.
 
-Most users only need `sforge`. The low-level runtime helpers are invoked automatically by generated batch scripts.
+GPU budget is global per stage batch. The planner packs resource groups into deterministic budget waves and writes wave dependencies so `dispatch.max_available_gpus` is not exceeded by combined array throttles.
 
-## Quick Start
+## Storage
 
-The recommended newcomer path is `init`.
-
-Create a starter project scaffold (interactive wizard):
-
-```bash
-sforge init
-```
-
-Or specify type and profile directly:
-
-```bash
-sforge init script --out ./demo_project
-cd ./demo_project
-```
-
-Validate the config first:
-
-```bash
-sforge validate --config ./experiment.yaml
-```
-
-Preview the generated batch:
-
-```bash
-sforge generate --config ./experiment.yaml --dry_run
-```
-
-Generate the batch files:
-
-```bash
-sforge generate --config ./experiment.yaml
-```
-
-Generated batches persist the `slurmforge` version that planned them.
-After upgrading `slurmforge`, older batches may still execute or replay with compatibility warnings instead of a hard stop.
-For new submissions after an upgrade, regenerate the batch so planning and execution use the same installed version.
-
-Then submit the generated Slurm scripts under:
+A stage batch root contains:
 
 ```text
-runs/<project>/<experiment>/batch_<name>/sbatch/
+<batch_root>/
+  manifest.json
+  lineage_index.json
+  materialization_status.json
+  spec_snapshot.yaml
+  batch_plan.json
+  selected_batch_plan.json
+  blocked_runs.json
+  submit/
+    submit_manifest.json
+    submit.sh
+    generations/
+      gen_<digest>/
+        group_001.sbatch
+        submit.sh
+    logs/
+      gen_<digest>/
+  submissions/
+    ledger.json
+    events.jsonl
+  scheduler_observations.jsonl
+  groups/
+    groups.json
+    gpu_budget_plan.json
+    selected_groups.json
+    selected_gpu_budget_plan.json
+  runs/
+    <run_id>/
+      root_ref.json
+      stage_plan.json
+      input_bindings.json
+      input_verification.json
+      stage_outputs.json
+      status.json
+      attempts/
+        0001/
+          attempt.json
+          launcher_plan.json
+          runtime_probe.json
+          logs/
+          artifacts/
+            artifact_manifest.json
+            files/
+          outputs/
+            stage_outputs.json
 ```
 
-## Connect A Starter To Your Code
+A pipeline root contains:
 
-There are two normal ways to adapt a starter project:
-
-1. Edit the generated scripts in place. Each script is divided into three labelled sections:
-   - **Section A — arg contract** `[keep as-is]`: CLI args that slurmforge injects at submission time. Add your own args here; do not remove the contract args.
-   - **Section B — your code** `[replace this block]`: the demo placeholder. Delete everything between the `↓↓↓ DEMO PLACEHOLDER` and `↑↑↑ DEMO PLACEHOLDER` markers and insert your real training or eval logic.
-   - **Section C — output contract** `[keep as-is]`: writes to `meta_dir` after every run for slurmforge bookkeeping.
-2. Keep the generated `experiment.yaml`, but change `model.script` and `eval.script` to point at entrypoint scripts that already exist in your project.
-
-`model.script` should point to the script that launches training, not to a module that only defines layers or model classes.
-
-Typical direct-entrypoint edit:
-
-```yaml
-model:
-  name: "my_model"
-  script: "train.py"
-
-eval:
-  enabled: true
-  script: "eval.py"
+```text
+<pipeline_root>/
+  manifest.json
+  lineage_index.json
+  spec_snapshot.yaml
+  pipeline_plan.json
+  pipeline_status.json
+  controller/
+    controller_plan.json
+    controller_job.json
+    controller_state.json
+    controller_status.json
+    events.jsonl
+    controller.sbatch
+  stage_batches/
+    train/
+    eval/
 ```
 
-Typical existing-project edit:
+## Contracts
 
-```yaml
-model:
-  name: "my_model"
-  script: "src/train_my_model.py"
+Every consuming stage writes `input_bindings.json`. This file is the authoritative dependency contract; env vars and CLI flags are only injection mechanisms.
 
-eval:
-  enabled: true
-  script: "tools/run_eval.py"
-```
+Pipeline progression resolves inputs through the same contract. The controller reads the next stage's declared inputs, binds `upstream_output` and runtime-supplied pipeline inputs from successful upstream `stage_outputs.json`, materializes the selected execution subset, and marks unresolved required inputs as `blocked`.
 
-If you use `script` or `registry` mode, make sure the script named by
-`model.script` accepts the arguments declared under `run.args`.
+Every stage batch writes `materialization_status.json`. `planned` means the plan exists, `verifying_inputs` means readiness checks are running, `ready` means submit files and ledger are available, and `blocked` means the batch cannot be submitted because a contract check failed.
 
-## Starter Modes
+Executable submission validates required inputs before writing sbatch files. The verification result is written to `input_verification.json`; missing, unreadable, or digest-mismatched required input paths fail with `input_contract_error` before a job is submitted.
 
-Use `init` when you want a starter project scaffold.
+The executor repeats the same verification on the compute node before starting user code. If a checkpoint is deleted after submission, is not visible from the node, or no longer matches the expected digest recorded in lineage, the stage fails as `input_contract_error` and the user script is not launched.
 
-`init` takes two orthogonal choices: **type** (how your training code is invoked) and **profile** (cluster complexity).
+Every stage batch writes `lineage_index.json`. It records stage instances, source roots, and the resolved input sources consumed by the batch. This makes an eval batch root self-contained for audit and resubmit: it can replan eval and still trace the train checkpoint producer without relying on an external directory convention.
 
-```bash
-sforge init                          # interactive wizard
-sforge init script                   # script type, starter profile (default)
-sforge init script   --profile hpc   # script type, hpc profile
-sforge init command
-sforge init command  --profile hpc
-sforge init registry
-sforge init registry --profile hpc
-sforge init adapter
-sforge init adapter  --profile hpc
-```
+Every stage plan carries a schema-versioned typed output contract. Checkpoint discovery and artifact collection are parsed and validated before planning; the executor consumes that contract directly instead of interpreting ad-hoc output dictionaries.
 
-Types:
-- `script` — train.py-style script; slurmforge manages args and submission
-- `command` — wraps a complete shell command in Slurm
-- `registry` — uses a shared team model registry
-- `adapter` — interface bridge script (advanced)
+Every successful stage writes `stage_outputs.json`. Downstream stages consume explicit output refs, not process-local shell state. Output refs are first-class for checkpoints, artifacts, metrics, and manifests. Metrics are extracted from declared JSON files, keep their scalar value in the output ref, and the metric source file is managed through the artifact store with digests.
 
-Profiles:
-- `starter` — single GPU, minimal config; runnable immediately after filling in 4 fields
-- `hpc` — multi-GPU, sweep, eval, artifact sync; includes placeholders for cluster account, environment activation, and data paths that you replace before execution
+Successful outputs are managed through the configured artifact store. Checkpoints, manifests, metric sources, and declared artifacts get source and managed digests, record the applied storage strategy, and are referenced from `stage_outputs.json` with producer stage and attempt lineage.
 
-Typical generated files:
+Each run directory writes `root_ref.json`. It records the containing stage batch root and, when present, the parent pipeline root for audit and root inference. Stage status commits stay per-stage; layout writes, controller progression, and `status --reconcile` refresh aggregate `run_status.json` / `pipeline_status.json` from stage records.
 
-- `experiment.yaml`
-- `README.md`
-- `runs/`
-- type-specific files such as `train.py`, `eval.py`, `train_adapter.py`, or `models.yaml`
+Resubmit is replan-based and lineage-aware. It selects runs from an existing root, applies `--set` overrides to the saved spec snapshot, recompiles only the requested stage into a new stage batch root, then resolves inputs from the new spec contract plus the saved lineage index. It does not blindly copy old input bindings, but it can use prior resolved inputs when the spec declares a runtime-supplied source.
 
-Run `sforge init --help` to see the full usage.
+Every materialized resubmit writes `source_plan.json` and `source_lineage.json` before submit-file generation. The derived batch root is reserved as a new directory under `<source_root>/derived_batches/`, so repeated resubmits never mutate an earlier batch.
 
-## Raw YAML References
+Stage status is monotonic. A late submit marker cannot overwrite a terminal `success`, `failed`, `cancelled`, or `blocked` result. The controller persists orchestration state only; stage scheduler job ids and submitted group facts live in the stage batch submission ledger.
 
-Use `examples` when you want to inspect or export the raw YAML reference files.
+Status aggregation is derived from stage records. Layout writes, controller completion, and `status --reconcile` refresh `run_status.json`; pipeline roots also refresh `pipeline_status.json`.
 
-List available examples:
+Controller files have separate ownership. `controller_job.json` is an immutable submit fact for the controller Slurm job: pipeline id, scheduler job id, submit time, and sbatch path. It is written once after a successful `sbatch` call and never contains mutable fields such as `state`, `reason`, `scheduler_state`, or `scheduler_exit_code`. `controller_status.json` is the only mutable controller scheduler/runtime status file. `controller_state.json` is the mutable orchestration state machine for pipeline progression.
 
-```bash
-sforge examples list
-```
+Stage submission is manifest-based. The submitter only submits the sbatch files listed in the current `submit_manifest.json`; it never glob-submits old `group_*.sbatch` files left in the root.
 
-Show one example:
+Every stage batch has one submission ledger under `submissions/ledger.json`. `train`, `eval`, `run`, and `resubmit` write through this ledger, and `status --reconcile` uses it as the scheduler job-id source of truth.
 
-```bash
-sforge examples show script_hpc
-```
+Submission is a gated contract, not a bag of helper functions. A submit call reloads the batch from disk and refuses to run unless `materialization_status.json` is `ready`, the generation id matches the ledger, the submit manifest exists, and submit-phase `input_verification.json` files are not failed. User-facing submit paths are new-only: if the target batch already has scheduler job ids, submission fails and a new execution must go through `resubmit`. The public `emit` package only exposes controller render/write helpers; controller jobs are recorded through `controller_job.json`, and stage sbatch emitters are private and are called only by `submission.prepare_stage_submission`.
 
-Export one example:
+Submission is per-group and recoverable inside the controller. The ledger records a group-submitting marker before `sbatch`, records each returned job id immediately, adopts recorded groups during explicit controller recovery, and continues missing groups. If the process dies while a group may have reached `sbatch` without a recorded job id, restart fails safe.
 
-```bash
-sforge examples export script_hpc --out ./experiment.yaml
-```
+Slurm reconcile observes both `sacct` and `squeue`. `squeue` covers active jobs that have not reached accounting yet; `sacct` covers terminal history. Observations are appended to `scheduler_observations.jsonl`.
 
-The shipped examples default to filesystem mode. To enable SQLite metadata
-storage, you usually only need to change `storage.backend.engine` from
-`"none"` to `"sqlite"`.
+Slurm reconcile has a missing-output grace period. A completed Slurm job without `stage_outputs.json` remains in a waiting reconcile state briefly before it is classified as `missing_attempt_result`.
 
-`examples` is the raw YAML layer. `init` is the recommended starter-project layer built around those YAML definitions.
-
-## Runtime Internals
-
-`sforge-run-plan-executor`, `sforge-artifact-sync`, `sforge-write-train-outputs`, and `sforge-write-attempt-result` are low-level runtime helpers.
-
-Most users do not call them directly. Generated batch scripts and debugging workflows use them to execute one run record, resolve train outputs for eval handoff, collect artifacts into the result directory, and persist structured `attempt_result.json` metadata after train/eval finishes.
-
-## Core Commands
-
-Validate a config without generating a batch:
-
-```bash
-sforge validate --config /path/to/experiment.yaml
-```
-
-Generate a batch:
-
-```bash
-sforge generate --config /path/to/experiment.yaml
-```
-
-Preview without writing files:
-
-```bash
-sforge generate --config /path/to/experiment.yaml --dry_run
-```
-
-Override config values from the CLI:
-
-```bash
-sforge generate \
-  --config /path/to/experiment.yaml \
-  --set run.args.lr=0.003 \
-  --set cluster.mem=80G
-```
-
-## Storage Modes
-
-Choose the planning metadata backend in your experiment YAML.
-
-The user-facing CLI does not change across storage modes:
-
-- `sforge generate`
-- `sforge status`
-- `sforge replay`
-- `sforge rerun`
-
-What changes is how planning metadata is persisted for each batch.
-
-In practice, switching from filesystem mode to SQLite mode usually means
-changing `storage.backend.engine` from `"none"` to `"sqlite"`. Keep
-`storage.backend.sqlite.path: "auto"` unless you want a custom relative path
-under the batch root.
-
-### Filesystem Mode
-
-Use filesystem mode when you want the simplest layout and the most obvious
-on-disk files.
-
-```yaml
-storage:
-  backend:
-    engine: "none"      # change to "sqlite" to enable SQLite metadata storage
-    sqlite:
-      path: "auto"      # sqlite mode only; "auto" = <batch_root>/meta/slurmforge.sqlite3
-  exports:
-    planning_recovery: true  # sqlite mode only; keep planning export files for recovery/debugging
-```
-
-Effect:
-
-- planning metadata is stored in the batch filesystem layout
-- this is the default mode
-- easiest mode to inspect manually
-
-Recommended for:
-
-- first-time users
-- small and medium batches
-- teams that prefer direct file inspection
-
-### SQLite Mode
-
-Use SQLite mode when you want a batch-local metadata database for planning
-state and indexed reads.
-
-```yaml
-storage:
-  backend:
-    engine: "sqlite"
-    sqlite:
-      path: "auto"   # sqlite mode only; "auto" = <batch_root>/meta/slurmforge.sqlite3
-  exports:
-    planning_recovery: true  # keep planning export files for recovery/debugging
-```
-
-Rules:
-
-- `storage.backend.sqlite.path` must be `"auto"` or a relative path
-- `path: "auto"` means `"<batch_root>/meta/slurmforge.sqlite3"`
-- runtime journal files still land in the batch result directories
-
-Effect:
-
-- planning metadata is persisted in SQLite
-- `status / replay / rerun` keep the same CLI surface
-- batch-level storage metadata is also written to `meta/storage.json`
-
-### `planning_recovery`
-
-`planning_recovery` controls whether planning recovery files are written for
-manual inspection and disaster recovery.
-
-In SQLite mode it decides whether files such as `records/group_xx/task_*.json`,
-`meta/runs_manifest.jsonl`, per-run `resolved_config.yaml`, and
-`run_snapshot.json` are exported next to the SQLite DB. Per-job recovery copies
-such as `meta/execution_plan.json` also follow this setting.
-
-```yaml
-storage:
-  backend:
-    engine: "sqlite"
-  exports:
-    planning_recovery: true
-```
-
-When `planning_recovery: true`:
-
-- planning metadata is stored in SQLite
-- planning export files are also kept for recovery and manual inspection
-
-```yaml
-storage:
-  backend:
-    engine: "sqlite"
-  exports:
-    planning_recovery: false
-```
-
-When `planning_recovery: false`:
-
-- planning metadata lives only in SQLite
-- planning recovery/export files are omitted
-- array sbatch scripts and `batch_manifest.json` are still written
-- runtime journal files are still written normally
-
-Recommended default:
-
-- start with `planning_recovery: true`
-- switch to `false` only after you are sure your workflow does not rely on
-  those planning files
-
-### What Users Will See
-
-- `experiment.yaml` contains the `storage` section
-- each batch writes `meta/storage.json`
-- when planning recovery is enabled, run-level `resolved_config.yaml` remains
-  focused on run configuration and does not duplicate batch storage settings
-
-Retry failed runs from an existing batch:
-
-```bash
-sforge rerun --from /path/to/batch_root
-```
-
-Replay a specific persisted run:
-
-```bash
-sforge replay --from-run /path/to/batch_root/runs/run_001_abcd1234
-```
-
-Replay selected runs from a batch:
-
-```bash
-sforge replay --from-batch /path/to/batch_root --run_id r1 --run_id r2
-```
-
-Replay selected runs by both id and index:
-
-```bash
-sforge replay --from-batch /path/to/batch_root --run_id r1 --run_index 1
-```
-
-`replay --from-batch` replays every run by default.
-Repeat `--run_id` or `--run_index` to narrow the selection.
-If you pass both flags, slurmforge uses intersection semantics: a run must match the selected ids and the selected indices.
-
-When retries find a checkpoint under the previous run's result directory, the rebuilt run will:
-
-- export `AI_INFRA_RESUME_FROM_CHECKPOINT`
-- pass `--resume_from_checkpoint ...` for structured modes that slurmforge controls
-
-Checkpoint resume selection is deterministic, not heuristic:
-
-- if `job-*/meta/checkpoint_state.json` exists, `rerun` uses it as the authoritative latest checkpoint pointer
-- otherwise slurmforge scans discovered checkpoint files and selects the highest parseable step number from the filename
-- if multiple checkpoint candidates exist and none expose a parseable step number, `rerun` fails instead of guessing from file modification time
-
-In practice, that means your training outputs should do one of these:
-
-- update `job-*/meta/checkpoint_state.json` whenever a new latest checkpoint is committed
-- or name checkpoint files with a stable step number such as `global_step_1200`, `step1200`, `checkpoint-1200`, or `ckpt_1200`
-
-Use `replay` when you want an exact user-directed replay source.
-Use `rerun` when you want status-based retry selection plus automatic checkpoint resume injection.
-
-Inspect run status:
-
-```bash
-sforge status --from /path/to/batch_root
-```
-
-If `squeue` / `sacct` are available on the machine where you run `status`, slurmforge will use Slurm-native job states to distinguish `pending`, `running`, and terminal scheduler states before falling back to local logs.
-
-## Path Rules
-
-- `--config` is required for `validate` and `generate`
-- relative paths inside the config resolve against `project_root`
-- by default, `project_root` is the directory that contains the config file
-- `--project_root` lets you override that explicitly
-- `validate` and `generate` use the same `--set` and `--project_root` semantics
-- `replay` restores the original planning root from persisted metadata; if the project moved, pass `--project_root`
-- `rerun` restores the original planning root from persisted run metadata; if the project moved, pass `--project_root`
-
-Fields typically resolved relative to `project_root`:
-
-- `model_registry.registry_file`
-- `model.script`
-- `model.yaml`
-- `launcher.workdir`
-- `run.workdir`
-- `run.adapter.script`
-- `eval.script`
-- `eval.workdir`
-- `output.base_output_dir`
-
-## Choosing A Starter Type
-
-The package exposes three user-facing ways to describe training:
-
-- `command` (`sforge init command`): run an existing command exactly as provided; slurmforge does not rewrite it into `torchrun` or infer a distributed launcher topology from it
-- `script` / `registry` (`sforge init script` or `sforge init registry`): build the train command from `model` and `run.args`
-- `adapter` (`sforge init adapter`): call a bridge script that translates slurmforge inputs to some external system
-
-Recommended order for new users:
-
-1. `sforge init command` if you only want to wrap an existing command quickly
-2. `sforge init script` as the default structured path
-3. `sforge init registry` when a team wants a shared model catalog
-4. `sforge init adapter` only for advanced or non-standard integrations
-
-If you use `model.script` directly, the default assumption is `ddp_supported: true`. Set `model.ddp_supported: false` explicitly for single-process-only scripts.
-
-Use `command` mode only when your command text already expresses the launcher you want. If you need slurmforge to manage `torchrun`, GPU process counts, or multi-node Slurm launch details, use `script` or `adapter` init types.
-
-## Advanced Configuration
-
-### Hyperparameter Sweep
-
-`sweep` generates the matrix product of all declared axes.
-Each combination becomes one independent Slurm task.
-
-**Flat grid (shared_axes only):**
-
-```yaml
-sweep:
-  enabled: true
-  max_runs: 20            # optional cap on total runs
-  shared_axes:
-    run.args.lr:          [1e-4, 5e-5, 1e-5]
-    run.args.batch_size:  [64, 128]
-```
-
-**Named cases** — each case can have its own fixed values (`set`) and additional axes:
-
-```yaml
-sweep:
-  enabled: true
-  shared_axes:
-    run.args.lr: [1e-4, 5e-5]
-  cases:
-    - name: "case_1"
-      set:
-        run.args.optimizer: "adam"
-    - name: "case_2"
-      set:
-        run.args.optimizer: "sgd"
-      axes:
-        run.args.epochsize: [10, 20, 40]
-```
-
-Each case is multiplied with `shared_axes` independently, so the total runs equal
-`len(shared_axes_product) × sum(len(case_product) for each case)`.
-
-`max_runs` truncates the final expansion deterministically if set.
-
-Dot-path keys in `shared_axes`, `set`, and `axes` must not overlap within or across a case.
-
----
-
-### Inline Evaluation
-
-`eval` runs inside the same Slurm job immediately after training completes.
-
-```yaml
-eval:
-  enabled: true
-  script: "eval.py"
-  workdir: "."
-  launch_mode: "inherit"   # auto / ddp / single / inherit (inherit = use same launcher as train)
-  pass_run_args: true       # pass run.args to eval script as --run_args_json
-  run_args_flag: "run_args_json"
-  pass_model_overrides: false
-  model_overrides_flag: "model_overrides_json"
-  args:                     # extra eval-only args
-    test_split: 0.02
-  launcher:
-    distributed:
-      master_port: 29900    # separate port to avoid conflict with train launcher
-      extra_torchrun_args: []
-  train_outputs:
-    checkpoint_policy: "latest"   # latest / best / explicit
-    # explicit_checkpoint: "checkpoints/step_5000.pt"  # only when policy=explicit
-```
-
-`eval.command` can be used instead of `eval.script` for an arbitrary shell command.
-When using `eval.command`, `eval.external_runtime` is required and `eval.args`/`pass_run_args`/`pass_model_overrides` are not available.
-
----
-
-### Email Notifications
-
-```yaml
-notify:
-  enabled: true
-  email: "you@example.com"
-  when: "afterany"    # after / afterany / afterok / afternotok
-```
-
-`when` uses Slurm dependency vocabulary: `afterany` sends on any completion,
-`afterok` only on success, `afternotok` only on failure.
-
----
-
-### GPU Budget Semantics
-
-`resources` carries two **independent** GPU budget knobs. They are not
-interchangeable:
-
-| Field                          | Scope          | Used by                                         |
-| ------------------------------ | -------------- | ----------------------------------------------- |
-| `resources.max_gpus_per_job`   | one run / job  | per-run topology, DDP packing, GPU estimator    |
-| `resources.max_available_gpus` | the full batch | array-group throttle (`%K`) + dispatch policy   |
-
-```yaml
-resources:
-  max_available_gpus: 16   # batch-wide concurrent GPU ceiling
-  max_gpus_per_job: 4      # any single run uses at most this many GPUs
-```
-
-`max_available_gpus` does **not** cap `max_gpus_per_job`, and vice versa —
-they describe different scopes.
-
-Scope rules:
-
-- `resources.max_available_gpus` is batch-scoped. Set it once for the batch; do
-  not use it as a sweep axis.
-- `dispatch.group_overflow_policy` is also batch-scoped and cannot vary per run.
-- `resources.max_gpus_per_job`, `resources.auto_gpu`, and estimator settings are
-  run-scoped and may vary across sweep runs.
-
-When replaying or rerunning selected runs, batch-scoped values from those runs
-must agree. If they do not, pass a CLI override such as
-`--set resources.max_available_gpus=16` or
-`--set dispatch.group_overflow_policy=serial` to define the new batch.
-
-### Automatic GPU Allocation
-
-When `resources.auto_gpu: true`, slurmforge estimates the GPU count per job
-from model memory heuristics and sets `cluster.gpus_per_node` automatically.
-
-```yaml
-resources:
-  auto_gpu: true
-  gpu_estimator: "heuristic"
-  target_mem_per_gpu_gb: 80    # target memory per GPU in GB
-  safety_factor: 1.15          # multiply estimated memory by this factor (>= 1.0)
-  min_gpus_per_job: 1
-  max_gpus_per_job: 8          # per-run cap (see "GPU Budget Semantics")
-  max_available_gpus: 8        # batch-wide budget (see "GPU Budget Semantics")
-
-cluster:
-  gpus_per_node: "auto"        # set to "auto" to let resources block drive this
-```
-
----
-
-### Dispatch Policy (Array Group Throttling)
-
-A batch is grouped into Slurm array groups by identical resource shape. The
-budget planner sets each group's array throttle (`#SBATCH --array=0-N%K`) so
-that total concurrent GPU consumption respects `resources.max_available_gpus`.
-
-When the minimum concurrent demand of all groups (one task each) exceeds the
-budget, `dispatch.group_overflow_policy` decides what happens:
-
-```yaml
-dispatch:
-  group_overflow_policy: "error"   # error | serial | best_effort
-```
-
-| Policy        | Behavior on overflow                                                                            |
-| ------------- | ----------------------------------------------------------------------------------------------- |
-| `error`       | `validate` / `generate` fail loudly. Default — safest and most transparent.                     |
-| `serial`      | Array groups are auto-chained via Slurm dependency (`afterany`, `--kill-on-invalid-dep=no`).    |
-| `best_effort` | Each group throttles independently to fit the budget; concurrent groups may still oversubscribe. Emits a warning. |
-
-A single task whose `gpus_per_task` exceeds `max_available_gpus` is always a
-hard error regardless of policy.
-
-`generate --dry_run` prints the full budget plan (per-group throttle,
-`limiting_run`, `limiting_model`, `max_estimated_gpus`, and any constraint
-reason) so you can see the throttle decisions before submission. The same
-plan is persisted under `gpu_budget_plan` in the batch manifest.
-
----
-
-### Distributed Launcher
-
-Full `torchrun`-based distributed config:
-
-```yaml
-launcher:
-  mode: "auto"          # auto selects ddp when ddp_supported=true and gpus_per_node > 1
-  python_bin: "python3"
-  workdir: "."
-  distributed:
-    nnodes: 1
-    nproc_per_node: "auto"      # int or "auto" (matches gpus_per_node)
-    master_port: 29500
-    port_offset: "auto"         # int or "auto" (avoids port collisions across array tasks)
-    extra_torchrun_args:
-      - "--rdzv_backend=c10d"
-      - "--max_restarts=2"
-```
-
-Set `model.ddp_supported: false` to force `single` mode regardless of GPU count.
-Set `model.ddp_required: true` to fail fast if DDP cannot be selected.
-
----
-
-### Cluster Configuration
-
-```yaml
-cluster:
-  partition: "your_partition"
-  account: "my_account"
-  qos: "high_priority"         # optional QoS override
-  time_limit: "04:00:00"       # or "2-00:00:00" for 2 days
-  nodes: 1
-  gpus_per_node: 4
-  cpus_per_task: 8
-  mem: "64G"                   # "0" = unlimited
-  constraint: "a100|h100"      # optional node constraint
-  extra_sbatch_args:            # raw #SBATCH directives
-    - "--exclude=node001,node002"
-    - "--reservation=my_reservation"
-```
-
----
-
-### Cross-Batch Slurm Dependencies
-
-`output.dependencies` injects `--dependency` flags into every generated array job,
-allowing you to chain batches without manual sbatch calls.
-
-```yaml
-output:
-  base_output_dir: "./runs"
-  batch_name: "finetune_v2"
-  dependencies:
-    afterok:
-      - "4512345"    # Slurm job IDs from a previous batch
-      - "4512346"
-    afterany:
-      - "4512347"
-```
-
-Supported dependency types: `after`, `afterany`, `afterok`, `afternotok`.
-
----
-
-### Artifact Collection
-
-slurmforge collects artifacts from the run working directory into the result directory after each job.
-
-```yaml
-artifacts:
-  checkpoint_globs:
-    - "checkpoints/**/*.pt"
-    - "checkpoints/**/*.ckpt"
-  eval_csv_globs:
-    - "eval_csv/**/*.csv"
-  eval_image_globs:
-    - "eval_images/**/*.png"
-    - "eval_images/**/*.pdf"
-  extra_globs:
-    - "logs/**/*.log"
-```
-
----
-
-### Validation Policies
-
-Control how slurmforge handles various warnings and errors:
-
-```yaml
-validation:
-  cli_args: "warn"          # warn / error / ignore — unknown CLI args in run.args
-  topology_errors: "error"  # error / warn / off    — DDP topology mismatches
-  resource_warnings: "warn" # warn / error / off    — GPU/memory estimation warnings
-  runtime_preflight: "error"# error / warn / off    — script existence checks
-```
-
----
-
-### Command Mode with External Runtime
-
-Use `command` mode to wrap an arbitrary shell command.
-`external_runtime` declares the topology slurmforge uses when injecting the command into a Slurm array.
-
-```yaml
-run:
-  command: "bash scripts/train.sh --config cfg.yaml"
-  command_mode: "argv"      # argv = safe argv rendering; raw = shell text
-  external_runtime:
-    nnodes: 1
-    nproc_per_node: 4
-```
-
-`command_mode: raw` passes the command string to bash without escaping. It is
-useful for pipes, redirects, and shell expansion, but disables slurmforge's
-argument safety checks.
-
----
-
-### Adapter Mode
-
-`adapter` mode calls a bridge script that translates slurmforge's structured inputs to an
-external training system.
-
-```yaml
-run:
-  adapter:
-    script: "train_adapter.py"
-    pass_run_args: true
-    run_args_flag: "run_args_json"
-    pass_model_overrides: true
-    model_overrides_flag: "model_overrides_json"
-    ddp_supported: false
-    ddp_required: false
-  args:
-    lr: 0.004
-
-launcher:
-  mode: "auto"
-```
-
-The adapter script receives `run.args` as a JSON blob via `--run_args_json` and
-`run.model_overrides` via `--model_overrides_json`.
-
-## Notes
-
-- batch materialization is always array-based in the current contract; `output.dispatch_mode` has been removed
-- `output.dependencies` can add external Slurm dependencies such as `afterok` or `afterany` to every generated array job when you need cross-batch sequencing
-- `notify.when` uses the same Slurm dependency vocabulary as batch submission dependencies
-- `eval` currently runs inline inside the same generated job as `train`; `output.dependencies` is a batch-level Slurm dependency feature, not a per-run train→eval stage DAG
-- `eval.train_outputs` controls how slurmforge selects the checkpoint handed off from train to eval; it must be a mapping, e.g. `{checkpoint_policy: latest}`; supported policies are `latest`, `best`, and `explicit`
-- `sweep` is always matrix expansion; valid top-level keys are `enabled`, `max_runs`, `shared_axes`, and `cases`; there is no `sweep.method` or `sweep.params` key
-- your train and eval scripts must exist on a Slurm-visible filesystem
-- generated array jobs bootstrap `env.modules`, `env.conda_activate`, and `env.venv_activate` before invoking `sforge-run-plan-executor`; that activated runtime environment must expose `sforge-run-plan-executor`, `sforge-artifact-sync`, `sforge-write-train-outputs`, and `sforge-write-attempt-result` on compute nodes
-- `generate` persists run metadata so `rerun` can replay without package-local path guesses
-- `eval` artifact fallback scans both train and eval workdirs
-
-## Maintenance Policy
-
-This project is currently maintained on a best-effort basis.  
-Responses to issues and pull requests may be delayed.
-
-Pull requests are welcome for:
-- bug fixes
-- documentation improvements
-
-New features may not be accepted unless aligned with the project scope.
-
-
+Scheduler reconcile also creates a scheduler-sourced attempt record when Slurm reports a running or terminal task that did not leave an executor attempt. This keeps the task-to-attempt audit trail intact even when Python never started.
 
 ## Development
 
+Install from source:
+
 ```bash
-pip install -e '.[dev]'
-pytest -q
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
 ```
 
-## Author and Maintainer
+Run validation:
 
-Created and maintained by Xin Li.
-
-- Email: `seanxinlee@gmail.com`
-- GitHub: <https://github.com/Sean-XinLi>
+```bash
+PYTHONPATH=src python3.11 -m pytest -q
+PYTHONPATH=src lint-imports --config .importlinter
+```

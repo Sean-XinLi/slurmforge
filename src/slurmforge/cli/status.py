@@ -1,87 +1,32 @@
-"""``sforge status`` -- summarize execution status for runs in a batch."""
+"""``sforge status`` -- summarize stage-level status records."""
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
-from ..pipeline.status import ExecutionStatus, status_matches_query
-from ..storage import open_batch_storage
-
-
-def _status_bucket(status: ExecutionStatus | None) -> str:
-    if status is None:
-        return "missing"
-    if status.state == "success":
-        return "success"
-    if status.state == "pending":
-        return "pending"
-    if status.state == "running":
-        return "running"
-    return status.failure_class or status.state or "unknown"
-
-
-def _trim_reason(reason: str, limit: int = 120) -> str:
-    cleaned = " ".join((reason or "").split())
-    if len(cleaned) <= limit:
-        return cleaned
-    return cleaned[: limit - 3] + "..."
-
-
-def render_status(*, batch_root: Path, status_query: str) -> None:
-    if not batch_root.exists():
-        raise FileNotFoundError(f"status batch_root does not exist: {batch_root}")
-
-    handle = open_batch_storage(batch_root)
-    views = handle.list_batch_run_views()
-
-    counts: dict[str, int] = {}
-    matched_rows: list[str] = []
-    for view in views:
-        status = view.latest_status
-        bucket = _status_bucket(status)
-        counts[bucket] = counts.get(bucket, 0) + 1
-        if not status_matches_query(status, status_query):
-            continue
-        state = status.state if status is not None else "missing"
-        failure_class = status.failure_class if status is not None and status.failure_class else "-"
-        failed_stage = status.failed_stage if status is not None and status.failed_stage else "-"
-        job_key = status.job_key if status is not None and status.job_key else "-"
-        reason = _trim_reason(status.reason if status is not None else "no execution result directory found")
-        run_label = Path(view.run_dir).name if view.run_dir else view.run_id
-        matched_rows.append(
-            f"{run_label}: state={state} class={failure_class} stage={failed_stage} job={job_key} reason={reason}"
-        )
-
-    print(f"[STATUS] batch={batch_root} total_runs={len(views)} matched={len(matched_rows)} query={status_query}")
-    if counts:
-        summary = ", ".join(f"{key}={counts[key]}" for key in sorted(counts))
-        print(f"[STATUS] counts: {summary}")
-    for row in matched_rows:
-        print(row)
+from ..orchestration import render_status
 
 
 def handle_status(args: argparse.Namespace) -> None:
     render_status(
-        batch_root=Path(args.batch_root).resolve(),
-        status_query=args.status,
+        root=Path(args.root).resolve(),
+        status_query=args.query,
+        stage=args.stage,
+        reconcile=args.reconcile,
+        missing_output_grace_seconds=args.missing_output_grace_seconds,
     )
 
 
 def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    status_parser = subparsers.add_parser("status", help="Summarize inferred execution status for runs in an existing batch")
-    status_parser.add_argument(
-        "--from",
-        "--batch_root",
-        dest="batch_root",
-        required=True,
-        help="Path to an existing batch_root to summarize",
+    parser = subparsers.add_parser("status", help="Summarize stage-level status for a batch or pipeline root")
+    parser.add_argument("--from", dest="root", required=True, help="Stage batch or pipeline root")
+    parser.add_argument("--stage", default=None, help="Filter by stage name")
+    parser.add_argument("--query", "--status", dest="query", default="all", help="Filter, e.g. state=failed or failed")
+    parser.add_argument("--reconcile", action="store_true", help="Query Slurm through submission ledgers before printing")
+    parser.add_argument(
+        "--missing-output-grace-seconds",
+        type=int,
+        default=300,
+        help="Grace period used by --reconcile before classifying missing stage_outputs.json",
     )
-    status_parser.add_argument(
-        "--status",
-        default="all",
-        help=(
-            "Filter results by status: all, failed(non-success), success, pending, running, "
-            "oom, preempted, node_failure, script_error, eval_failed"
-        ),
-    )
-    status_parser.set_defaults(handler=handle_status)
+    parser.set_defaults(handler=handle_status)

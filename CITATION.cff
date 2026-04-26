@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use slurmforge, please cite this project."
 title: "slurmforge"
-version: "0.2.2"
+version: "0.3.1"
 license: "MIT"
 authors:
   - family-names: "Li"
