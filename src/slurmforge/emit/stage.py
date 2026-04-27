@@ -3,9 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ..io import SchemaVersion, content_digest, read_json, stable_json, write_json
-from ..plans import GroupPlan, StageBatchPlan
-from .sbatch import _job_name, _q, _runtime_bootstrap_lines
+from ..io import SchemaVersion, content_digest, read_json, write_json
+from ..plans import StageBatchPlan
+from .sbatch_helpers import _q
+from .stage_render import (
+    render_stage_group_sbatch,
+    render_stage_notification_barrier_sbatch,
+    render_stage_notification_sbatch,
+)
 
 
 def _submit_root(batch: StageBatchPlan) -> Path:
@@ -26,7 +31,7 @@ def _generation_id(batch: StageBatchPlan) -> str:
             }
             for group in batch.group_plans
         ],
-        "dependencies": batch.budget_plan.get("dependencies", ()),
+        "dependencies": batch.budget_plan.dependencies,
     }
     digest = content_digest(payload, prefix=12)
     return f"gen_{digest}"
@@ -40,78 +45,46 @@ def _manifest_path(batch_root: Path) -> Path:
     return batch_root / "submit" / "submit_manifest.json"
 
 
-def _instances_by_id(batch: StageBatchPlan) -> dict[str, Any]:
-    return {instance.stage_instance_id: instance for instance in batch.stage_instances}
+def _notification_enabled(batch: StageBatchPlan, event: str) -> bool:
+    email = batch.notification_plan.email
+    return email.enabled and event in set(email.events)
 
 
-def _runtime_for_group(batch: StageBatchPlan, group: GroupPlan) -> dict[str, Any]:
-    instances = _instances_by_id(batch)
-    plans = {
-        stable_json(instances[stage_instance_id].runtime_plan): instances[stage_instance_id].runtime_plan
-        for stage_instance_id in group.stage_instance_ids
-    }
-    if len(plans) != 1:
-        raise ValueError(f"group {group.group_id} mixes multiple runtime plans")
-    return next(iter(plans.values()))
+def write_stage_notification_submit_file(batch: StageBatchPlan, event: str = "batch_finished") -> Path:
+    manifest = load_stage_submit_manifest(Path(batch.submission_root))
+    generation_id = str(manifest["generation_id"])
+    path = _submit_root(batch) / "notifications" / generation_id / f"notify_{event}.sbatch"
+    for item in manifest.get("notifications", ()):
+        if str(item.get("event") or "") == event and item.get("sbatch_path"):
+            path = Path(str(item["sbatch_path"]))
+            break
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(render_stage_notification_sbatch(batch, event, generation_id=generation_id), encoding="utf-8")
+    path.chmod(0o755)
+    return path
 
 
-def _render_stage_group_sbatch(batch: StageBatchPlan, group: GroupPlan, *, generation_id: str | None = None) -> str:
-    resources = group.resources
-    runtime_plan = _runtime_for_group(batch, group)
-    executor_plan = dict(runtime_plan.get("executor") or {})
-    python_plan = dict(executor_plan.get("python") or {})
-    python_bin = str(python_plan.get("bin") or "python3")
-    executor_module = str(executor_plan.get("module") or "slurmforge.executor.stage")
-    submit_dir = _submit_root(batch)
-    log_dir = submit_dir / "logs" / (generation_id or "manual")
-    lines = [
-        "#!/usr/bin/env bash",
-        f"#SBATCH --job-name={_job_name('sforge', batch.project, batch.stage_name, group.group_id)}",
-        f"#SBATCH --output={_q(str(log_dir / (group.group_id + '-%A_%a.out')))}",
-        f"#SBATCH --error={_q(str(log_dir / (group.group_id + '-%A_%a.err')))}",
-    ]
-    if resources.get("partition"):
-        lines.append(f"#SBATCH --partition={resources['partition']}")
-    if resources.get("account"):
-        lines.append(f"#SBATCH --account={resources['account']}")
-    if resources.get("qos"):
-        lines.append(f"#SBATCH --qos={resources['qos']}")
-    if resources.get("time_limit"):
-        lines.append(f"#SBATCH --time={resources['time_limit']}")
-    lines.extend(
-        [
-            f"#SBATCH --nodes={int(resources.get('nodes') or 1)}",
-            "#SBATCH --ntasks-per-node=1",
-            f"#SBATCH --cpus-per-task={int(resources.get('cpus_per_task') or 1)}",
-        ]
+def write_stage_notification_barrier_file(
+    batch: StageBatchPlan,
+    event: str,
+    *,
+    barrier_index: int,
+) -> Path:
+    manifest = load_stage_submit_manifest(Path(batch.submission_root))
+    generation_id = str(manifest["generation_id"])
+    path = _submit_root(batch) / "notifications" / generation_id / f"barrier_{event}_{barrier_index:03d}.sbatch"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_stage_notification_barrier_sbatch(
+            batch,
+            event,
+            generation_id=generation_id,
+            barrier_index=barrier_index,
+        ),
+        encoding="utf-8",
     )
-    if int(resources.get("gpus_per_node") or 0) > 0:
-        lines.append(f"#SBATCH --gres=gpu:{int(resources.get('gpus_per_node') or 0)}")
-    if resources.get("mem"):
-        lines.append(f"#SBATCH --mem={resources['mem']}")
-    if resources.get("constraint"):
-        lines.append(f"#SBATCH --constraint={resources['constraint']}")
-    for arg in resources.get("extra_sbatch_args") or ():
-        lines.append(f"#SBATCH {arg}")
-    throttle = ""
-    if group.array_throttle is not None and group.array_throttle > 0 and group.array_throttle < group.array_size:
-        throttle = f"%{group.array_throttle}"
-    lines.extend(
-        [
-            f"#SBATCH --array=0-{group.array_size - 1}{throttle}",
-            "",
-            "set -euo pipefail",
-            *_runtime_bootstrap_lines(runtime_plan),
-            f"BATCH_ROOT={_q(batch.submission_root)}",
-            f"GROUP_INDEX={group.group_index}",
-            'TASK_INDEX="${SLURM_ARRAY_TASK_ID:-0}"',
-            'printf "%s\\n" "[STAGE] batch_root=${BATCH_ROOT} group=${GROUP_INDEX} task=${TASK_INDEX}"',
-            f"{_q(python_bin)} -m {_q(executor_module)} "
-            '--batch-root "${BATCH_ROOT}" --group-index "${GROUP_INDEX}" --task-index "${TASK_INDEX}"',
-            "",
-        ]
-    )
-    return "\n".join(lines)
+    path.chmod(0o755)
+    return path
 
 
 def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
@@ -123,13 +96,13 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
     sbatch_paths: list[Path] = []
     for group in batch.group_plans:
         path = submit_dir / f"{group.group_id}.sbatch"
-        path.write_text(_render_stage_group_sbatch(batch, group, generation_id=generation_id), encoding="utf-8")
+        path.write_text(render_stage_group_sbatch(batch, group, generation_id=generation_id), encoding="utf-8")
         path.chmod(0o755)
         sbatch_paths.append(path)
     submit_script = submit_dir / "submit.sh"
     submit_lines = ["#!/usr/bin/env bash", "set -euo pipefail"]
     job_vars: dict[str, str] = {}
-    dependencies = {item["to_group"]: item for item in batch.budget_plan.get("dependencies", ())}
+    dependencies = {item.to_group: item for item in batch.budget_plan.dependencies}
     for path in sbatch_paths:
         group_id = path.stem
         var_name = f"JOB_{group_id.upper()}"
@@ -137,14 +110,27 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
         if dep is None:
             submit_lines.append(f'{var_name}="$(sbatch --parsable {_q(str(path))})"')
         else:
-            from_groups = dep.get("from_groups") or [dep.get("from_group")]
-            from_vars = [job_vars[str(item)] for item in from_groups if item]
+            from_vars = [job_vars[str(item)] for item in dep.from_groups if item]
             dependency_expr = ":".join(f"${{{item}}}" for item in from_vars)
             submit_lines.append(
-                f'{var_name}="$(sbatch --parsable --dependency={dep["type"]}:{dependency_expr} {_q(str(path))})"'
+                f'{var_name}="$(sbatch --parsable --dependency={dep.type}:{dependency_expr} {_q(str(path))})"'
             )
         submit_lines.append(f'printf "%s\\n" "{group_id}=${{{var_name}}}"')
         job_vars[group_id] = var_name
+    notification_entries: list[dict[str, str]] = []
+    if _notification_enabled(batch, "batch_finished"):
+        notify_path = submit_dir / "notify_batch_finished.sbatch"
+        notify_path.write_text(
+            render_stage_notification_sbatch(batch, "batch_finished", generation_id=generation_id),
+            encoding="utf-8",
+        )
+        notify_path.chmod(0o755)
+        notification_entries.append(
+            {
+                "event": "batch_finished",
+                "sbatch_path": str(notify_path),
+            }
+        )
     submit_script.write_text("\n".join(submit_lines) + "\n", encoding="utf-8")
     submit_script.chmod(0o755)
     manifest = {
@@ -164,7 +150,8 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
             }
             for group in batch.group_plans
         ],
-        "dependencies": batch.budget_plan.get("dependencies", ()),
+        "dependencies": batch.budget_plan.dependencies,
+        "notifications": notification_entries,
     }
     write_json(_manifest_path(root), manifest)
     wrapper = _submit_root(batch) / "submit.sh"

@@ -1,4 +1,4 @@
-"""Read-only helpers for stage_batch / pipeline roots."""
+"""Read-only helpers for stage_batch / train-eval pipeline roots."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,11 +6,14 @@ from typing import Any, Iterable
 
 from ..io import read_json
 from ..plans import (
-    PipelinePlan,
+    TRAIN_EVAL_PIPELINE_KIND,
+    TrainEvalPipelinePlan,
     RunDefinition,
     StageBatchPlan,
     StageInstancePlan,
-    pipeline_plan_from_dict,
+)
+from ..plans.serde import (
+    train_eval_pipeline_plan_from_dict,
     stage_batch_plan_from_dict,
     stage_outputs_record_from_dict,
     stage_instance_plan_from_dict,
@@ -30,8 +33,8 @@ def load_execution_stage_batch_plan(batch_root: Path) -> StageBatchPlan:
     return load_stage_batch_plan(batch_root)
 
 
-def load_pipeline_plan(pipeline_root: Path) -> PipelinePlan:
-    return pipeline_plan_from_dict(read_json(pipeline_root / "pipeline_plan.json"))
+def load_train_eval_pipeline_plan(pipeline_root: Path) -> TrainEvalPipelinePlan:
+    return train_eval_pipeline_plan_from_dict(read_json(pipeline_root / "train_eval_pipeline_plan.json"))
 
 
 def is_stage_batch_root(path: Path) -> bool:
@@ -39,22 +42,22 @@ def is_stage_batch_root(path: Path) -> bool:
     return manifest.exists() and read_json(manifest).get("kind") == "stage_batch"
 
 
-def is_pipeline_root(path: Path) -> bool:
+def is_train_eval_pipeline_root(path: Path) -> bool:
     manifest = path / "manifest.json"
-    return manifest.exists() and read_json(manifest).get("kind") == "pipeline"
+    return manifest.exists() and read_json(manifest).get("kind") == TRAIN_EVAL_PIPELINE_KIND
 
 
 def iter_stage_run_dirs(root: Path) -> Iterable[Path]:
     if is_stage_batch_root(root):
         yield from sorted((root / "runs").glob("*"))
         return
-    if is_pipeline_root(root):
+    if is_train_eval_pipeline_root(root):
         for stage_root in sorted((root / "stage_batches").glob("*")):
             runs_dir = stage_root / "runs"
             if runs_dir.exists():
                 yield from sorted(runs_dir.glob("*"))
         return
-    raise FileNotFoundError(f"Not a stage batch or pipeline root: {root}")
+    raise FileNotFoundError(f"Not a stage batch or train/eval pipeline root: {root}")
 
 
 def collect_stage_statuses(root: Path) -> list[StageStatusRecord]:
@@ -93,7 +96,7 @@ def run_definitions_from_stage_batch(batch: StageBatchPlan) -> tuple[RunDefiniti
             RunDefinition(
                 run_id=instance.run_id,
                 run_index=instance.run_index,
-                matrix_assignments=dict(instance.matrix_assignments),
+                run_overrides=dict(instance.run_overrides),
                 spec_snapshot_digest=instance.spec_snapshot_digest,
             )
         )

@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from ..io import SchemaVersion
-
-
-JsonDict = dict[str, Any]
 
 
 TERMINAL_STATES = {"success", "failed", "cancelled", "skipped", "blocked"}
@@ -61,7 +57,7 @@ class RunStatusRecord:
 
 
 @dataclass(frozen=True)
-class PipelineStatusRecord:
+class TrainEvalPipelineStatusRecord:
     schema_version: int
     pipeline_id: str
     state: str

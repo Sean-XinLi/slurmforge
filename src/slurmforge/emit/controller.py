@@ -2,44 +2,44 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..plans import PipelinePlan
-from .sbatch import _job_name, _q, _runtime_bootstrap_lines
+from ..plans import TrainEvalPipelinePlan
+from .sbatch_helpers import _environment_lines, _job_name, _q
 
 
-def render_controller_sbatch(plan: PipelinePlan) -> str:
+def render_controller_sbatch(plan: TrainEvalPipelinePlan) -> str:
     root = Path(plan.root_dir)
-    resources = dict(plan.controller_plan.resources or {})
-    runtime_plan = dict(plan.controller_plan.runtime_plan or {})
-    executor_plan = dict(runtime_plan.get("executor") or runtime_plan)
-    python_plan = dict(executor_plan.get("python") or {})
-    python_bin = str(python_plan.get("bin") or "python3")
+    resources = plan.controller_plan.resources
+    environment_plan = plan.controller_plan.environment_plan
+    executor_plan = plan.controller_plan.runtime_plan.executor
+    python_bin = executor_plan.python.bin
     lines = [
         "#!/usr/bin/env bash",
         f"#SBATCH --job-name={_job_name('sforge', plan.pipeline_id, 'controller')}",
         f"#SBATCH --output={_q(str(root / 'controller' / 'controller-%j.out'))}",
         f"#SBATCH --error={_q(str(root / 'controller' / 'controller-%j.err'))}",
     ]
-    if resources.get("partition"):
-        lines.append(f"#SBATCH --partition={resources['partition']}")
-    if resources.get("time_limit"):
-        lines.append(f"#SBATCH --time={resources['time_limit']}")
-    if resources.get("cpus"):
-        lines.append(f"#SBATCH --cpus-per-task={int(resources['cpus'])}")
-    if resources.get("mem"):
-        lines.append(f"#SBATCH --mem={resources['mem']}")
+    if resources.partition:
+        lines.append(f"#SBATCH --partition={resources.partition}")
+    if resources.time_limit:
+        lines.append(f"#SBATCH --time={resources.time_limit}")
+    if resources.cpus:
+        lines.append(f"#SBATCH --cpus-per-task={int(resources.cpus)}")
+    if resources.mem:
+        lines.append(f"#SBATCH --mem={resources.mem}")
     lines.extend(
         [
             "set -euo pipefail",
-            *_runtime_bootstrap_lines(runtime_plan),
+            *_environment_lines(environment_plan),
             f"PIPELINE_ROOT={_q(plan.root_dir)}",
-            f"{_q(python_bin)} -m slurmforge.controller.pipeline --pipeline-root " + '"${PIPELINE_ROOT}"',
+            f"{_q(python_bin)} -m slurmforge.controller.train_eval_pipeline --train-eval-pipeline-root "
+            + '"${PIPELINE_ROOT}"',
             "",
         ]
     )
     return "\n".join(lines)
 
 
-def write_controller_submit_file(plan: PipelinePlan) -> Path:
+def write_controller_submit_file(plan: TrainEvalPipelinePlan) -> Path:
     root = Path(plan.root_dir)
     path = root / "controller" / "controller.sbatch"
     path.parent.mkdir(parents=True, exist_ok=True)

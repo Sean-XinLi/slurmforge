@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from ..io import SchemaVersion
-from ..plans import PipelinePlan, StageBatchPlan, StageInstancePlan
+from ..plans import TrainEvalPipelinePlan, StageBatchPlan, StageInstancePlan
 from ..schema import InputBinding
 
 
@@ -64,12 +64,13 @@ def build_stage_batch_lineage(batch: StageBatchPlan) -> dict[str, Any]:
     }
 
 
-def build_pipeline_lineage(plan: PipelinePlan) -> dict[str, Any]:
+def build_train_eval_pipeline_lineage(plan: TrainEvalPipelinePlan) -> dict[str, Any]:
     return {
         "schema_version": SchemaVersion.LINEAGE,
-        "kind": "pipeline_lineage",
+        "kind": "train_eval_pipeline_lineage",
         "root": str(Path(plan.root_dir).resolve()),
         "pipeline_id": plan.pipeline_id,
+        "pipeline_kind": plan.pipeline_kind,
         "stage_order": list(plan.stage_order),
         "run_ids": list(plan.run_set),
         "spec_snapshot_digest": plan.spec_snapshot_digest,

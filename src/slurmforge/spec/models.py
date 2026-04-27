@@ -9,14 +9,14 @@ from ..schema import InputInjection, InputSource
 from .output_contract import StageOutputContract
 
 
-JsonDict = dict[str, Any]
+JsonObject = dict[str, Any]
 
 
 @dataclass(frozen=True)
 class EntrySpec:
     type: str
     workdir: str
-    args: JsonDict = field(default_factory=dict)
+    args: JsonObject = field(default_factory=dict)
     script: str | None = None
     command: str | list[str] | None = None
 
@@ -27,8 +27,9 @@ class ResourceSpec:
     account: str | None = None
     qos: str | None = None
     time_limit: str | None = None
+    gpu_type: str = ""
     nodes: int = 1
-    gpus_per_node: int = 0
+    gpus_per_node: int | str = 0
     cpus_per_task: int = 1
     mem: str | None = None
     constraint: str | None = None
@@ -45,21 +46,96 @@ class PythonRuntimeSpec:
 class ExecutorRuntimeSpec:
     python: PythonRuntimeSpec = field(default_factory=PythonRuntimeSpec)
     executor_module: str = "slurmforge.executor.stage"
-    bootstrap_scope: str = "sbatch"
-    bootstrap_steps: tuple[JsonDict, ...] = ()
-    env: JsonDict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class UserRuntimeSpec:
     python: PythonRuntimeSpec = field(default_factory=PythonRuntimeSpec)
-    env: JsonDict = field(default_factory=dict)
+    env: JsonObject = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class RuntimeSpec:
     executor: ExecutorRuntimeSpec = field(default_factory=ExecutorRuntimeSpec)
     user: dict[str, UserRuntimeSpec] = field(default_factory=lambda: {"default": UserRuntimeSpec()})
+
+
+@dataclass(frozen=True)
+class EnvironmentSourceSpec:
+    path: str
+    args: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class EnvironmentSpec:
+    name: str
+    modules: tuple[str, ...] = ()
+    source: tuple[EnvironmentSourceSpec, ...] = ()
+    env: JsonObject = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class EmailNotificationSpec:
+    enabled: bool = False
+    to: tuple[str, ...] = ()
+    events: tuple[str, ...] = ()
+    mode: str = "summary"
+    from_address: str = "slurmforge@localhost"
+    sendmail: str = "/usr/sbin/sendmail"
+    subject_prefix: str = "SlurmForge"
+
+
+@dataclass(frozen=True)
+class NotificationsSpec:
+    email: EmailNotificationSpec = field(default_factory=EmailNotificationSpec)
+
+
+@dataclass(frozen=True)
+class GpuTypeSpec:
+    name: str
+    memory_gb: float
+    usable_memory_fraction: float
+    max_gpus_per_node: int | None = None
+    slurm: JsonObject = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class HardwareSpec:
+    gpu_types: dict[str, GpuTypeSpec] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class GpuSizingDefaultsSpec:
+    safety_factor: float = 1.0
+    round_to: int = 1
+
+
+@dataclass(frozen=True)
+class SizingSpec:
+    gpu: GpuSizingDefaultsSpec = field(default_factory=GpuSizingDefaultsSpec)
+
+
+@dataclass(frozen=True)
+class StageGpuSizingSpec:
+    estimator: str
+    target_memory_gb: float
+    min_gpus_per_job: int = 1
+    max_gpus_per_job: int | None = None
+    safety_factor: float | None = None
+    round_to: int | None = None
+
+
+@dataclass(frozen=True)
+class RunCaseSpec:
+    name: str
+    set: JsonObject = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class RunsSpec:
+    type: str = "single"
+    axes: tuple[tuple[str, tuple[Any, ...]], ...] = ()
+    cases: tuple[RunCaseSpec, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -73,7 +149,7 @@ class ArtifactStoreSpec:
 @dataclass(frozen=True)
 class LauncherSpec:
     type: str = "single"
-    options: JsonDict = field(default_factory=dict)
+    options: JsonObject = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -86,6 +162,12 @@ class StageInputSpec:
 
 
 @dataclass(frozen=True)
+class BeforeStepSpec:
+    run: str
+    name: str = ""
+
+
+@dataclass(frozen=True)
 class StageSpec:
     name: str
     kind: str
@@ -94,6 +176,9 @@ class StageSpec:
     resources: ResourceSpec
     launcher: LauncherSpec = field(default_factory=LauncherSpec)
     runtime: str = "default"
+    environment: str = ""
+    gpu_sizing: StageGpuSizingSpec | None = None
+    before: tuple[BeforeStepSpec, ...] = ()
     depends_on: tuple[str, ...] = ()
     inputs: dict[str, StageInputSpec] = field(default_factory=dict)
     outputs: StageOutputContract = field(default_factory=StageOutputContract)
@@ -115,11 +200,17 @@ class DispatchSpec:
 
 
 @dataclass(frozen=True)
+class ControllerSpec:
+    partition: str | None = None
+    cpus: int = 1
+    mem: str | None = "2G"
+    time_limit: str | None = None
+    environment: str = ""
+
+
+@dataclass(frozen=True)
 class OrchestrationSpec:
-    controller_partition: str | None = None
-    controller_cpus: int = 1
-    controller_mem: str | None = "2G"
-    controller_time_limit: str | None = None
+    controller: ControllerSpec = field(default_factory=ControllerSpec)
 
 
 @dataclass(frozen=True)
@@ -128,11 +219,15 @@ class ExperimentSpec:
     experiment: str
     storage: StorageSpec
     stages: dict[str, StageSpec]
+    hardware: HardwareSpec
+    environments: dict[str, EnvironmentSpec]
+    sizing: SizingSpec
+    runs: RunsSpec
+    notifications: NotificationsSpec
     project_root: Path
     config_path: Path
     spec_snapshot_digest: str
-    raw: JsonDict
-    matrix_axes: tuple[tuple[str, tuple[Any, ...]], ...] = ()
+    raw: JsonObject
     runtime: RuntimeSpec = field(default_factory=RuntimeSpec)
     artifact_store: ArtifactStoreSpec = field(default_factory=ArtifactStoreSpec)
     dispatch: DispatchSpec = field(default_factory=DispatchSpec)
@@ -153,7 +248,7 @@ class ExperimentSpec:
         order = [name for name in ("train", "eval") if name in stages]
         return tuple(order)
 
-    def with_raw(self, raw: JsonDict, digest: str) -> "ExperimentSpec":
+    def with_raw(self, raw: JsonObject, digest: str) -> "ExperimentSpec":
         from .parser import parse_experiment_spec
 
         return parse_experiment_spec(

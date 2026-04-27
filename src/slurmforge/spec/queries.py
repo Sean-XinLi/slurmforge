@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import itertools
+import re
 from typing import Any
 
 from ..errors import ConfigContractError
@@ -10,7 +11,7 @@ from ..schema import RunDefinition
 from .models import ExperimentSpec
 
 
-def normalize_matrix_path(raw: dict[str, Any], path: str) -> str:
+def normalize_run_path(raw: dict[str, Any], path: str) -> str:
     first = path.split(".", 1)[0]
     stages = raw.get("stages")
     if isinstance(stages, dict) and first in stages and not path.startswith("stages."):
@@ -30,28 +31,44 @@ def stage_name_for_kind(spec: ExperimentSpec, kind: str) -> str:
     return matches[0]
 
 
-def iter_matrix_assignments(spec: ExperimentSpec) -> tuple[dict[str, Any], ...]:
-    if not spec.matrix_axes:
+def iter_run_overrides(spec: ExperimentSpec) -> tuple[dict[str, Any], ...]:
+    if spec.runs.type == "single":
         return ({},)
-    keys = [key for key, _values in spec.matrix_axes]
-    value_sets = [tuple(values) for _key, values in spec.matrix_axes]
+    if spec.runs.type == "cases":
+        return tuple(copy.deepcopy(case.set) for case in spec.runs.cases)
+    keys = [key for key, _values in spec.runs.axes]
+    value_sets = [tuple(values) for _key, values in spec.runs.axes]
     return tuple(dict(zip(keys, combo)) for combo in itertools.product(*value_sets))
 
 
-def run_id_for(index: int, assignments: dict[str, Any], spec_digest: str) -> str:
-    seed = {"index": index, "assignments": assignments, "spec_snapshot_digest": spec_digest}
+def run_id_for(index: int, run_overrides: dict[str, Any], spec_digest: str) -> str:
+    seed = {"index": index, "run_overrides": run_overrides, "spec_snapshot_digest": spec_digest}
     digest = content_digest(seed, prefix=10)
     return f"run_{index:04d}_{digest}"
 
 
+def _validate_case_run_id(name: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", name):
+        raise ConfigContractError(
+            "`runs.cases[].name` may only contain letters, numbers, underscores, dots, and dashes"
+        )
+    return name
+
+
 def expand_run_definitions(spec: ExperimentSpec) -> tuple[RunDefinition, ...]:
     runs: list[RunDefinition] = []
-    for index, assignments in enumerate(iter_matrix_assignments(spec), start=1):
+    overrides = iter_run_overrides(spec)
+    for index, run_overrides in enumerate(overrides, start=1):
+        run_id = (
+            _validate_case_run_id(spec.runs.cases[index - 1].name)
+            if spec.runs.type == "cases"
+            else run_id_for(index, run_overrides, spec.spec_snapshot_digest)
+        )
         runs.append(
             RunDefinition(
-                run_id=run_id_for(index, assignments, spec.spec_snapshot_digest),
+                run_id=run_id,
                 run_index=index,
-                matrix_assignments=copy.deepcopy(assignments),
+                run_overrides=copy.deepcopy(run_overrides),
                 spec_snapshot_digest=spec.spec_snapshot_digest,
             )
         )

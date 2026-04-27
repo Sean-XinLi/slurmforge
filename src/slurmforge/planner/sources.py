@@ -10,7 +10,7 @@ from ..overrides import deep_set, parse_override
 from ..plans import PriorBatchLineage, RunDefinition, SelectedStageRun, SourcedStageBatchPlan, StageBatchSource
 from ..spec import parse_experiment_spec, validate_experiment_spec
 from ..status import read_stage_status, state_matches
-from ..storage import iter_stage_run_dirs, plan_for_run_dir
+from ..storage.loader import iter_stage_run_dirs, plan_for_run_dir
 from ..resolver import resolve_stage_inputs_from_prior_source
 from .core import compile_stage_batch
 
@@ -52,7 +52,7 @@ def select_stage_runs(
                 run=RunDefinition(
                     run_id=plan.run_id,
                     run_index=plan.run_index,
-                    matrix_assignments=dict(plan.matrix_assignments),
+                    run_overrides=dict(plan.run_overrides),
                     spec_snapshot_digest=plan.spec_snapshot_digest,
                 ),
             )

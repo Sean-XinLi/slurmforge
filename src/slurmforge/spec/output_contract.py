@@ -14,6 +14,12 @@ OUTPUT_SELECTORS = {"latest_step", "first", "last"}
 @dataclass(frozen=True)
 class OutputDiscoveryRule:
     globs: tuple[str, ...] = ()
+    schema_version: int = SchemaVersion.OUTPUT_CONTRACT
+
+
+@dataclass(frozen=True)
+class FileOutputDiscoveryRule:
+    globs: tuple[str, ...] = ()
     select: str = "latest_step"
     schema_version: int = SchemaVersion.OUTPUT_CONTRACT
 
@@ -23,7 +29,7 @@ class StageOutputSpec:
     name: str
     kind: str
     required: bool = False
-    discover: OutputDiscoveryRule = field(default_factory=OutputDiscoveryRule)
+    discover: OutputDiscoveryRule | FileOutputDiscoveryRule = field(default_factory=OutputDiscoveryRule)
     file: str = ""
     json_path: str = "$"
     schema_version: int = SchemaVersion.OUTPUT_CONTRACT
@@ -72,13 +78,17 @@ def _normalize_selector(value: Any) -> str:
     return selector
 
 
-def _parse_discovery(raw: Any, *, name: str) -> OutputDiscoveryRule:
+def _parse_discovery(raw: Any, *, name: str, allow_select: bool) -> OutputDiscoveryRule | FileOutputDiscoveryRule:
     data = {} if raw in (None, "") else _require_mapping(raw, name)
     _require_schema(data, name=name)
-    return OutputDiscoveryRule(
-        globs=_string_tuple(data.get("globs"), name=f"{name}.globs"),
-        select=_normalize_selector(data.get("select")),
-    )
+    globs = _string_tuple(data.get("globs"), name=f"{name}.globs")
+    if "select" in data:
+        if not allow_select:
+            raise ConfigContractError(f"`{name}.select` is only supported for file outputs")
+        return FileOutputDiscoveryRule(globs=globs, select=_normalize_selector(data.get("select")))
+    if allow_select:
+        return FileOutputDiscoveryRule(globs=globs)
+    return OutputDiscoveryRule(globs=globs)
 
 
 def _parse_output_spec(output_name: str, raw: Any, *, stage_name: str) -> StageOutputSpec:
@@ -88,7 +98,7 @@ def _parse_output_spec(output_name: str, raw: Any, *, stage_name: str) -> StageO
     kind = str(data.get("kind") or "")
     if kind not in OUTPUT_KINDS:
         raise ConfigContractError(f"`{name}.kind` must be file, files, metric, or manifest")
-    discover = _parse_discovery(data.get("discover"), name=f"{name}.discover")
+    discover = _parse_discovery(data.get("discover"), name=f"{name}.discover", allow_select=kind == "file")
     file_value = data.get("file")
     json_path = str(data.get("json_path") or "$")
     return StageOutputSpec(
@@ -114,21 +124,33 @@ def parse_stage_output_contract(raw: Any, *, stage_name: str) -> StageOutputCont
     return StageOutputContract(outputs=outputs)
 
 
-def output_discovery_rule_from_dict(payload: dict[str, Any]) -> OutputDiscoveryRule:
+def output_discovery_rule_from_dict(
+    payload: dict[str, Any],
+    *,
+    allow_select: bool = False,
+) -> OutputDiscoveryRule | FileOutputDiscoveryRule:
     _require_schema(payload, name="output_discovery_rule", require_present=True)
-    return OutputDiscoveryRule(
-        globs=tuple(str(item) for item in payload.get("globs", ())),
-        select=_normalize_selector(payload.get("select")),
-    )
+    globs = tuple(str(item) for item in payload.get("globs", ()))
+    if "select" in payload:
+        if not allow_select:
+            raise ConfigContractError("output discover select is only supported for file outputs")
+        return FileOutputDiscoveryRule(
+            globs=globs,
+            select=_normalize_selector(payload.get("select")),
+        )
+    if allow_select:
+        return FileOutputDiscoveryRule(globs=globs)
+    return OutputDiscoveryRule(globs=globs)
 
 
 def stage_output_spec_from_dict(payload: dict[str, Any]) -> StageOutputSpec:
     _require_schema(payload, name="stage_output_spec", require_present=True)
+    kind = str(payload["kind"])
     return StageOutputSpec(
         name=str(payload["name"]),
-        kind=str(payload["kind"]),
+        kind=kind,
         required=bool(payload.get("required", False)),
-        discover=output_discovery_rule_from_dict(dict(payload.get("discover") or {})),
+        discover=output_discovery_rule_from_dict(dict(payload.get("discover") or {}), allow_select=kind == "file"),
         file=str(payload.get("file") or ""),
         json_path=str(payload.get("json_path") or "$"),
     )

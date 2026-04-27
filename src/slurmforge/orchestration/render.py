@@ -3,16 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from .controller import reconcile_controller_job
+from ..read_models.status import refresh_root_status
 from ..submission import reconcile_root_submissions
 from ..status import state_matches
-from ..storage import (
-    collect_stage_statuses,
-    is_pipeline_root,
-    is_stage_batch_root,
-    read_controller_status,
-    read_materialization_status,
-    refresh_root_status,
-)
+from ..storage.controller import read_controller_status
+from ..storage.loader import collect_stage_statuses, is_stage_batch_root, is_train_eval_pipeline_root
+from ..storage.materialization import read_materialization_status
 
 
 def _trim(value: str, limit: int = 120) -> str:
@@ -30,9 +26,9 @@ def render_status(
 ) -> None:
     if not root.exists():
         raise FileNotFoundError(f"status root does not exist: {root}")
-    if not is_stage_batch_root(root) and not is_pipeline_root(root):
-        raise FileNotFoundError(f"not a stage batch or pipeline root: {root}")
-    root_is_pipeline = is_pipeline_root(root)
+    if not is_stage_batch_root(root) and not is_train_eval_pipeline_root(root):
+        raise FileNotFoundError(f"not a stage batch or train/eval pipeline root: {root}")
+    root_is_pipeline = is_train_eval_pipeline_root(root)
     if reconcile and root_is_pipeline:
         reconcile_controller_job(root)
     if reconcile:

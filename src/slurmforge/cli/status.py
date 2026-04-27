@@ -18,8 +18,8 @@ def handle_status(args: argparse.Namespace) -> None:
 
 
 def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    parser = subparsers.add_parser("status", help="Summarize stage-level status for a batch or pipeline root")
-    parser.add_argument("--from", dest="root", required=True, help="Stage batch or pipeline root")
+    parser = subparsers.add_parser("status", help="Summarize stage-level status for a batch or train/eval pipeline root")
+    parser.add_argument("--from", dest="root", required=True, help="Stage batch or train/eval pipeline root")
     parser.add_argument("--stage", default=None, help="Filter by stage name")
     parser.add_argument("--query", "--status", dest="query", default="all", help="Filter, e.g. state=failed or failed")
     parser.add_argument("--reconcile", action="store_true", help="Query Slurm through submission ledgers before printing")

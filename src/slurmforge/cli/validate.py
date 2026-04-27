@@ -41,6 +41,6 @@ def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser
     parser = subparsers.add_parser("validate", help="Validate a stage-batch experiment spec without emitting files")
     parser.add_argument("--config", required=True, help="Path to experiment config yaml")
     parser.add_argument("--set", action="append", default=[], help="Override config by dot-path")
-    parser.add_argument("--project_root", default=None, help="Override project root for relative paths")
+    parser.add_argument("--project-root", dest="project_root", default=None, help="Override project root for relative paths")
     parser.add_argument("--force", action="store_true", help=argparse.SUPPRESS)
     parser.set_defaults(handler=handle_validate)

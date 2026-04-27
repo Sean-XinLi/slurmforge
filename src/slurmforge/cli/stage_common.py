@@ -12,10 +12,10 @@ from ..orchestration import (
     ExecutionMode,
     build_eval_stage_batch,
     build_dry_run_audit,
-    build_pipeline_stage_plan,
+    build_train_eval_pipeline_plan,
     build_train_stage_batch,
     resolve_eval_inputs,
-    summarize_pipeline_plan,
+    summarize_train_eval_pipeline_plan,
     summarize_stage_batch,
 )
 from ..spec import ExperimentSpec, load_experiment_spec
@@ -31,7 +31,8 @@ def add_config_args(parser: argparse.ArgumentParser) -> None:
         help="Override config by dot-path, e.g. --set stages.train.entry.args.lr=0.004",
     )
     parser.add_argument(
-        "--project_root",
+        "--project-root",
+        dest="project_root",
         default=None,
         help="Override project root used to resolve relative paths (default: config file directory)",
     )
@@ -39,14 +40,20 @@ def add_config_args(parser: argparse.ArgumentParser) -> None:
 
 def add_execution_mode_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--dry_run",
+        "--dry-run",
+        dest="dry_run",
         nargs="?",
         const="summary",
         default=False,
         choices=("summary", "json", "full"),
-        help="Compile without writing files. Use --dry_run=json or --dry_run=full for machine-readable audit output",
+        help="Compile without writing files. Use --dry-run=json or --dry-run=full for machine-readable audit output",
     )
-    parser.add_argument("--emit_only", action="store_true", help="Write plan and sbatch files without submitting")
+    parser.add_argument(
+        "--emit-only",
+        dest="emit_only",
+        action="store_true",
+        help="Write plan and sbatch files without submitting",
+    )
     parser.add_argument("--output", default=None, help="Write machine-readable dry-run output to this path")
 
 
@@ -152,9 +159,9 @@ def build_eval_batch_from_args(args: argparse.Namespace):
     return spec, batch
 
 
-def build_pipeline_from_args(args: argparse.Namespace):
+def build_train_eval_pipeline_from_args(args: argparse.Namespace):
     spec = load_spec_from_args(args)
-    plan = build_pipeline_stage_plan(spec)
+    plan = build_train_eval_pipeline_plan(spec)
     return spec, plan
 
 
@@ -162,5 +169,5 @@ def print_stage_batch_plan(batch) -> None:
     print_lines(summarize_stage_batch(batch))
 
 
-def print_pipeline_plan(plan) -> None:
-    print_lines(summarize_pipeline_plan(plan))
+def print_train_eval_pipeline_plan(plan) -> None:
+    print_lines(summarize_train_eval_pipeline_plan(plan))

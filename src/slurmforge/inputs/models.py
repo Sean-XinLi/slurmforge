@@ -4,13 +4,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-JsonDict = dict[str, Any]
+JsonObject = dict[str, Any]
 
 
 @dataclass(frozen=True)
 class InputVerificationRecord:
     input_name: str
-    source: JsonDict
+    source: JsonObject
     expects: str
     required: bool
     resolved_kind: str = "unresolved"

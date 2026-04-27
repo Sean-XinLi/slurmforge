@@ -4,11 +4,11 @@ from pathlib import Path
 
 from ..slurm import SlurmClient
 from ..status import reconcile_stage_batch_with_slurm
-from ..storage import is_pipeline_root, is_stage_batch_root, load_execution_stage_batch_plan
+from ..storage.loader import is_stage_batch_root, is_train_eval_pipeline_root, load_execution_stage_batch_plan
 from .ledger import submitted_group_job_ids
 
 
-def reconcile_batch_submission_impl(
+def reconcile_batch_submission(
     batch_root: Path,
     *,
     client: SlurmClient | None = None,
@@ -27,7 +27,7 @@ def reconcile_batch_submission_impl(
     return group_job_ids
 
 
-def reconcile_root_submissions_impl(
+def reconcile_root_submissions(
     root: Path,
     *,
     stage: str | None = None,
@@ -37,20 +37,20 @@ def reconcile_root_submissions_impl(
     if is_stage_batch_root(root):
         batch = load_execution_stage_batch_plan(root)
         if stage is None or batch.stage_name == stage:
-            reconcile_batch_submission_impl(
+            reconcile_batch_submission(
                 root,
                 client=client,
                 missing_output_grace_seconds=missing_output_grace_seconds,
             )
         return
-    if is_pipeline_root(root):
+    if is_train_eval_pipeline_root(root):
         for stage_root in sorted((root / "stage_batches").glob("*")):
             if not is_stage_batch_root(stage_root):
                 continue
             batch = load_execution_stage_batch_plan(stage_root)
             if stage is not None and batch.stage_name != stage:
                 continue
-            reconcile_batch_submission_impl(
+            reconcile_batch_submission(
                 stage_root,
                 client=client,
                 missing_output_grace_seconds=missing_output_grace_seconds,

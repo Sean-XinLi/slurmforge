@@ -5,10 +5,10 @@ from typing import Any, Iterable
 
 from ..planner import (
     build_dry_run_audit as _build_dry_run_audit,
-    compile_pipeline_plan,
+    compile_train_eval_pipeline_plan,
     compile_stage_batch_from_prior_source,
     compile_stage_batch_for_kind,
-    summarize_pipeline_plan as _summarize_pipeline_plan,
+    summarize_train_eval_pipeline_plan as _summarize_pipeline_plan,
     summarize_stage_batch as _summarize_stage_batch,
 )
 from ..plans import SourcedStageBatchPlan
@@ -18,6 +18,8 @@ from ..resolver import (
     upstream_bindings_from_run,
     upstream_bindings_from_stage_batch,
 )
+from ..sizing import build_resource_estimate as _build_resource_estimate
+from ..sizing import render_resource_estimate as _render_resource_estimate
 from ..spec import ExperimentSpec
 
 
@@ -82,8 +84,8 @@ def build_eval_stage_batch(
     )
 
 
-def build_pipeline_stage_plan(spec: ExperimentSpec):
-    return compile_pipeline_plan(spec)
+def build_train_eval_pipeline_plan(spec: ExperimentSpec):
+    return compile_train_eval_pipeline_plan(spec)
 
 
 def build_dry_run_audit(spec: ExperimentSpec, plan, *, command: str, full: bool = False):
@@ -94,8 +96,16 @@ def summarize_stage_batch(batch) -> list[str]:
     return _summarize_stage_batch(batch)
 
 
-def summarize_pipeline_plan(plan) -> list[str]:
+def summarize_train_eval_pipeline_plan(plan) -> list[str]:
     return _summarize_pipeline_plan(plan)
+
+
+def build_resource_estimate_for_plan(plan):
+    return _build_resource_estimate(plan)
+
+
+def render_resource_estimate_for_plan(plan) -> list[str]:
+    return _render_resource_estimate(_build_resource_estimate(plan))
 
 
 def build_prior_source_stage_batch(

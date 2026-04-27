@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..plans import PipelinePlan, RunDefinition
+from ..plans import TrainEvalPipelinePlan, RunDefinition
 from ..schema import InputBinding, InputSource, binding_is_ready_for_injection
 from ..spec import ExperimentSpec, StageInputSpec
 from ..status import read_stage_status
-from ..storage import load_stage_outputs, plan_for_run_dir, run_definitions_from_stage_batch
+from ..storage.loader import load_stage_outputs, plan_for_run_dir, run_definitions_from_stage_batch
 from .core import (
     ResolvedStageInputs,
     inject_payload,
@@ -25,7 +25,7 @@ def _producer_ref(input_spec: StageInputSpec, depends_on: tuple[str, ...]) -> tu
 
 
 def _pipeline_upstream_binding(
-    plan: PipelinePlan,
+    plan: TrainEvalPipelinePlan,
     input_spec: StageInputSpec,
     run: RunDefinition,
     *,
@@ -84,7 +84,7 @@ def _pipeline_upstream_binding(
 
 def _resolve_input_for_pipeline(
     spec: ExperimentSpec,
-    plan: PipelinePlan,
+    plan: TrainEvalPipelinePlan,
     stage_name: str,
     run: RunDefinition,
     input_spec: StageInputSpec,
@@ -103,13 +103,13 @@ def _resolve_input_for_pipeline(
         )
     return unresolved_binding(
         input_spec,
-        reason="input source is not resolvable by the pipeline controller",
+        reason="input source is not resolvable by the train/eval pipeline controller",
     )
 
 
-def resolve_stage_inputs_for_pipeline(
+def resolve_stage_inputs_for_train_eval_pipeline(
     spec: ExperimentSpec,
-    plan: PipelinePlan,
+    plan: TrainEvalPipelinePlan,
     *,
     stage_name: str,
 ) -> ResolvedStageInputs:

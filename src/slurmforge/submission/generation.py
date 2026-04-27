@@ -8,7 +8,7 @@ from ..inputs import StageInputVerificationReport, verification_failure_reasons,
 from ..io import SchemaVersion
 from ..plans import StageBatchPlan
 from ..status import StageStatusRecord, commit_stage_status
-from ..storage import write_materialization_status
+from ..storage.materialization import write_materialization_status
 from .ledger import initialize_submission_ledger, ledger_path
 from .models import SubmitGeneration
 from .models import PreparedSubmission

@@ -30,6 +30,8 @@ class SchemaVersion:
     CONTROLLER_STATUS = 1
     SCHEDULER_OBSERVATION = 1
     DRY_RUN_AUDIT = 1
+    NOTIFICATION = 1
+    RESOURCE_ESTIMATE = 1
 
 
 def require_schema(payload: dict[str, Any], *, name: str, version: int) -> int:

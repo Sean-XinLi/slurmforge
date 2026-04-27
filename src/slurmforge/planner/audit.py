@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from ..schema import binding_is_ready_for_injection
 from ..runtime import check_runtime_contract
 from ..inputs import verify_stage_instance_inputs
-from ..io import SchemaVersion, to_jsonable
-from ..plans import PipelinePlan, StageBatchPlan
+from ..io import SchemaVersion, stable_json, to_jsonable
+from ..plans import TrainEvalPipelinePlan, StageBatchPlan
+from ..sizing import build_resource_estimate
 from ..spec import ExperimentSpec
 
 
@@ -18,6 +19,7 @@ class DryRunAudit:
     plan_kind: str
     plan: dict[str, Any]
     validation: dict[str, Any]
+    resource_estimate: dict[str, Any] = field(default_factory=dict)
     schema_version: int = SchemaVersion.DRY_RUN_AUDIT
 
 
@@ -65,7 +67,7 @@ def _runtime_contracts_for_stage_batch(batch: StageBatchPlan, *, full: bool) -> 
     seen: set[str] = set()
     reports: list[dict[str, Any]] = []
     for instance in batch.stage_instances:
-        key = repr(sorted(dict(instance.runtime_plan).items()))
+        key = stable_json(instance.runtime_plan)
         if key in seen:
             continue
         seen.add(key)
@@ -110,7 +112,7 @@ def _stage_batch_payload(batch: StageBatchPlan, *, full: bool) -> dict[str, Any]
 
 def build_dry_run_audit(
     spec: ExperimentSpec,
-    plan: StageBatchPlan | PipelinePlan,
+    plan: StageBatchPlan | TrainEvalPipelinePlan,
     *,
     command: str,
     full: bool = False,
@@ -123,6 +125,7 @@ def build_dry_run_audit(
             plan_kind="stage_batch",
             plan=to_jsonable(plan),
             validation=validation,
+            resource_estimate=to_jsonable(build_resource_estimate(plan)) if full else {},
         )
     stages = {
         stage_name: _stage_batch_payload(batch, full=full)
@@ -132,7 +135,7 @@ def build_dry_run_audit(
     return DryRunAudit(
         command=command,
         state=state,
-        plan_kind="pipeline",
+        plan_kind="train_eval_pipeline",
         plan=to_jsonable(plan),
         validation={
             "state": state,
@@ -140,4 +143,5 @@ def build_dry_run_audit(
             "experiment": spec.experiment,
             "stage_batches": stages,
         },
+        resource_estimate=to_jsonable(build_resource_estimate(plan)) if full else {},
     )

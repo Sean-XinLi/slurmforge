@@ -4,9 +4,11 @@ from typing import Literal
 
 from ..emit import write_controller_submit_file
 from ..plans import SourcedStageBatchPlan
+from ..read_models.status import refresh_stage_batch_status, refresh_train_eval_pipeline_status
 from ..spec import ExperimentSpec
-from ..storage import materialize_sourced_stage_batch_plan, write_pipeline_layout, write_stage_batch_layout
-from ..submission import PreparedSubmission, prepare_stage_submission, submit_prepared_stage_batch
+from ..storage.layout import write_stage_batch_layout, write_train_eval_pipeline_layout
+from ..storage.materialization import materialize_sourced_stage_batch_plan
+from ..submission import PreparedSubmission, prepare_stage_submission, submit_prepared_stage_batch, submit_stage_batch_finalizer
 from .controller import submit_controller_job
 
 ExecutionMode = Literal["preview", "emit", "submit"]
@@ -14,11 +16,14 @@ ExecutionMode = Literal["preview", "emit", "submit"]
 
 def _materialize_stage_batch(spec: ExperimentSpec, batch) -> PreparedSubmission:
     write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+    refresh_stage_batch_status(batch.submission_root)
     return prepare_stage_submission(batch)
 
 
 def _materialize_sourced_stage_batch(plan: SourcedStageBatchPlan) -> SourcedStageBatchPlan:
-    return materialize_sourced_stage_batch_plan(plan)
+    concrete = materialize_sourced_stage_batch_plan(plan)
+    refresh_stage_batch_status(concrete.batch.submission_root)
+    return concrete
 
 
 def _submit_materialized_stage_batch(prepared: PreparedSubmission) -> dict[str, str]:
@@ -34,7 +39,9 @@ def emit_sourced_stage_batch(
     prepared = prepare_stage_submission(concrete.batch)
     if not submit:
         return concrete, None
-    return concrete, _submit_materialized_stage_batch(prepared)
+    group_job_ids = _submit_materialized_stage_batch(prepared)
+    submit_stage_batch_finalizer(concrete.batch, group_job_ids)
+    return concrete, group_job_ids
 
 
 def emit_stage_batch(spec: ExperimentSpec, batch, *, submit: bool) -> None:
@@ -43,6 +50,7 @@ def emit_stage_batch(spec: ExperimentSpec, batch, *, submit: bool) -> None:
         print(f"[OK] emitted stage batch: {batch.submission_root}")
         return
     group_job_ids = _submit_materialized_stage_batch(prepared)
+    submit_stage_batch_finalizer(batch, group_job_ids)
     print(f"[OK] submitted stage batch: {batch.submission_root}")
     print(f"[OK] scheduler_job_ids={','.join(group_job_ids.values())}")
 
@@ -53,20 +61,21 @@ def execute_stage_batch_plan(spec: ExperimentSpec, batch, *, mode: ExecutionMode
     emit_stage_batch(spec, batch, submit=mode == "submit")
 
 
-def emit_pipeline(spec: ExperimentSpec, plan, *, submit: bool) -> None:
-    write_pipeline_layout(plan, spec_snapshot=spec.raw)
+def emit_train_eval_pipeline(spec: ExperimentSpec, plan, *, submit: bool) -> None:
+    write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+    refresh_train_eval_pipeline_status(plan.root_dir)
     if "train" in plan.stage_batches:
         prepare_stage_submission(plan.stage_batches["train"])
     if not submit:
         write_controller_submit_file(plan)
-        print(f"[OK] emitted pipeline: {plan.root_dir}")
+        print(f"[OK] emitted train/eval pipeline: {plan.root_dir}")
         return
     record = submit_controller_job(plan)
-    print(f"[OK] submitted pipeline controller: {record.scheduler_job_id}")
+    print(f"[OK] submitted train/eval pipeline controller: {record.scheduler_job_id}")
     print(f"[OK] pipeline_root={plan.root_dir}")
 
 
-def execute_pipeline_plan(spec: ExperimentSpec, plan, *, mode: ExecutionMode) -> None:
+def execute_train_eval_pipeline_plan(spec: ExperimentSpec, plan, *, mode: ExecutionMode) -> None:
     if mode == "preview":
         return
-    emit_pipeline(spec, plan, submit=mode == "submit")
+    emit_train_eval_pipeline(spec, plan, submit=mode == "submit")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from .discovery import ArtifactIntegrityError, StageOutputDiscoveryResult, discover_stage_outputs, write_stage_outputs_record
+from .artifact_store import ArtifactIntegrityError
+from .discovery import StageOutputDiscoveryResult, discover_stage_outputs, write_stage_outputs_record
 from .models import (
     ArtifactManifestRecord,
     ArtifactRef,

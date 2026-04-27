@@ -10,102 +10,20 @@ only per-stage records so it stays a leaf component.
 """
 from __future__ import annotations
 
-import contextlib
 import json
 from pathlib import Path
-from typing import Any, Iterator
 
-from ..io import SchemaVersion, read_json, require_schema, to_jsonable, utc_now, write_json
+from ..io import to_jsonable, utc_now, write_json
 from .models import (
     StageAttemptRecord,
     StageStatusRecord,
     TERMINAL_STATES,
 )
-
-
-def _status_path(run_dir: Path) -> Path:
-    return Path(run_dir) / "status.json"
+from .reader import attempt_path, read_stage_status, status_path
 
 
 def _status_events_path(run_dir: Path) -> Path:
     return Path(run_dir) / "status_events.jsonl"
-
-
-def _attempts_dir(run_dir: Path) -> Path:
-    return Path(run_dir) / "attempts"
-
-
-def _attempt_path(run_dir: Path, attempt_id: str) -> Path:
-    return _attempts_dir(run_dir) / attempt_id / "attempt.json"
-
-
-# ---------------------------------------------------------------------------
-# from-dict
-# ---------------------------------------------------------------------------
-
-
-def stage_status_from_dict(payload: dict[str, Any]) -> StageStatusRecord:
-    require_schema(payload, name="stage_status", version=SchemaVersion.STATUS)
-    return StageStatusRecord(
-        schema_version=int(payload["schema_version"]),
-        stage_instance_id=str(payload["stage_instance_id"]),
-        run_id=str(payload["run_id"]),
-        stage_name=str(payload["stage_name"]),
-        state=str(payload.get("state") or "planned"),
-        latest_attempt_id=None if payload.get("latest_attempt_id") in (None, "") else str(payload.get("latest_attempt_id")),
-        latest_output_digest=None
-        if payload.get("latest_output_digest") in (None, "")
-        else str(payload.get("latest_output_digest")),
-        failure_class=None if payload.get("failure_class") in (None, "") else str(payload.get("failure_class")),
-        reason=str(payload.get("reason") or ""),
-    )
-
-
-def attempt_from_dict(payload: dict[str, Any]) -> StageAttemptRecord:
-    require_schema(payload, name="stage_attempt", version=SchemaVersion.STATUS)
-    return StageAttemptRecord(
-        attempt_id=str(payload["attempt_id"]),
-        stage_instance_id=str(payload["stage_instance_id"]),
-        attempt_source=str(payload.get("attempt_source") or "executor"),
-        attempt_state=str(payload.get("attempt_state") or "starting"),
-        scheduler_job_id=str(payload.get("scheduler_job_id") or ""),
-        scheduler_array_job_id=str(payload.get("scheduler_array_job_id") or ""),
-        scheduler_array_task_id=str(payload.get("scheduler_array_task_id") or ""),
-        scheduler_state=str(payload.get("scheduler_state") or ""),
-        scheduler_exit_code=str(payload.get("scheduler_exit_code") or ""),
-        node_list=str(payload.get("node_list") or ""),
-        started_by_executor=bool(payload.get("started_by_executor", True)),
-        executor_started_at=str(payload.get("executor_started_at") or ""),
-        executor_finished_at=str(payload.get("executor_finished_at") or ""),
-        started_at=str(payload.get("started_at") or ""),
-        finished_at=str(payload.get("finished_at") or ""),
-        exit_code=None if payload.get("exit_code") is None else int(payload.get("exit_code")),
-        failure_class=None if payload.get("failure_class") in (None, "") else str(payload.get("failure_class")),
-        reason=str(payload.get("reason") or ""),
-        log_paths=tuple(str(item) for item in payload.get("log_paths", ())),
-        artifact_paths=tuple(str(item) for item in payload.get("artifact_paths", ())),
-        artifact_manifest_path=str(payload.get("artifact_manifest_path") or ""),
-        schema_version=int(payload["schema_version"]),
-    )
-
-
-# ---------------------------------------------------------------------------
-# read
-# ---------------------------------------------------------------------------
-
-
-def read_stage_status(run_dir: Path) -> StageStatusRecord | None:
-    path = _status_path(run_dir)
-    if not path.exists():
-        return None
-    return stage_status_from_dict(read_json(path))
-
-
-def list_attempts(run_dir: Path) -> list[StageAttemptRecord]:
-    root = _attempts_dir(run_dir)
-    if not root.exists():
-        return []
-    return [attempt_from_dict(read_json(path)) for path in sorted(root.glob("*/attempt.json"))]
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +41,7 @@ def _state_rank(state: str) -> int:
 
 
 def _write_stage_status(run_dir: Path, status: StageStatusRecord) -> None:
-    write_json(_status_path(run_dir), status)
+    write_json(status_path(run_dir), status)
 
 
 def _append_status_event(
@@ -202,20 +120,9 @@ def _transition_stage_status(
 
 
 def _write_attempt(run_dir: Path, attempt: StageAttemptRecord) -> Path:
-    path = _attempt_path(run_dir, attempt.attempt_id)
+    path = attempt_path(run_dir, attempt.attempt_id)
     write_json(path, attempt)
     return path
-
-
-# ---------------------------------------------------------------------------
-# compatibility bulk-write context
-# ---------------------------------------------------------------------------
-
-
-@contextlib.contextmanager
-def batched_commits() -> Iterator[None]:
-    """Group stage writes without giving status ownership of parent rollups."""
-    yield
 
 
 # ---------------------------------------------------------------------------
@@ -243,32 +150,3 @@ def commit_stage_status(
 def commit_attempt(run_dir: Path, attempt: StageAttemptRecord) -> Path:
     return _write_attempt(run_dir, attempt)
 
-
-# ---------------------------------------------------------------------------
-# query helpers (read-only, used by aggregation and CLI)
-# ---------------------------------------------------------------------------
-
-
-def state_matches(status: StageStatusRecord | None, query: str) -> bool:
-    if query in {"", "all", "*"}:
-        return True
-    if status is None:
-        return query in {"missing", "state=missing"}
-    if "=" in query:
-        key, value = query.split("=", 1)
-        key = key.strip()
-        value = value.strip()
-        if key == "state":
-            return status.state == value
-        if key == "failure_class":
-            return status.failure_class == value
-        if key == "stage":
-            return status.stage_name == value
-        if key == "run_id":
-            return status.run_id == value
-        return False
-    if query == "failed":
-        return status.state == "failed"
-    if query == "non_success":
-        return status.state != "success"
-    return status.state == query or status.failure_class == query

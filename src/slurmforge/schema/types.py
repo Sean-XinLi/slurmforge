@@ -13,7 +13,7 @@ from typing import Any
 from ..io import SchemaVersion, require_schema, stable_json
 
 
-JsonDict = dict[str, Any]
+JsonObject = dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -49,8 +49,8 @@ class InputBinding:
     source: InputSource
     expects: str
     resolved: ResolvedInput = field(default_factory=ResolvedInput)
-    inject: JsonDict = field(default_factory=dict)
-    resolution: JsonDict = field(default_factory=dict)
+    inject: JsonObject = field(default_factory=dict)
+    resolution: JsonObject = field(default_factory=dict)
     schema_version: int = SchemaVersion.INPUT_CONTRACT
 
 
@@ -58,12 +58,12 @@ class InputBinding:
 class RunDefinition:
     run_id: str
     run_index: int
-    matrix_assignments: JsonDict
+    run_overrides: JsonObject
     spec_snapshot_digest: str
     schema_version: int = SchemaVersion.PLAN
 
 
-def input_source_from_dict(payload: JsonDict | InputSource) -> InputSource:
+def input_source_from_dict(payload: JsonObject | InputSource) -> InputSource:
     if isinstance(payload, InputSource):
         return payload
     values = dict(payload)
@@ -77,7 +77,7 @@ def input_source_from_dict(payload: JsonDict | InputSource) -> InputSource:
     )
 
 
-def resolved_input_from_dict(payload: JsonDict | ResolvedInput | None) -> ResolvedInput:
+def resolved_input_from_dict(payload: JsonObject | ResolvedInput | None) -> ResolvedInput:
     if isinstance(payload, ResolvedInput):
         return payload
     values = dict(payload or {})
@@ -93,7 +93,7 @@ def resolved_input_from_dict(payload: JsonDict | ResolvedInput | None) -> Resolv
     )
 
 
-def input_binding_from_dict(payload: JsonDict) -> InputBinding:
+def input_binding_from_dict(payload: JsonObject) -> InputBinding:
     require_schema(payload, name="input_binding", version=SchemaVersion.INPUT_CONTRACT)
     return InputBinding(
         input_name=str(payload["input_name"]),

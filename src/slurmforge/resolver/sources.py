@@ -15,7 +15,7 @@ from ..schema import (
     resolved_payload_present,
 )
 from ..spec import ExperimentSpec
-from ..storage import iter_stage_run_dirs, load_stage_outputs, plan_for_run_dir
+from ..storage.loader import iter_stage_run_dirs, load_stage_outputs, plan_for_run_dir
 from .core import (
     inject_payload,
     output_ref,

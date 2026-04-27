@@ -6,9 +6,9 @@ import argparse
 from ..errors import ConfigContractError
 from ..orchestration import (
     build_eval_stage_batch,
-    build_pipeline_stage_plan,
+    build_train_eval_pipeline_plan,
     build_train_stage_batch,
-    execute_pipeline_plan,
+    execute_train_eval_pipeline_plan,
     execute_stage_batch_plan,
 )
 from .stage_common import (
@@ -17,7 +17,7 @@ from .stage_common import (
     emit_machine_dry_run_if_requested,
     execution_mode_from_args,
     load_spec_from_args,
-    print_pipeline_plan,
+    print_train_eval_pipeline_plan,
     print_stage_batch_plan,
 )
 from .requests import eval_source_from_args
@@ -27,11 +27,11 @@ def handle_plan(args: argparse.Namespace) -> None:
     spec = load_spec_from_args(args)
     command = str(args.plan_command)
     if command == "run":
-        pipeline_plan = build_pipeline_stage_plan(spec)
+        pipeline_plan = build_train_eval_pipeline_plan(spec)
         if emit_machine_dry_run_if_requested(args, spec, pipeline_plan, command="run"):
             return
-        print_pipeline_plan(pipeline_plan)
-        execute_pipeline_plan(spec, pipeline_plan, mode=execution_mode_from_args(args, default="emit"))
+        print_train_eval_pipeline_plan(pipeline_plan)
+        execute_train_eval_pipeline_plan(spec, pipeline_plan, mode=execution_mode_from_args(args, default="emit"))
         return
     if command == "train":
         batch = build_train_stage_batch(spec)
@@ -53,14 +53,15 @@ def handle_plan(args: argparse.Namespace) -> None:
             return
         raise ConfigContractError(
             "eval plan has unresolved required inputs; provide --checkpoint, --from-run, "
-            "or --from-train-batch, or use --dry_run for logical preview only"
+            "or --from-train-batch, or use --dry-run for logical preview only"
         )
     execute_stage_batch_plan(spec, batch, mode=execution_mode_from_args(args, default="emit"))
 
 
 def _add_plan_mode_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--dry_run",
+        "--dry-run",
+        dest="dry_run",
         nargs="?",
         const="summary",
         default=False,
@@ -86,7 +87,7 @@ def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser
     _add_plan_mode_args(eval_parser)
     eval_parser.set_defaults(handler=handle_plan, plan_command="eval")
 
-    run_parser = plan_subparsers.add_parser("run", help="Compile a pipeline controller plan")
+    run_parser = plan_subparsers.add_parser("run", help="Compile a train/eval pipeline controller plan")
     add_config_args(run_parser)
     _add_plan_mode_args(run_parser)
     run_parser.set_defaults(handler=handle_plan, plan_command="run")

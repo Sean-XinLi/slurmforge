@@ -1,22 +1,14 @@
 from __future__ import annotations
 
-import glob
 import json
-import os
-import re
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from ..io import SchemaVersion, file_digest, write_json
 from ..plans import OutputRef, StageInstancePlan, StageOutputsRecord
-from ..storage import stage_outputs_path
+from .artifact_store import artifact_payload, manage_file
 from .models import ArtifactManifestRecord, ArtifactRef, output_ref_from_artifact
-
-
-class ArtifactIntegrityError(RuntimeError):
-    pass
+from .selection import glob_paths, json_path_value, resolve_file, select_file
 
 
 @dataclass(frozen=True)
@@ -27,147 +19,8 @@ class StageOutputDiscoveryResult:
     failure_reason: str | None = None
 
 
-def _glob_paths(workdir: Path, patterns: list[str]) -> list[str]:
-    paths: set[str] = set()
-    for pattern in patterns:
-        if not pattern:
-            continue
-        expanded = pattern if Path(pattern).is_absolute() else str(workdir / pattern)
-        for match in glob.glob(expanded, recursive=True):
-            if Path(match).is_file():
-                paths.add(str(Path(match).resolve()))
-    return sorted(paths)
-
-
-def _step_number(path: str) -> int | None:
-    numbers = [int(item) for item in re.findall(r"(?<![A-Za-z])(\d+)(?![A-Za-z])", Path(path).stem)]
-    return max(numbers) if numbers else None
-
-
-def _select_file(paths: list[str], selector: str) -> tuple[str | None, str]:
-    if not paths:
-        return None, "no_match"
-    if selector == "latest_step":
-        with_steps = [(path, _step_number(path)) for path in paths]
-        if any(step is not None for _path, step in with_steps):
-            selected = max(with_steps, key=lambda item: (-1 if item[1] is None else item[1], item[0]))[0]
-            return selected, "latest_step"
-        return paths[-1], "lexicographic_last"
-    if selector == "first":
-        return paths[0], "first_match"
-    return paths[-1], "last_match"
-
-
-def _resolve_file(workdir: Path, value: str) -> Path:
-    path = Path(value)
-    return path if path.is_absolute() else workdir / path
-
-
-def _json_path_value(payload: object, path: str) -> object:
-    if path == "$":
-        return payload
-    if not path.startswith("$."):
-        raise ValueError(f"unsupported metric json_path: {path}")
-    cursor = payload
-    for part in path[2:].split("."):
-        if not isinstance(cursor, dict) or part not in cursor:
-            raise KeyError(f"json_path `{path}` did not resolve at `{part}`")
-        cursor = cursor[part]
-    return cursor
-
-
-def _managed_name(path: Path, digest: str) -> str:
-    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", path.name)
-    return f"{digest[:12]}_{safe}"
-
-
-def _store_file(source: Path, managed: Path, *, strategy: str) -> tuple[str, bool]:
-    if strategy == "register_only":
-        return str(source), False
-    managed.parent.mkdir(parents=True, exist_ok=True)
-    if managed.exists() or managed.is_symlink():
-        managed.unlink()
-    if strategy == "copy":
-        shutil.copy2(source, managed)
-    elif strategy == "hardlink":
-        os.link(source, managed)
-    elif strategy == "symlink":
-        managed.symlink_to(source)
-    else:
-        raise ValueError(f"Unsupported artifact store strategy: {strategy}")
-    return str(managed), True
-
-
-def _manage_file(
-    path: str,
-    *,
-    attempt_dir: Path,
-    kind: str,
-    output_name: str | None = None,
-    optional: bool = False,
-    store_plan: dict[str, Any],
-) -> ArtifactRef:
-    source = Path(path).resolve()
-    source_digest = file_digest(source)
-    strategy = str(store_plan.get("strategy") or "copy")
-    fallback_strategy = store_plan.get("fallback_strategy")
-    verify_digest = bool(store_plan.get("verify_digest", True))
-    fail_on_verify_error = bool(store_plan.get("fail_on_verify_error", True))
-    files_dir = attempt_dir / "artifacts" / "files"
-    managed = files_dir / _managed_name(source, source_digest)
-    try:
-        managed_path, is_managed = _store_file(source, managed, strategy=strategy)
-        strategy_applied = strategy
-    except OSError:
-        if not fallback_strategy:
-            raise
-        managed_path, is_managed = _store_file(source, managed, strategy=str(fallback_strategy))
-        strategy_applied = str(fallback_strategy)
-    managed_digest = source_digest
-    verified = None
-    verify_error = ""
-    if verify_digest:
-        try:
-            managed_digest = file_digest(Path(managed_path))
-            verified = managed_digest == source_digest
-        except OSError as exc:
-            verified = False
-            verify_error = str(exc)
-        if verified is False and fail_on_verify_error:
-            detail = verify_error or f"source_digest={source_digest} managed_digest={managed_digest}"
-            raise ArtifactIntegrityError(f"artifact digest verification failed for {managed_path}: {detail}")
-    return ArtifactRef(
-        name=output_name or source.name,
-        kind=kind,
-        source_path=str(source),
-        managed_path=managed_path,
-        strategy=strategy_applied,
-        managed=is_managed,
-        digest=source_digest,
-        source_digest=source_digest,
-        managed_digest=managed_digest,
-        verified=verified,
-        size_bytes=source.stat().st_size,
-        optional=optional,
-    )
-
-
-def _artifact_payload(artifact: ArtifactRef) -> dict[str, Any]:
-    return {
-        "schema_version": artifact.schema_version,
-        "name": artifact.name,
-        "kind": artifact.kind,
-        "source_path": artifact.source_path,
-        "managed_path": artifact.managed_path,
-        "strategy": artifact.strategy,
-        "managed": artifact.managed,
-        "digest": artifact.digest,
-        "source_digest": artifact.source_digest,
-        "managed_digest": artifact.managed_digest,
-        "verified": artifact.verified,
-        "size_bytes": artifact.size_bytes,
-        "optional": artifact.optional,
-    }
+def _stage_outputs_path(run_dir: Path) -> Path:
+    return run_dir / "stage_outputs.json"
 
 
 def _write_files_output_ref(
@@ -185,7 +38,7 @@ def _write_files_output_ref(
         "cardinality": "many",
         "producer_stage_instance_id": instance.stage_instance_id,
         "producer_attempt_id": attempt_id,
-        "refs": [_artifact_payload(item) for item in artifacts],
+        "refs": [artifact_payload(item) for item in artifacts],
     }
     manifest_path = attempt_dir / "artifacts" / "output_manifests" / f"{output_name}.json"
     write_json(manifest_path, payload)
@@ -218,14 +71,14 @@ def discover_stage_outputs(
     contract = instance.output_contract
     outputs = {}
     artifact_refs: list[ArtifactRef] = []
-    store_plan = dict(instance.artifact_store_plan or {})
+    store_plan = instance.artifact_store_plan
     missing_required: list[str] = []
     for output_name, output_cfg in sorted(contract.outputs.items()):
         if output_cfg.kind == "file":
-            paths = _glob_paths(workdir, list(output_cfg.discover.globs))
-            selected, reason = _select_file(paths, output_cfg.discover.select)
+            paths = glob_paths(workdir, list(output_cfg.discover.globs))
+            selected, reason = select_file(paths, output_cfg.discover.select)
             if selected:
-                artifact = _manage_file(
+                artifact = manage_file(
                     selected,
                     attempt_dir=attempt_dir,
                     kind="file",
@@ -245,12 +98,12 @@ def discover_stage_outputs(
                 missing_required.append(f"required output `{output_name}` was not produced")
             continue
         if output_cfg.kind == "files":
-            paths = _glob_paths(workdir, list(output_cfg.discover.globs))
+            paths = glob_paths(workdir, list(output_cfg.discover.globs))
             if not paths and output_cfg.required:
                 missing_required.append(f"required output `{output_name}` was not produced")
                 continue
             artifacts = tuple(
-                _manage_file(
+                manage_file(
                     path,
                     attempt_dir=attempt_dir,
                     kind="files",
@@ -271,19 +124,19 @@ def discover_stage_outputs(
                 )
             continue
         if output_cfg.kind == "metric":
-            metric_file = _resolve_file(workdir, output_cfg.file).resolve()
+            metric_file = resolve_file(workdir, output_cfg.file).resolve()
             if not metric_file.exists() or not metric_file.is_file():
                 if output_cfg.required:
                     missing_required.append(f"required output `{output_name}` was not produced")
                 continue
             try:
                 with metric_file.open("r", encoding="utf-8") as handle:
-                    value = _json_path_value(json.load(handle), output_cfg.json_path)
+                    value = json_path_value(json.load(handle), output_cfg.json_path)
             except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
                 if output_cfg.required:
                     missing_required.append(f"required output `{output_name}` did not resolve: {exc}")
                 continue
-            artifact = _manage_file(
+            artifact = manage_file(
                 str(metric_file),
                 attempt_dir=attempt_dir,
                 kind="metric",
@@ -310,12 +163,12 @@ def discover_stage_outputs(
                 selection_reason=f"json_path:{output_cfg.json_path}",
             )
             continue
-        manifest_file = _resolve_file(workdir, output_cfg.file).resolve()
+        manifest_file = resolve_file(workdir, output_cfg.file).resolve()
         if not manifest_file.exists() or not manifest_file.is_file():
             if output_cfg.required:
                 missing_required.append(f"required output `{output_name}` was not produced")
             continue
-        artifact = _manage_file(
+        artifact = manage_file(
             str(manifest_file),
             attempt_dir=attempt_dir,
             kind="manifest",
@@ -354,5 +207,5 @@ def discover_stage_outputs(
 
 
 def write_stage_outputs_record(record: StageOutputsRecord, *, run_dir: Path, attempt_dir: Path) -> None:
-    write_json(stage_outputs_path(run_dir), record)
+    write_json(_stage_outputs_path(run_dir), record)
     write_json(attempt_dir / "outputs" / "stage_outputs.json", record)

@@ -67,20 +67,26 @@ def handle_resubmit(args: argparse.Namespace) -> None:
 
 
 def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    parser = subparsers.add_parser("resubmit", help="Resubmit one stage from a batch or pipeline root")
-    parser.add_argument("--from", dest="root", required=True, help="Stage batch or pipeline root")
+    parser = subparsers.add_parser("resubmit", help="Resubmit one stage from a batch or train/eval pipeline root")
+    parser.add_argument("--from", dest="root", required=True, help="Stage batch or train/eval pipeline root")
     parser.add_argument("--stage", required=True, help="Stage name to resubmit")
     parser.add_argument("--query", default="state=failed", help="Selection query, e.g. state=failed")
     parser.add_argument("--run-id", action="append", default=[], help="Select a specific run_id")
     parser.add_argument("--set", action="append", default=[], help="Override config by dot-path")
     parser.add_argument(
-        "--dry_run",
+        "--dry-run",
+        dest="dry_run",
         nargs="?",
         const="summary",
         default=False,
         choices=("summary", "json", "full"),
         help="Compile without writing files; json/full produce machine-readable audit output",
     )
-    parser.add_argument("--emit_only", action="store_true", help="Write plan and sbatch files without submitting")
+    parser.add_argument(
+        "--emit-only",
+        dest="emit_only",
+        action="store_true",
+        help="Write plan and sbatch files without submitting",
+    )
     parser.add_argument("--output", default=None, help="Write machine-readable dry-run output to this path")
     parser.set_defaults(handler=handle_resubmit)

@@ -107,27 +107,39 @@ def probe_python_runtime(
     )
 
 
-def probe_runtime_plan(runtime_plan: dict[str, Any]) -> tuple[RuntimeProbeRecord, ...]:
+def _section(payload: Any, name: str) -> Any:
+    if isinstance(payload, dict):
+        return payload.get(name)
+    return getattr(payload, name, None)
+
+
+def _field(payload: Any, name: str, default: Any = None) -> Any:
+    if isinstance(payload, dict):
+        return payload.get(name, default)
+    return getattr(payload, name, default)
+
+
+def probe_runtime_plan(runtime_plan: Any) -> tuple[RuntimeProbeRecord, ...]:
     probes: list[RuntimeProbeRecord] = []
-    executor_plan = dict(runtime_plan.get("executor") or {})
-    executor_python = dict(executor_plan.get("python") or {})
+    executor_plan = _section(runtime_plan, "executor") or runtime_plan
+    executor_python = _section(executor_plan, "python")
     if executor_python:
         probes.append(
             probe_python_runtime(
-                str(executor_python.get("bin") or "python3"),
-                min_version=str(executor_python.get("min_version") or "3.10"),
+                str(_field(executor_python, "bin", "python3") or "python3"),
+                min_version=str(_field(executor_python, "min_version", "3.10") or "3.10"),
                 runtime_role="executor",
             )
         )
-    user_plan = dict(runtime_plan.get("user") or {})
-    user_python = dict(user_plan.get("python") or {})
+    user_plan = _section(runtime_plan, "user")
+    user_python = _section(user_plan, "python") if user_plan else None
     if user_python:
         probes.append(
             probe_python_runtime(
-                str(user_python.get("bin") or "python3"),
-                min_version=str(user_python.get("min_version") or "3.10"),
+                str(_field(user_python, "bin", "python3") or "python3"),
+                min_version=str(_field(user_python, "min_version", "3.10") or "3.10"),
                 runtime_role="user",
-                runtime_name=str(user_plan.get("name") or "default"),
+                runtime_name=str(_field(user_plan, "name", "default") or "default"),
             )
         )
     return tuple(probes)
@@ -148,7 +160,7 @@ def _runtime_contract_failure_reason(probes: tuple[RuntimeProbeRecord, ...]) -> 
     return "runtime contract failed: " + "; ".join(details)
 
 
-def check_runtime_contract(runtime_plan: dict[str, Any]) -> RuntimeContractReport:
+def check_runtime_contract(runtime_plan: Any) -> RuntimeContractReport:
     probes = probe_runtime_plan(runtime_plan)
     failure_reason = _runtime_contract_failure_reason(probes)
     return RuntimeContractReport(
@@ -158,7 +170,7 @@ def check_runtime_contract(runtime_plan: dict[str, Any]) -> RuntimeContractRepor
     )
 
 
-def require_runtime_contract(runtime_plan: dict[str, Any]) -> RuntimeContractReport:
+def require_runtime_contract(runtime_plan: Any) -> RuntimeContractReport:
     report = check_runtime_contract(runtime_plan)
     if report.state != "verified":
         exc = RuntimeContractError(report.failure_reason)

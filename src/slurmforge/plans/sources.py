@@ -6,7 +6,7 @@ from pathlib import Path
 from ..io import SchemaVersion
 from ..spec import ExperimentSpec
 from ..schema import RunDefinition
-from .models import StageBatchPlan
+from .stage import StageBatchPlan
 
 
 @dataclass(frozen=True)

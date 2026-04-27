@@ -5,7 +5,7 @@ from pathlib import Path
 from ..emit import write_controller_submit_file
 from ..slurm import SlurmClient, failure_class_for_slurm_state, stage_state_for_slurm_state
 from ..io import SchemaVersion, utc_now
-from ..storage import (
+from ..storage.controller import (
     ControllerJobRecord,
     append_controller_event,
     read_controller_job,
@@ -22,7 +22,7 @@ def submit_controller_job(
     pipeline_root = Path(plan.root_dir)
     existing = read_controller_job(pipeline_root)
     if existing is not None:
-        raise RuntimeError(f"controller job record already exists for pipeline root: {pipeline_root}")
+        raise RuntimeError(f"controller job record already exists for train/eval pipeline root: {pipeline_root}")
     sbatch_path = write_controller_submit_file(plan).resolve()
     submitted_at = utc_now()
     slurm = client or SlurmClient()

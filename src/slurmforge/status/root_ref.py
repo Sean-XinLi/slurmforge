@@ -1,10 +1,11 @@
-"""Stage run -> stage_batch / pipeline root indirection."""
+"""Stage run -> stage_batch / train-eval pipeline root indirection."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
 from ..io import SchemaVersion, read_json, require_schema, write_json
+from ..plans import TRAIN_EVAL_PIPELINE_KIND
 
 
 def _root_ref_path(run_dir: Path) -> Path:
@@ -30,7 +31,7 @@ def _parent_pipeline_root(stage_batch_root: Path) -> Path | None:
         payload = read_json(manifest)
     except Exception:
         return None
-    return candidate.resolve() if payload.get("kind") == "pipeline" else None
+    return candidate.resolve() if payload.get("kind") == TRAIN_EVAL_PIPELINE_KIND else None
 
 
 def infer_stage_root_ref(run_dir: Path) -> StageRootRef | None:
