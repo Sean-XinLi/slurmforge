@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    compile_stage_batch_for_kind,
+    load_experiment_spec,
+    write_demo_project,
+    write_stage_batch_layout,
+)
+from tests.support.std import Path, json, tempfile
 
 
 class ReconcileTests(StageBatchSystemTestCase):
@@ -135,7 +142,7 @@ class ReconcileTests(StageBatchSystemTestCase):
             root = Path(tmp)
             cfg_path = write_demo_project(
                 root,
-                extra={"matrix": {"axes": {"train.entry.args.lr": [0.001, 0.002]}}},
+                extra={"runs": {"type": "grid", "axes": {"train.entry.args.lr": [0.001, 0.002]}}},
             )
             spec = load_experiment_spec(cfg_path)
             batch = compile_stage_batch_for_kind(spec, kind="train")
@@ -164,7 +171,7 @@ class ReconcileTests(StageBatchSystemTestCase):
             root = Path(tmp)
             cfg_path = write_demo_project(
                 root,
-                extra={"matrix": {"axes": {"train.entry.args.lr": [0.001, 0.002]}}},
+                extra={"runs": {"type": "grid", "axes": {"train.entry.args.lr": [0.001, 0.002]}}},
             )
             spec = load_experiment_spec(cfg_path)
             batch = compile_stage_batch_for_kind(spec, kind="train")
@@ -229,4 +236,3 @@ class ReconcileTests(StageBatchSystemTestCase):
             assert status is not None
             self.assertEqual(status.state, "running")
             self.assertTrue((Path(batch.submission_root) / "scheduler_observations.jsonl").exists())
-

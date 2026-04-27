@@ -1,6 +1,18 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    SchemaVersion,
+    compile_train_eval_pipeline_plan,
+    execute_stage_task,
+    load_experiment_spec,
+    prepare_stage_submission,
+    read_submission_ledger,
+    write_demo_project,
+    write_train_eval_pipeline_layout,
+    write_submission_ledger,
+)
+from tests.support.std import Path, json, patch, tempfile
 
 
 class ControllerTests(StageBatchSystemTestCase):
@@ -10,13 +22,13 @@ class ControllerTests(StageBatchSystemTestCase):
             submit_controller_job,
         )
         from slurmforge.slurm import FakeSlurmClient
-        from slurmforge.storage import read_controller_job, read_controller_status
+        from slurmforge.storage.controller import read_controller_job, read_controller_status
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             client = FakeSlurmClient()
 
             record = submit_controller_job(plan, client=client)
@@ -69,7 +81,7 @@ class ControllerTests(StageBatchSystemTestCase):
     def test_failed_pipeline_controller_submit_does_not_create_submission_fact(self) -> None:
         from slurmforge.orchestration import submit_controller_job
         from slurmforge.slurm import FakeSlurmClient
-        from slurmforge.storage import read_controller_status
+        from slurmforge.storage.controller import read_controller_status
 
         class FailingSlurm(FakeSlurmClient):
             def submit(self, path, *, dependency=None):
@@ -78,8 +90,8 @@ class ControllerTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             pipeline_root = Path(plan.root_dir)
 
             with self.assertRaisesRegex(RuntimeError, "sbatch unavailable"):
@@ -92,7 +104,7 @@ class ControllerTests(StageBatchSystemTestCase):
             self.assertEqual(status["reason"], "sbatch unavailable")
 
     def test_controller_persists_state_and_blocked_pipeline_is_not_success(self) -> None:
-        from slurmforge.controller.pipeline import run_controller
+        from slurmforge.controller.train_eval_pipeline import run_controller
         from slurmforge.orchestration import submit_controller_job
         from slurmforge.slurm import FakeSlurmClient
 
@@ -101,8 +113,8 @@ class ControllerTests(StageBatchSystemTestCase):
             cfg_path = write_demo_project(root)
             (root / "train.py").write_text("raise SystemExit(1)\n", encoding="utf-8")
             spec = load_experiment_spec(cfg_path)
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             controller_record = submit_controller_job(plan, client=FakeSlurmClient())
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertNotEqual(execute_stage_task(train_root, 1, 0), 0)
@@ -119,8 +131,64 @@ class ControllerTests(StageBatchSystemTestCase):
             self.assertEqual(len(eval_statuses), 1)
             self.assertEqual(json.loads(eval_statuses[0].read_text())["state"], "blocked")
 
+    def test_controller_sends_one_pipeline_terminal_notification(self) -> None:
+        from slurmforge.controller.train_eval_pipeline import run_controller
+        from slurmforge.notifications import read_notification_record
+        from slurmforge.slurm import FakeSlurmClient
+        from slurmforge.status import StageStatusRecord, commit_stage_status
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = write_demo_project(
+                root,
+                extra={
+                    "notifications": {
+                        "email": {
+                            "enabled": True,
+                            "to": ["you@example.com"],
+                            "on": ["train_eval_pipeline_finished"],
+                            "mode": "summary",
+                        }
+                    },
+                },
+            )
+            spec = load_experiment_spec(cfg_path)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            pipeline_root = Path(plan.root_dir)
+            for batch in plan.stage_batches.values():
+                batch_root = Path(batch.submission_root)
+                for instance in batch.stage_instances:
+                    commit_stage_status(
+                        batch_root / instance.run_dir_rel,
+                        StageStatusRecord(
+                            schema_version=SchemaVersion.STATUS,
+                            stage_instance_id=instance.stage_instance_id,
+                            run_id=instance.run_id,
+                            stage_name=instance.stage_name,
+                            state="success",
+                        ),
+                        source="test",
+                    )
+
+            sent: list[dict] = []
+
+            def fake_send(**kwargs):
+                sent.append(kwargs)
+
+            with patch("slurmforge.notifications.delivery.send_email_summary", side_effect=fake_send):
+                self.assertEqual(run_controller(pipeline_root, client=FakeSlurmClient(), poll_seconds=0), 0)
+                self.assertEqual(run_controller(pipeline_root, client=FakeSlurmClient(), poll_seconds=0), 0)
+
+            self.assertEqual(len(sent), 1)
+            self.assertIn("SlurmForge train/eval pipeline finished", sent[0]["body"])
+            record = read_notification_record(pipeline_root, "train_eval_pipeline_finished")
+            assert record is not None
+            self.assertEqual(record.state, "sent")
+            self.assertEqual(record.recipients, ("you@example.com",))
+
     def test_controller_resume_does_not_duplicate_submitted_stage(self) -> None:
-        from slurmforge.controller.pipeline import run_controller
+        from slurmforge.controller.train_eval_pipeline import run_controller
         from slurmforge.slurm import FakeSlurmClient
 
         class CompletingFakeSlurm(FakeSlurmClient):
@@ -132,8 +200,8 @@ class ControllerTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             client = CompletingFakeSlurm()
 
             self.assertEqual(
@@ -158,7 +226,7 @@ class ControllerTests(StageBatchSystemTestCase):
             self.assertEqual(len(client.submissions), 1)
 
     def test_controller_reads_submission_state_through_public_api(self) -> None:
-        source = Path("src/slurmforge/controller/pipeline.py").read_text(encoding="utf-8")
+        source = Path("src/slurmforge/controller/train_eval_pipeline.py").read_text(encoding="utf-8")
         self.assertNotIn("submission._ledger", source)
         self.assertNotIn("from ..submission._ledger", source)
         self.assertNotIn("from ..submission.ledger", source)
@@ -166,14 +234,14 @@ class ControllerTests(StageBatchSystemTestCase):
         self.assertIn("read_submission_state", source)
 
     def test_controller_stops_on_uncertain_submission_ledger(self) -> None:
-        from slurmforge.controller.pipeline import run_controller
+        from slurmforge.controller.train_eval_pipeline import run_controller
         from slurmforge.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             train_batch = plan.stage_batches["train"]
             prepare_stage_submission(train_batch)
             ledger = read_submission_ledger(Path(train_batch.submission_root))
@@ -186,7 +254,7 @@ class ControllerTests(StageBatchSystemTestCase):
             self.assertEqual(len(client.submissions), 0)
 
     def test_controller_recovers_partial_group_submission_without_duplicate(self) -> None:
-        from slurmforge.controller.pipeline import run_controller
+        from slurmforge.controller.train_eval_pipeline import run_controller
         from slurmforge.slurm import FakeSlurmClient
 
         class CompletingFakeSlurm(FakeSlurmClient):
@@ -200,13 +268,13 @@ class ControllerTests(StageBatchSystemTestCase):
             cfg_path = write_demo_project(
                 root,
                 extra={
-                    "matrix": {"axes": {"train.resources.constraint": ["a", "b"]}},
+                    "runs": {"type": "grid", "axes": {"train.resources.constraint": ["a", "b"]}},
                     "dispatch": {"max_available_gpus": 2, "overflow_policy": "serialize_groups"},
                 },
             )
             spec = load_experiment_spec(cfg_path)
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             train_batch = plan.stage_batches["train"]
             first_group = train_batch.group_plans[0].group_id
             second_group = train_batch.group_plans[1].group_id

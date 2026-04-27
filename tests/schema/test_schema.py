@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import write_demo_project
+from tests.support.std import Path, tempfile
 
 
 class SchemaTypeTests(StageBatchSystemTestCase):
@@ -17,4 +19,3 @@ class SchemaTypeTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(write_demo_project(Path(tmp)))
 
             self.assertEqual(stage_source_input_name(spec, stage_name="eval"), "checkpoint")
-

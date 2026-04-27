@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    compile_stage_batch_for_kind,
+    execute_stage_task,
+    load_experiment_spec,
+    write_demo_project,
+    write_stage_batch_layout,
+)
+from tests.support.std import Path, json, patch, tempfile, yaml
 
 
 class OutputTests(StageBatchSystemTestCase):
@@ -26,7 +34,7 @@ class OutputTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(write_demo_project(root))
             batch = compile_stage_batch_for_kind(spec, kind="train")
             write_stage_batch_layout(batch, spec_snapshot=spec.raw)
-            with patch("slurmforge.outputs.discovery.file_digest", side_effect=["source", "managed"]):
+            with patch("slurmforge.outputs.artifact_store.file_digest", side_effect=["source", "managed"]):
                 self.assertNotEqual(execute_stage_task(Path(batch.submission_root), 1, 0), 0)
             run_dir = Path(batch.submission_root) / batch.stage_instances[0].run_dir_rel
             status = json.loads((run_dir / "status.json").read_text())
@@ -40,7 +48,7 @@ class OutputTests(StageBatchSystemTestCase):
             cfg = yaml.safe_load(cfg_path.read_text())
             cfg["stages"]["train"]["outputs"]["required_log"] = {
                 "kind": "files",
-                "discover": {"globs": ["required/**/*.log"], "select": "last"},
+                "discover": {"globs": ["required/**/*.log"]},
                 "required": True,
             }
             cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")

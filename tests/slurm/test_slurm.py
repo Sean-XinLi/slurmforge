@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.std import Path
 
 
 class SlurmParsingTests(StageBatchSystemTestCase):
@@ -32,4 +33,3 @@ class SlurmParsingTests(StageBatchSystemTestCase):
         observed = client.query_observed_jobs([job_id])
         self.assertIn(job_id, observed)
         self.assertIn(f"{job_id}_0", observed)
-

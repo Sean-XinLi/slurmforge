@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    SchemaVersion,
+    compile_stage_batch_for_kind,
+    execute_stage_task,
+    load_experiment_spec,
+    upstream_bindings_from_train_batch,
+    write_demo_project,
+    write_stage_batch_layout,
+)
+from tests.support.std import Namespace, Path, io, json, redirect_stderr, redirect_stdout, tempfile, yaml
 
 
 class CliTests(StageBatchSystemTestCase):
@@ -41,6 +51,83 @@ class CliTests(StageBatchSystemTestCase):
             self.assertEqual(len(ledgers), 1)
             ledger = json.loads(ledgers[0].read_text())
             self.assertEqual(ledger["state"], "planned")
+
+    def test_estimate_command_renders_resource_summary(self) -> None:
+        from slurmforge.cli.estimate import handle_estimate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = write_demo_project(root)
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                handle_estimate(
+                    Namespace(
+                        config=str(cfg_path),
+                        set=[],
+                        project_root=None,
+                        json=False,
+                        output=None,
+                    )
+                )
+
+            text = stdout.getvalue()
+            self.assertIn("[ESTIMATE] project=demo experiment=stage_pipeline runs=1", text)
+            self.assertIn("Stage train:", text)
+            self.assertIn("peak_concurrent_gpus", text)
+
+    def test_estimate_command_renders_heterogeneous_gpu_sizing(self) -> None:
+        from slurmforge.cli.estimate import handle_estimate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = write_demo_project(
+                root,
+                extra={
+                    "hardware": {
+                        "gpu_types": {
+                            "a100_80gb": {
+                                "memory_gb": 80,
+                                "usable_memory_fraction": 0.90,
+                                "max_gpus_per_node": 8,
+                            }
+                        }
+                    },
+                    "sizing": {"gpu": {"defaults": {"safety_factor": 1.0, "round_to": 1}}},
+                    "runs": {
+                        "type": "cases",
+                        "cases": [
+                            {"name": "small", "set": {"train.gpu_sizing.target_memory_gb": 80}},
+                            {"name": "large", "set": {"train.gpu_sizing.target_memory_gb": 192}},
+                        ],
+                    },
+                    "dispatch": {"max_available_gpus": 8, "overflow_policy": "serialize_groups"},
+                },
+            )
+            payload = yaml.safe_load(cfg_path.read_text())
+            payload["stages"]["train"]["resources"]["gpu_type"] = "a100_80gb"
+            payload["stages"]["train"]["resources"]["gpus_per_node"] = "auto"
+            payload["stages"]["train"]["gpu_sizing"] = {
+                "estimator": "heuristic",
+                "target_memory_gb": 80,
+                "min_gpus_per_job": 1,
+            }
+            cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                handle_estimate(
+                    Namespace(
+                        config=str(cfg_path),
+                        set=[],
+                        project_root=None,
+                        json=False,
+                        output=None,
+                    )
+                )
+
+            text = stdout.getvalue()
+            self.assertIn("sizing[1].resolved_gpus_per_node: 2", text)
+            self.assertIn("sizing[2].resolved_gpus_per_node: 3", text)
 
     def test_resubmit_machine_dry_run_stdout_is_pure_json(self) -> None:
         from slurmforge.cli.resubmit import handle_resubmit
@@ -133,7 +220,7 @@ class CliTests(StageBatchSystemTestCase):
         subparser_action = next(action for action in parser._actions if getattr(action, "choices", None))
         self.assertEqual(
             set(subparser_action.choices),
-            {"validate", "plan", "train", "eval", "run", "status", "resubmit"},
+            {"validate", "estimate", "plan", "train", "eval", "run", "status", "resubmit"},
         )
         pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
         self.assertIn('sforge = "slurmforge.launcher:main"', pyproject)

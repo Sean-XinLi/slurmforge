@@ -1,9 +1,23 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    compile_train_eval_pipeline_plan,
+    compile_stage_batch_for_kind,
+    execute_stage_task,
+    load_experiment_spec,
+    load_stage_outputs,
+    render_controller_sbatch,
+    upstream_bindings_from_train_batch,
+    write_demo_project,
+    write_train_eval_pipeline_layout,
+    write_stage_batch_layout,
+    write_stage_submit_files,
+)
+from tests.support.std import Namespace, Path, json, tempfile, yaml
 
 
-class PipelineFlowTests(StageBatchSystemTestCase):
+class TrainEvalPipelineFlowTests(StageBatchSystemTestCase):
     def test_train_and_eval_are_separate_attempts_with_file_contracts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -65,16 +79,19 @@ class PipelineFlowTests(StageBatchSystemTestCase):
             self.assertEqual(execute_stage_task(Path(eval_batch.submission_root), 1, 0), 0)
 
     def test_pipeline_controller_is_orchestration_only_and_uses_controller_resources(self) -> None:
-        from slurmforge.orchestration import emit_pipeline
+        from slurmforge.orchestration import emit_train_eval_pipeline
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
 
             pipeline_root = Path(plan.root_dir)
-            self.assertTrue((pipeline_root / "pipeline_plan.json").exists())
+            manifest = json.loads((pipeline_root / "manifest.json").read_text())
+            self.assertEqual(manifest["kind"], "train_eval_pipeline")
+            self.assertEqual(manifest["pipeline_kind"], "train_eval_pipeline")
+            self.assertTrue((pipeline_root / "train_eval_pipeline_plan.json").exists())
             self.assertTrue((pipeline_root / "stage_batches" / "train" / "batch_plan.json").exists())
             self.assertTrue((pipeline_root / "stage_batches" / "eval" / "batch_plan.json").exists())
             controller_state = json.loads((pipeline_root / "controller" / "controller_state.json").read_text())
@@ -85,8 +102,8 @@ class PipelineFlowTests(StageBatchSystemTestCase):
             self.assertNotIn("train.py", controller_sbatch)
             self.assertNotIn("eval.py", controller_sbatch)
 
-            emitted_plan = compile_pipeline_plan(spec, submission_root=root / "emitted_pipeline")
-            emit_pipeline(spec, emitted_plan, submit=False)
+            emitted_plan = compile_train_eval_pipeline_plan(spec, submission_root=root / "emitted_pipeline")
+            emit_train_eval_pipeline(spec, emitted_plan, submit=False)
             emitted_root = Path(emitted_plan.root_dir)
             self.assertTrue((emitted_root / "stage_batches" / "train" / "submit" / "submit_manifest.json").exists())
             self.assertFalse((emitted_root / "stage_batches" / "eval" / "submit" / "submit_manifest.json").exists())
@@ -94,7 +111,14 @@ class PipelineFlowTests(StageBatchSystemTestCase):
     def test_plan_files_have_schema_versions_and_typed_output_contracts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            spec = load_experiment_spec(write_demo_project(root))
+            cfg_path = write_demo_project(root)
+            cfg = yaml.safe_load(cfg_path.read_text())
+            cfg["stages"]["train"]["outputs"]["train_logs"] = {
+                "kind": "files",
+                "discover": {"globs": ["logs/**/*.log"]},
+            }
+            cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+            spec = load_experiment_spec(cfg_path)
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
             write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
 
@@ -106,6 +130,7 @@ class PipelineFlowTests(StageBatchSystemTestCase):
             self.assertEqual(output_contract["schema_version"], 1)
             self.assertEqual(output_contract["outputs"]["checkpoint"]["schema_version"], 1)
             self.assertEqual(output_contract["outputs"]["checkpoint"]["discover"]["select"], "latest_step")
+            self.assertNotIn("select", output_contract["outputs"]["train_logs"]["discover"])
 
             run_dir = Path(train_batch.submission_root) / train_batch.stage_instances[0].run_dir_rel
             stage_plan = json.loads((run_dir / "stage_plan.json").read_text())
@@ -171,7 +196,7 @@ class PipelineFlowTests(StageBatchSystemTestCase):
             cfg["stages"]["train"]["outputs"]["train_logs"] = {
                 "kind": "files",
                 "required": True,
-                "discover": {"globs": ["logs/**/*.log"], "select": "last"},
+                "discover": {"globs": ["logs/**/*.log"]},
             }
             cfg["stages"]["eval"]["inputs"] = {
                 "logs_manifest": {
@@ -365,7 +390,7 @@ class PipelineFlowTests(StageBatchSystemTestCase):
             self.assertTrue(verification["records"][0]["value_digest"])
 
     def test_partial_train_success_keeps_full_and_selected_eval_plans(self) -> None:
-        from slurmforge.controller.pipeline import run_controller
+        from slurmforge.controller.train_eval_pipeline import run_controller
         from slurmforge.slurm import FakeSlurmClient
 
         class CompletingFakeSlurm(FakeSlurmClient):
@@ -378,7 +403,7 @@ class PipelineFlowTests(StageBatchSystemTestCase):
             root = Path(tmp)
             cfg_path = write_demo_project(
                 root,
-                extra={"matrix": {"axes": {"train.entry.args.lr": [0.001, 0.002]}}},
+                extra={"runs": {"type": "grid", "axes": {"train.entry.args.lr": [0.001, 0.002]}}},
             )
             (root / "train.py").write_text(
                 "\n".join(
@@ -398,8 +423,8 @@ class PipelineFlowTests(StageBatchSystemTestCase):
                 encoding="utf-8",
             )
             spec = load_experiment_spec(cfg_path)
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             self.assertNotEqual(execute_stage_task(train_root, 1, 1), 0)

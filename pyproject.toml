@@ -67,6 +67,3 @@ slurmforge = []
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-p", "no:cacheprovider"]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["F403", "F405"]

@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    compile_train_eval_pipeline_plan,
+    compile_stage_batch_for_kind,
+    execute_stage_task,
+    load_experiment_spec,
+    upstream_bindings_from_train_batch,
+    write_demo_project,
+    write_train_eval_pipeline_layout,
+    write_stage_batch_layout,
+)
+from tests.support.std import Path, tempfile
 
 
 class LineageTests(StageBatchSystemTestCase):
@@ -37,8 +48,8 @@ class LineageTests(StageBatchSystemTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             spec = load_experiment_spec(write_demo_project(Path(tmp)))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             roots = set(iter_lineage_source_roots(Path(plan.root_dir)))
 
             self.assertEqual(

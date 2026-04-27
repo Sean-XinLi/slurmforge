@@ -1,6 +1,19 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    compile_stage_batch_for_kind,
+    create_submit_generation,
+    load_experiment_spec,
+    load_stage_submit_manifest,
+    prepare_stage_submission,
+    read_submission_ledger,
+    submit_prepared_stage_batch,
+    write_demo_project,
+    write_stage_batch_layout,
+    write_stage_submit_files,
+)
+from tests.support.std import Path, json, replace, tempfile
 
 
 class SubmissionTests(StageBatchSystemTestCase):
@@ -10,14 +23,14 @@ class SubmissionTests(StageBatchSystemTestCase):
             cfg_path = write_demo_project(
                 root,
                 extra={
-                    "matrix": {"axes": {"train.resources.gpus_per_node": [1, 2]}},
+                    "runs": {"type": "grid", "axes": {"train.resources.gpus_per_node": [1, 2]}},
                     "dispatch": {"max_available_gpus": 2, "overflow_policy": "serialize_groups"},
                 },
             )
             batch = compile_stage_batch_for_kind(load_experiment_spec(cfg_path), kind="train")
-            self.assertEqual(batch.budget_plan["policy_applied"], "global_waves")
-            self.assertEqual(batch.budget_plan["dependencies"][0]["type"], "afterany")
-            self.assertLessEqual(max(wave["total_wave_gpus"] for wave in batch.budget_plan["waves"]), 2)
+            self.assertEqual(batch.budget_plan.policy_applied, "global_waves")
+            self.assertEqual(batch.budget_plan.dependencies[0].type, "afterany")
+            self.assertLessEqual(max(wave.total_wave_gpus for wave in batch.budget_plan.waves), 2)
             write_stage_batch_layout(batch, spec_snapshot=load_experiment_spec(cfg_path).raw)
             write_stage_submit_files(batch)
             manifest = load_stage_submit_manifest(Path(batch.submission_root))
@@ -30,15 +43,15 @@ class SubmissionTests(StageBatchSystemTestCase):
             cfg_path = write_demo_project(
                 root,
                 extra={
-                    "matrix": {"axes": {"train.resources.constraint": ["a", "b"]}},
+                    "runs": {"type": "grid", "axes": {"train.resources.constraint": ["a", "b"]}},
                     "dispatch": {"max_available_gpus": 2, "overflow_policy": "serialize_groups"},
                 },
             )
             batch = compile_stage_batch_for_kind(load_experiment_spec(cfg_path), kind="train")
-            self.assertEqual(len(batch.budget_plan["waves"]), 1)
-            wave = batch.budget_plan["waves"][0]
-            self.assertEqual(wave["total_wave_gpus"], 2)
-            self.assertEqual([item["array_throttle"] for item in wave["groups"]], [1, 1])
+            self.assertEqual(len(batch.budget_plan.waves), 1)
+            wave = batch.budget_plan.waves[0]
+            self.assertEqual(wave.total_wave_gpus, 2)
+            self.assertEqual([item.array_throttle for item in wave.groups], [1, 1])
 
     def test_submit_uses_ledger_manifest_and_ignores_stale_sbatch_files(self) -> None:
         from slurmforge.slurm import FakeSlurmClient
@@ -48,7 +61,7 @@ class SubmissionTests(StageBatchSystemTestCase):
             cfg_path = write_demo_project(
                 root,
                 extra={
-                    "matrix": {"axes": {"train.resources.constraint": ["a", "b"]}},
+                    "runs": {"type": "grid", "axes": {"train.resources.constraint": ["a", "b"]}},
                     "dispatch": {"max_available_gpus": 2, "overflow_policy": "serialize_groups"},
                 },
             )
@@ -79,6 +92,48 @@ class SubmissionTests(StageBatchSystemTestCase):
             with self.assertRaisesRegex(Exception, "already has submitted group"):
                 submit_prepared_stage_batch(prepared, client=FakeSlurmClient())
 
+    def test_batch_notification_finalizer_submits_after_terminal_groups(self) -> None:
+        from slurmforge.notifications import read_notification_record
+        from slurmforge.submission.finalizer import (
+            finalizer_dependency_group_ids,
+            submit_stage_batch_finalizer,
+        )
+        from slurmforge.slurm import FakeSlurmClient
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = write_demo_project(
+                root,
+                extra={
+                    "notifications": {
+                        "email": {
+                            "enabled": True,
+                            "to": ["you@example.com"],
+                            "on": ["batch_finished"],
+                            "mode": "summary",
+                        }
+                    },
+                },
+            )
+            spec = load_experiment_spec(cfg_path)
+            batch = compile_stage_batch_for_kind(spec, kind="train")
+            self.assertEqual(finalizer_dependency_group_ids(batch), ("group_001",))
+            write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+            prepared = prepare_stage_submission(batch)
+            client = FakeSlurmClient()
+            group_job_ids = submit_prepared_stage_batch(prepared, client=client)
+
+            record = submit_stage_batch_finalizer(batch, group_job_ids, client=client)
+
+            assert record is not None
+            self.assertEqual(record.state, "submitted")
+            self.assertEqual(record.scheduler_job_id, "1002")
+            self.assertEqual(client.submissions[-1][0].name, "notify_batch_finished.sbatch")
+            self.assertEqual(client.submissions[-1][1], f"afterany:{group_job_ids['group_001']}")
+            persisted = read_notification_record(Path(batch.submission_root), "batch_finished")
+            assert persisted is not None
+            self.assertEqual(persisted.scheduler_job_id, record.scheduler_job_id)
+
     def test_submit_generation_creation_is_pure_emit_not_readiness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -98,8 +153,10 @@ class SubmissionTests(StageBatchSystemTestCase):
         import slurmforge.submission as submission
 
         # submission/__init__ is the canonical entry for public submission behavior.
-        self.assertTrue(hasattr(submission, "create_submit_generation"))
-        self.assertTrue(hasattr(submission, "write_submission_ledger"))
+        self.assertFalse(hasattr(submission, "create_submit_generation"))
+        self.assertFalse(hasattr(submission, "read_submission_ledger"))
+        self.assertFalse(hasattr(submission, "write_submission_ledger"))
+        self.assertFalse(hasattr(submission, "finalizer_dependency_group_ids"))
         self.assertFalse(hasattr(submission, "initialize_submission_ledger"))
         self.assertFalse(hasattr(submission, "append_submission_event"))
         self.assertFalse(hasattr(submission, "submit_stage_batch_with_ledger"))

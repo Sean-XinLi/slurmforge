@@ -9,11 +9,11 @@ The core planning objects are:
 - `RunDefinition`
 - `StageInstancePlan`
 - `StageBatchPlan`
-- `PipelinePlan`
+- `TrainEvalPipelinePlan` (`pipeline_kind=train_eval_pipeline`)
 - `InputBinding`
 - `OutputRef`
 
-`RunDefinition` is the matrix-expanded run identity. Each matrix instance has one stable `run_id`.
+`RunDefinition` is the planned run identity produced by `runs`. A single run, each grid point, or each named case has one stable `run_id`.
 
 `StageInstancePlan` is the executable plan for one stage of one run:
 
@@ -23,6 +23,7 @@ The core planning objects are:
 - `stage_kind`
 - `entry`
 - `resources`
+- `resource_sizing`
 - `runtime_plan`
 - `launcher_plan`
 - `artifact_store_plan`
@@ -32,9 +33,19 @@ The core planning objects are:
 
 `StageBatchPlan` groups same-stage instances by resource shape and emits Slurm array jobs. A group never mixes train and eval.
 
-`PipelinePlan` is orchestration metadata. It is consumed by the controller and does not execute user code directly.
+`TrainEvalPipelinePlan` is train/eval pipeline orchestration metadata. It is consumed by the controller and does not execute user code directly.
 
 The supported topology is deliberately narrow: `train`, `eval`, or `train -> eval`. Stage-batch v1 is not an arbitrary DAG engine.
+
+Current persisted plan loaders are strict. Required fields are read by key, not defaulted during load:
+
+- `StageInstancePlan.resource_sizing`
+- `GroupPlan.stage_instance_ids`, `run_ids`, `array_throttle`, and `gpus_per_task`
+- `StageBatchPlan.selected_runs`, `stage_instances`, `group_plans`, `source_ref`, `budget_plan`, and `notification_plan`
+- `TrainEvalPipelinePlan.pipeline_kind`, `stage_order`, `run_set`, `stage_batches`, and `notification_plan`
+- `TrainEvalControllerPlan.pipeline_kind`, `stage_order`, `resources`, `environment_name`, `environment_plan`, and `runtime_plan`
+
+A missing field means the persisted file is outside the current schema and must fail fast instead of being silently upgraded at read time.
 
 ## Runtime Objects
 
@@ -43,7 +54,7 @@ Runtime state is stage-scoped:
 - `StageAttemptRecord`
 - `StageStatusRecord`
 - `RunStatusRecord`
-- `PipelineStatusRecord`
+- `TrainEvalPipelineStatusRecord`
 
 `StageAttemptRecord` records one stage attempt and one stage exit code:
 
@@ -77,13 +88,13 @@ Runtime state is stage-scoped:
 - `failure_class`
 - `reason`
 
-Run and pipeline status are derived from stage status records.
+Run and train/eval pipeline status are derived from stage status records.
 
 Status writes use monotonic transitions. Normal queued/running markers cannot move a terminal stage back to a non-terminal state.
 
 Every status transition appends a line to `status_events.jsonl` in the run directory.
 
-Every materialized run directory writes `root_ref.json`. It records the containing stage batch root and, when applicable, the parent pipeline root. Stage status commits stay per-stage; layout writes, controller progression, and `status --reconcile` refresh aggregate `run_status.json` / `pipeline_status.json` from the current stage records.
+Every materialized run directory writes `root_ref.json`. It records the containing stage batch root and, when applicable, the parent train/eval pipeline root. Stage status commits stay per-stage; layout writes, controller progression, and `status --reconcile` refresh aggregate `run_status.json` / `train_eval_pipeline_status.json` from the current stage records.
 
 Every executor attempt writes `runtime_probe.json` under the attempt directory. It is a `RuntimeContractReport` with a single `state`, `failure_reason`, and both executor and user Python probes. A failed report prevents user code launch.
 
@@ -261,7 +272,7 @@ Normal submit/executor verification records `expected_digest` from lineage when 
 
 ## Lineage Contract
 
-Every stage batch and pipeline root writes `lineage_index.json`.
+Every stage batch and train/eval pipeline root writes `lineage_index.json`.
 
 Stage batch lineage records:
 
@@ -275,9 +286,10 @@ Stage batch lineage records:
 
 `input_sources` repeats each persisted input binding with its `resolution`. This is the durable join point between an eval batch and the train batch that produced its checkpoint.
 
-Pipeline lineage records:
+Train/eval pipeline lineage records:
 
 - `pipeline_id`
+- `pipeline_kind = train_eval_pipeline`
 - `stage_order`
 - `run_ids`
 - `stage_batches`
@@ -388,11 +400,19 @@ Stage batch root:
     generations/
       gen_<digest>/
         group_001.sbatch
+        notify_batch_finished.sbatch
         submit.sh
+    notifications/
+      gen_<digest>/
+        barrier_batch_finished_001.sbatch
     logs/
       gen_<digest>/
   submissions/
     ledger.json
+    events.jsonl
+  notifications/
+    records/
+      batch_finished.email.json
     events.jsonl
   scheduler_observations.jsonl
   groups/
@@ -410,6 +430,8 @@ Stage batch root:
       attempts/
         0001/
           attempt.json
+          environment_plan.json
+          before_steps.json
           launcher_plan.json
           runtime_probe.json
           logs/
@@ -420,21 +442,25 @@ Stage batch root:
             stage_outputs.json
 ```
 
-Pipeline root:
+Train/eval pipeline root:
 
 ```text
-<pipeline_root>/
+<train_eval_pipeline_root>/
   manifest.json
   lineage_index.json
   spec_snapshot.yaml
-  pipeline_plan.json
-  pipeline_status.json
+  train_eval_pipeline_plan.json
+  train_eval_pipeline_status.json
   controller/
     controller_plan.json
     controller_job.json
     controller_state.json
     controller_status.json
     controller.sbatch
+    events.jsonl
+  notifications/
+    records/
+      train_eval_pipeline_finished.email.json
     events.jsonl
   stage_batches/
 ```
@@ -446,35 +472,41 @@ Pipeline root:
 - A stage attempt records one exit code.
 - `planned` means a stage plan exists; `ready` lives in materialization status and means submit files are available.
 - Input contract failures before submission are `blocked`, not attempts.
-- Runtime bootstrap is explicit; generated sbatch uses `python -m slurmforge.executor.stage`, not a PATH-dependent helper binary.
+- Environment loading is explicit; generated sbatch uses `python -m slurmforge.executor.stage`, not a PATH-dependent helper binary.
 - Runtime Python is explicit through `runtime.executor.python.bin` and `runtime.user.<name>.python.bin`; both are probed in full dry-run audits and executor attempts. A failed runtime probe is `runtime_contract_error` and blocks user code launch.
-- Runtime bootstrap runs in the sbatch scope only; the executor does not re-run module or activation steps inside the user stage shell.
-- User launch is explicit through `launcher_plan`; Slurm resources, runtime bootstrap, and user launch are separate concerns.
+- Reusable `environments.<name>` modules, source scripts, and env vars run in the sbatch scope; the executor records the selected environment plan and applies environment env vars to user commands.
+- User pre-commands are explicit through `before_steps`; user launch is explicit through `launcher_plan`; Slurm resources, environments, pre-commands, and user launch are separate concerns.
+- GPU sizing is resolved before persistence. Config may use `resources.gpus_per_node: "auto"`, but every `StageInstancePlan.resources.gpus_per_node`, group plan, and sbatch file carries a numeric GPU count plus the explanatory `resource_sizing` payload.
+- `resources.gpu_type` references `hardware.gpu_types`; hardware `slurm.constraint` is a scheduler default and is overridden by an explicit stage `resources.constraint`.
 - `torchrun` launch declares `single_node` or `multi_node`; multi-node launch uses `srun` with explicit rendezvous values.
 - Torchrun validation rejects resource mismatches before submission: `single_node` requires one Slurm node, explicit `nnodes` must match `resources.nodes`, `nproc_per_node` cannot exceed `resources.gpus_per_node`, and rendezvous ports must be valid.
 - Artifact storage is explicit through `artifact_store_plan`; checkpoint passing never relies on a previous shell block.
 - Artifact digest verification is enforced when `artifact_store_plan.verify_digest=true`; a mismatch is `artifact_integrity_error`.
 - Required stage inputs are verified before sbatch generation and before executor launch; missing or unreadable inputs fail as `input_contract_error`.
 - Train status and eval status are separate records.
-- Pipeline execution is controller-driven orchestration.
-- Pipeline dependency progression is contract-driven: the controller resolves the target stage's declared inputs from successful upstream stage outputs, not from train/eval-specific code paths.
+- Train/eval pipeline execution is controller-driven orchestration.
+- Train/eval pipeline dependency progression is contract-driven: the controller resolves the target stage's declared inputs from successful upstream stage outputs, not from train/eval-specific code paths.
 - Controller state is durable but orchestration-only; the controller Slurm job is recorded in `controller_job.json`, and submitted stage group job ids are recorded in each stage batch submission ledger.
 - Stage submission is manifest-driven; submit code never glob-submits stale root-level sbatch files.
 - `submissions/ledger.json` is the scheduler job-id source of truth for `train`, `eval`, `run`, `resubmit`, and `status --reconcile`.
 - Public submit APIs are gated by `PreparedSubmission`; direct ledger mutation is not a supported submission path.
 - User-facing submit paths are new-only. A batch with submitted scheduler job ids is not silently reused; create a new execution through `resubmit`.
 - Controller recovery is the only path that may adopt already submitted groups and continue missing groups.
-- The public `emit` API only renders/writes the controller sbatch. Controller jobs are recorded through `controller_job.json`; stage sbatch files are emitted only through `submission.prepare_stage_submission`.
+- The public `emit` API renders/writes controller sbatch files and manifest-scoped stage submit files. Controller jobs are recorded through `controller_job.json`; stage group sbatch files are emitted only through `submission.prepare_stage_submission`.
 - Submission records each group job id immediately, can continue after partial submission, and fails safe only for the uncertain window where a group may have reached `sbatch` without a recorded job id.
+- Batch notifications are Slurm finalizer jobs submitted by `submission.submit_stage_batch_finalizer` after terminal array groups with `afterany` dependencies. Large dependency sets are reduced through generated barrier jobs before the single notification job is submitted.
+- Train/eval pipeline notifications are controller-owned terminal actions. They send at most one `train_eval_pipeline_finished` summary per train/eval pipeline root and do not create separate train/eval batch notifications for controller-submitted stage batches.
+- Notification delivery state is persisted under `notifications/records/<event>.email.json`; summary content is rendered from `NotificationSummaryInput`. Storage-backed status reads and reconciliation live in `read_models.notifications`, while `notifications.summary` only counts, formats, and renders the neutral summary input.
 - `sforge status` is read-only by default; only `sforge status --reconcile` mutates status records from Slurm state.
-- `status --reconcile` refreshes aggregate read models from stage records, including `run_status.json` and pipeline `pipeline_status.json`.
-- Stage status and attempt commits are per-stage writes; aggregate stage-batch and pipeline read models are refreshed by layout writes, controller progression, and `status --reconcile`.
+- `status --reconcile` refreshes aggregate read models from stage records, including `run_status.json` and train/eval pipeline `train_eval_pipeline_status.json`.
+- Stage status and attempt commits are per-stage writes; aggregate stage-batch and train/eval pipeline read models are refreshed by executor completion, controller progression, notification finalizers, and `status --reconcile`.
 - Scheduler observation merges active `squeue` rows with accounting `sacct` rows, so running tasks are visible before they reach Slurm accounting.
 - Scheduler observations are append-only records in `scheduler_observations.jsonl`.
 - Scheduler reconcile creates a scheduler-sourced attempt when Slurm reports a running or terminal task without an executor attempt.
 - Successful checkpoint and artifact outputs are managed under the attempt artifact store and include digest plus producer attempt lineage.
 - Metric and manifest outputs are first-class output refs; metrics carry extracted values, and manifests are managed as artifacts.
-- `--dry_run=json` and `--dry_run=full` produce machine-readable audits without materializing batch roots; full mode adds runtime probes and contract verification.
+- `sforge estimate` uses the same planner as submission and returns the resource estimate without materializing batch roots.
+- `--dry-run=json` and `--dry-run=full` produce machine-readable audits without materializing batch roots; full mode adds runtime probes, contract verification, and `resource_estimate`.
 - GPU budget waves enforce `dispatch.max_available_gpus` across all concurrent resource groups.
 - Partial train success keeps the full eval `batch_plan.json` and writes a selected execution subset separately.
 - Slurm reconcile maps statuses by array task and waits through a missing-output grace period before marking `missing_attempt_result`.

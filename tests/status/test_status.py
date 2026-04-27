@@ -1,6 +1,19 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    SchemaVersion,
+    compile_train_eval_pipeline_plan,
+    compile_stage_batch_for_kind,
+    load_experiment_spec,
+    prepare_stage_submission,
+    read_submission_state,
+    submit_prepared_stage_batch,
+    write_demo_project,
+    write_train_eval_pipeline_layout,
+    write_stage_batch_layout,
+)
+from tests.support.std import Path, patch, tempfile
 
 
 class StatusTests(StageBatchSystemTestCase):
@@ -87,8 +100,8 @@ class StatusTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             pipeline_root = Path(plan.root_dir)
 
             with (
@@ -99,4 +112,4 @@ class StatusTests(StageBatchSystemTestCase):
                 controller_reconcile.assert_called_once_with(pipeline_root)
                 stage_reconcile.assert_called_once()
             self.assertTrue((pipeline_root / "run_status.json").exists())
-            self.assertTrue((pipeline_root / "pipeline_status.json").exists())
+            self.assertTrue((pipeline_root / "train_eval_pipeline_status.json").exists())

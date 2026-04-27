@@ -20,12 +20,15 @@ forbidden_modules =
     slurmforge.executor
     slurmforge.inputs
     slurmforge.lineage
+    slurmforge.notifications
     slurmforge.orchestration
     slurmforge.outputs
     slurmforge.plans
     slurmforge.planner
+    slurmforge.read_models
     slurmforge.resolver
     slurmforge.runtime
+    slurmforge.sizing
     slurmforge.slurm
     slurmforge.spec
     slurmforge.status
@@ -49,13 +52,16 @@ forbidden_modules =
     slurmforge.executor
     slurmforge.inputs
     slurmforge.lineage
+    slurmforge.notifications
     slurmforge.orchestration
     slurmforge.outputs
     slurmforge.plans
     slurmforge.planner
+    slurmforge.read_models
     slurmforge.resolver
     slurmforge.runtime
     slurmforge.schema
+    slurmforge.sizing
     slurmforge.slurm
     slurmforge.spec
     slurmforge.status
@@ -64,7 +70,7 @@ forbidden_modules =
 
 # ----------------------------------------------------------------------------
 # Contract 3: emit/sbatch helpers are intra-package only.
-# emit.sbatch holds shell-quoting / job-name helpers used by emit.controller
+# emit.sbatch_helpers holds shell-quoting / job-name helpers used by emit.controller
 # and emit.stage. External packages must consume the public renderers
 # (write_stage_submit_files, write_controller_submit_file, ...) only.
 # ----------------------------------------------------------------------------
@@ -77,30 +83,35 @@ source_modules =
     slurmforge.executor
     slurmforge.inputs
     slurmforge.lineage
+    slurmforge.notifications
     slurmforge.orchestration
     slurmforge.outputs
     slurmforge.planner
+    slurmforge.read_models
     slurmforge.resolver
     slurmforge.runtime
+    slurmforge.sizing
     slurmforge.spec
     slurmforge.status
     slurmforge.storage
     slurmforge.submission
 forbidden_modules =
-    slurmforge.emit.sbatch
+    slurmforge.emit.sbatch_helpers
 ignore_imports =
-    slurmforge.emit.controller -> slurmforge.emit.sbatch
-    slurmforge.emit.stage -> slurmforge.emit.sbatch
+    slurmforge.emit.controller -> slurmforge.emit.sbatch_helpers
+    slurmforge.emit.stage -> slurmforge.emit.sbatch_helpers
+    slurmforge.emit.stage_render -> slurmforge.emit.sbatch_helpers
 
 # ----------------------------------------------------------------------------
-# Contract 4: status state machine + root_ref are package-private.
+# Contract 4: status internals are package-private.
 # All stage status writes must enter through ``slurmforge.status`` (the
 # package's public API in __init__.py). status.machine is the sole writer
-# of status.json / attempt.json; root_ref is an internal helper.
+# of status.json / attempt.json; reader/query/serde/root_ref are internal
+# helpers behind that facade.
 # ignore_imports whitelists the legitimate intra-package re-export chain.
 # ----------------------------------------------------------------------------
 [importlinter:contract:4]
-name = status machine is sole writer
+name = status internals go through package facade
 type = forbidden
 source_modules =
     slurmforge.cli
@@ -109,68 +120,72 @@ source_modules =
     slurmforge.executor
     slurmforge.inputs
     slurmforge.lineage
+    slurmforge.notifications
     slurmforge.orchestration
     slurmforge.outputs
     slurmforge.planner
+    slurmforge.read_models
     slurmforge.resolver
     slurmforge.runtime
+    slurmforge.sizing
     slurmforge.spec
     slurmforge.storage
     slurmforge.submission
 forbidden_modules =
     slurmforge.status.machine
+    slurmforge.status.query
+    slurmforge.status.reader
     slurmforge.status.root_ref
+    slurmforge.status.serde
 ignore_imports =
     slurmforge.status -> slurmforge.status.machine
+    slurmforge.status -> slurmforge.status.query
+    slurmforge.status -> slurmforge.status.reader
     slurmforge.status -> slurmforge.status.root_ref
+    slurmforge.status -> slurmforge.status.serde
     slurmforge.status.reconcile -> slurmforge.status.machine
+    slurmforge.status.reconcile -> slurmforge.status.reader
+    slurmforge.status.reconcile_state -> slurmforge.status.machine
+    slurmforge.status.reconcile_state -> slurmforge.status.reader
 
 # ----------------------------------------------------------------------------
-# Contract 5: storage/ public API is layout + loader + materialization.
-# Internal modules of submission/, status/, emit/, etc. must be
-# accessed through their package facades.
+# Contract 5: storage.paths is storage-internal.
+# External packages may import explicit storage role modules
+# (layout, loader, controller, materialization), but must not bind directly to
+# raw path helpers.
 # ----------------------------------------------------------------------------
 [importlinter:contract:5]
-name = storage submodules go through package facade
+name = storage paths are package-private
 type = forbidden
+allow_indirect_imports = True
 source_modules =
     slurmforge.cli
     slurmforge.controller
+    slurmforge.emit
     slurmforge.executor
+    slurmforge.inputs
     slurmforge.lineage
+    slurmforge.notifications
     slurmforge.orchestration
     slurmforge.outputs
+    slurmforge.plans
     slurmforge.planner
+    slurmforge.read_models
     slurmforge.resolver
     slurmforge.runtime
+    slurmforge.schema
+    slurmforge.sizing
+    slurmforge.slurm
     slurmforge.spec
+    slurmforge.status
     slurmforge.submission
 forbidden_modules =
-    slurmforge.storage.aggregate
-    slurmforge.storage.controller
-    slurmforge.storage.layout
-    slurmforge.storage.loader
-    slurmforge.storage.materialization
     slurmforge.storage.paths
-ignore_imports =
-    slurmforge.storage -> slurmforge.storage.aggregate
-    slurmforge.storage -> slurmforge.storage.controller
-    slurmforge.storage -> slurmforge.storage.layout
-    slurmforge.storage -> slurmforge.storage.loader
-    slurmforge.storage -> slurmforge.storage.materialization
-    slurmforge.storage -> slurmforge.storage.paths
-    slurmforge.storage.aggregate -> slurmforge.storage.loader
-    slurmforge.storage.controller -> slurmforge.storage.paths
-    slurmforge.storage.layout -> slurmforge.storage.aggregate
-    slurmforge.storage.layout -> slurmforge.storage.materialization
-    slurmforge.storage.layout -> slurmforge.storage.paths
-    slurmforge.storage.loader -> slurmforge.storage.paths
-    slurmforge.storage.materialization -> slurmforge.storage.layout
 
 # ----------------------------------------------------------------------------
 # Contract 6: submission internals are accessed through the package facade.
 # External packages use ``slurmforge.submission``; only the submission package
-# itself may reach generation/submitter/ledger/reconcile directly.
+# itself may reach generation/submitter/ledger/reconcile/state helpers directly.
 # ----------------------------------------------------------------------------
 [importlinter:contract:6]
 name = submission internals go through package facade
@@ -182,30 +197,47 @@ source_modules =
     slurmforge.executor
     slurmforge.inputs
     slurmforge.lineage
+    slurmforge.notifications
     slurmforge.orchestration
     slurmforge.outputs
     slurmforge.plans
     slurmforge.planner
+    slurmforge.read_models
     slurmforge.resolver
     slurmforge.runtime
     slurmforge.schema
+    slurmforge.sizing
     slurmforge.slurm
     slurmforge.spec
     slurmforge.status
     slurmforge.storage
 forbidden_modules =
+    slurmforge.submission.dependencies
+    slurmforge.submission.finalizer
     slurmforge.submission.generation
     slurmforge.submission.ledger
+    slurmforge.submission.models
+    slurmforge.submission.queueing
+    slurmforge.submission.ready
     slurmforge.submission.reconcile
+    slurmforge.submission.state
     slurmforge.submission.submitter
 ignore_imports =
+    slurmforge.submission -> slurmforge.submission.finalizer
     slurmforge.submission -> slurmforge.submission.generation
-    slurmforge.submission -> slurmforge.submission.ledger
+    slurmforge.submission -> slurmforge.submission.models
     slurmforge.submission -> slurmforge.submission.reconcile
+    slurmforge.submission -> slurmforge.submission.state
     slurmforge.submission -> slurmforge.submission.submitter
+    slurmforge.submission.finalizer -> slurmforge.submission.reconcile
     slurmforge.submission.generation -> slurmforge.submission.ledger
+    slurmforge.submission.ready -> slurmforge.submission.ledger
     slurmforge.submission.reconcile -> slurmforge.submission.ledger
+    slurmforge.submission.state -> slurmforge.submission.ledger
+    slurmforge.submission.submitter -> slurmforge.submission.dependencies
     slurmforge.submission.submitter -> slurmforge.submission.ledger
+    slurmforge.submission.submitter -> slurmforge.submission.queueing
+    slurmforge.submission.submitter -> slurmforge.submission.ready
 
 # ----------------------------------------------------------------------------
 # Contract 7: runtime/ is a leaf runtime-probe package.
@@ -224,14 +256,121 @@ forbidden_modules =
     slurmforge.executor
     slurmforge.inputs
     slurmforge.lineage
+    slurmforge.notifications
     slurmforge.orchestration
     slurmforge.outputs
     slurmforge.plans
     slurmforge.planner
+    slurmforge.read_models
     slurmforge.resolver
+    slurmforge.schema
+    slurmforge.sizing
+    slurmforge.slurm
+    slurmforge.spec
+    slurmforge.status
+    slurmforge.storage
+    slurmforge.submission
+
+# ----------------------------------------------------------------------------
+# Contract 8: sizing/ is a leaf resource-estimation package.
+# It owns pure sizing models and calculations. It may depend on errors/io only;
+# it must not know about specs, plans, orchestration, storage, submission, or
+# notification delivery.
+# ----------------------------------------------------------------------------
+[importlinter:contract:8]
+name = sizing is a leaf
+type = forbidden
+source_modules =
+    slurmforge.sizing
+forbidden_modules =
+    slurmforge.cli
+    slurmforge.controller
+    slurmforge.emit
+    slurmforge.executor
+    slurmforge.inputs
+    slurmforge.lineage
+    slurmforge.notifications
+    slurmforge.orchestration
+    slurmforge.outputs
+    slurmforge.plans
+    slurmforge.planner
+    slurmforge.read_models
+    slurmforge.resolver
+    slurmforge.runtime
     slurmforge.schema
     slurmforge.slurm
     slurmforge.spec
     slurmforge.status
     slurmforge.storage
+    slurmforge.submission
+
+# ----------------------------------------------------------------------------
+# Contract 9: notifications/ owns summaries, records, and delivery runtime.
+# Scheduler submission for batch notification finalizers belongs to submission/.
+# ----------------------------------------------------------------------------
+[importlinter:contract:9]
+name = notifications do not own scheduler submission
+type = forbidden
+source_modules =
+    slurmforge.notifications
+forbidden_modules =
+    slurmforge.cli
+    slurmforge.controller
+    slurmforge.emit
+    slurmforge.executor
+    slurmforge.inputs
+    slurmforge.lineage
+    slurmforge.orchestration
+    slurmforge.planner
+    slurmforge.read_models
+    slurmforge.resolver
+    slurmforge.runtime
+    slurmforge.slurm
+    slurmforge.spec
+    slurmforge.storage
+    slurmforge.submission.finalizer
+    slurmforge.submission.dependencies
+    slurmforge.submission.generation
+    slurmforge.submission.ledger
+    slurmforge.submission.models
+    slurmforge.submission.queueing
+    slurmforge.submission.ready
+    slurmforge.submission.reconcile
+    slurmforge.submission.state
+    slurmforge.submission.submitter
+
+# ----------------------------------------------------------------------------
+# Contract 10: read_models/ projects persisted read models only.
+# It may read storage.loader, status models, plans constants, and notification
+# summary input models. It must not own scheduling, orchestration, execution,
+# delivery runtime, or submission.
+# ----------------------------------------------------------------------------
+[importlinter:contract:10]
+name = read models are read-side projections
+type = forbidden
+allow_indirect_imports = True
+source_modules =
+    slurmforge.read_models
+forbidden_modules =
+    slurmforge.cli
+    slurmforge.controller
+    slurmforge.emit
+    slurmforge.executor
+    slurmforge.inputs
+    slurmforge.lineage
+    slurmforge.notifications.delivery
+    slurmforge.notifications.email
+    slurmforge.notifications.records
+    slurmforge.orchestration
+    slurmforge.outputs
+    slurmforge.planner
+    slurmforge.resolver
+    slurmforge.runtime
+    slurmforge.sizing
+    slurmforge.slurm
+    slurmforge.spec
+    slurmforge.storage.controller
+    slurmforge.storage.layout
+    slurmforge.storage.materialization
+    slurmforge.storage.paths
     slurmforge.submission

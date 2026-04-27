@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    compile_train_eval_pipeline_plan,
+    compile_stage_batch_for_kind,
+    execute_stage_task,
+    load_experiment_spec,
+    write_demo_project,
+    write_train_eval_pipeline_layout,
+    write_stage_batch_layout,
+)
+from tests.support.std import Path, io, redirect_stdout, tempfile
 
 
 class OrchestrationTests(StageBatchSystemTestCase):
@@ -21,8 +31,8 @@ class OrchestrationTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            pipeline = compile_pipeline_plan(spec)
-            write_pipeline_layout(pipeline, spec_snapshot=spec.raw)
+            pipeline = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
             self.assertEqual(execute_stage_task(Path(pipeline.stage_batches["train"].submission_root), 1, 0), 0)
             plan = build_prior_source_stage_batch(
                 source_root=Path(pipeline.root_dir),

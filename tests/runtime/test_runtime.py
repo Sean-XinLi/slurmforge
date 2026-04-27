@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
 
 
 class RuntimeProbeTests(StageBatchSystemTestCase):
@@ -11,4 +11,3 @@ class RuntimeProbeTests(StageBatchSystemTestCase):
 
         self.assertEqual(record.state, "failed")
         self.assertIn("was not found", record.reason)
-

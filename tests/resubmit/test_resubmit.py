@@ -1,6 +1,19 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    SchemaVersion,
+    compile_train_eval_pipeline_plan,
+    compile_stage_batch_for_kind,
+    execute_stage_task,
+    load_experiment_spec,
+    read_submission_ledger,
+    upstream_bindings_from_train_batch,
+    write_demo_project,
+    write_train_eval_pipeline_layout,
+    write_stage_batch_layout,
+)
+from tests.support.std import Namespace, Path, io, json, patch, redirect_stdout, tempfile
 
 
 class ResubmitTests(StageBatchSystemTestCase):
@@ -10,8 +23,8 @@ class ResubmitTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
 
@@ -45,8 +58,8 @@ class ResubmitTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             client = FakeSlurmClient()
@@ -77,8 +90,8 @@ class ResubmitTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
 
@@ -100,7 +113,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             self.assertNotEqual(resubmit_roots[0].name, resubmit_roots[1].name)
 
     def test_resubmit_root_reservation_is_new_only(self) -> None:
-        from slurmforge.storage import reserve_derived_stage_batch_root
+        from slurmforge.storage.materialization import reserve_derived_stage_batch_root
 
         with tempfile.TemporaryDirectory() as tmp:
             source_root = Path(tmp)
@@ -120,8 +133,8 @@ class ResubmitTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
 
             with self.assertRaisesRegex(Exception, "launcher.type"):
                 handle_resubmit(
@@ -326,8 +339,8 @@ class ResubmitTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             replacement = root / "replacement.pt"

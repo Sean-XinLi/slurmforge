@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-from tests.support import *  # noqa: F401,F403
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.sforge import (
+    compile_train_eval_pipeline_plan,
+    execute_stage_task,
+    load_experiment_spec,
+    resolve_stage_inputs_for_train_eval_pipeline,
+    write_demo_project,
+    write_train_eval_pipeline_layout,
+)
+from tests.support.std import Path, tempfile, yaml
 
 
 class InputResolutionTests(StageBatchSystemTestCase):
     def test_controller_dependency_resolution_is_contract_driven(self) -> None:
-        controller_source = Path("src/slurmforge/controller/pipeline.py").read_text(encoding="utf-8")
+        controller_source = Path("src/slurmforge/controller/train_eval_pipeline.py").read_text(encoding="utf-8")
         self.assertNotIn("upstream_bindings_from_train_batch", controller_source)
         self.assertNotIn('kind="eval"', controller_source)
         self.assertNotIn("stage_spec.name == \"eval\"", controller_source)
@@ -19,11 +28,11 @@ class InputResolutionTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             self.assertEqual(execute_stage_task(Path(plan.stage_batches["train"].submission_root), 1, 0), 0)
 
-            resolved = resolve_stage_inputs_for_pipeline(spec, plan, stage_name="eval")
+            resolved = resolve_stage_inputs_for_train_eval_pipeline(spec, plan, stage_name="eval")
 
             self.assertEqual(len(resolved.selected_runs), 1)
             self.assertEqual(resolved.blocked_run_ids, ())
@@ -48,11 +57,11 @@ class InputResolutionTests(StageBatchSystemTestCase):
             }
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
             spec = load_experiment_spec(cfg_path)
-            plan = compile_pipeline_plan(spec)
-            write_pipeline_layout(plan, spec_snapshot=spec.raw)
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
             self.assertEqual(execute_stage_task(Path(plan.stage_batches["train"].submission_root), 1, 0), 0)
 
-            resolved = resolve_stage_inputs_for_pipeline(spec, plan, stage_name="eval")
+            resolved = resolve_stage_inputs_for_train_eval_pipeline(spec, plan, stage_name="eval")
 
             binding = resolved.input_bindings_by_run[resolved.selected_runs[0].run_id][0]
             self.assertEqual(binding.input_name, "model_input")
@@ -111,4 +120,3 @@ class InputResolutionTests(StageBatchSystemTestCase):
             self.assertEqual(binding.source.kind, "external_path")
             self.assertEqual(binding.resolution["source_role"], "checkpoint")
             self.assertEqual(binding.resolved.path, str(checkpoint.resolve()))
-
