@@ -11,9 +11,11 @@ from ..orchestration import (
     build_train_eval_pipeline_plan,
     build_resource_estimate_for_plan,
     build_train_stage_batch,
+    render_resource_estimate_for_plan,
 )
-from ..sizing import render_resource_estimate
-from .stage_common import add_config_args, load_spec_from_args, print_lines
+from .args import add_config_args
+from .builders import load_spec_from_args
+from .render import print_lines
 
 
 def _build_estimate_plan(spec):
@@ -35,7 +37,7 @@ def handle_estimate(args: argparse.Namespace) -> None:
         else:
             print(payload, end="")
         return
-    print_lines(render_resource_estimate(estimate))
+    print_lines(render_resource_estimate_for_plan(plan))
 
 
 def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

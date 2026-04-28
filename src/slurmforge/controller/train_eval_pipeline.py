@@ -26,7 +26,7 @@ def _load_snapshot_yaml(root: Path) -> dict[str, Any]:
     path = root / "spec_snapshot.yaml"
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError(f"spec_snapshot.yaml must contain a mapping: {path}")
+        raise ConfigContractError(f"spec_snapshot.yaml must contain a mapping: {path}")
     return payload
 
 

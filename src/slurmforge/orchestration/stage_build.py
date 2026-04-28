@@ -3,24 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Iterable
 
+from ..errors import UsageError
 from ..planner import (
-    build_dry_run_audit as _build_dry_run_audit,
-    compile_train_eval_pipeline_plan,
     compile_stage_batch_from_prior_source,
     compile_stage_batch_for_kind,
-    summarize_train_eval_pipeline_plan as _summarize_pipeline_plan,
     summarize_stage_batch as _summarize_stage_batch,
 )
 from ..plans import SourcedStageBatchPlan
-from ..resolver import (
-    explicit_input_bindings,
-    stage_source_input_name,
-    upstream_bindings_from_run,
-    upstream_bindings_from_stage_batch,
-)
-from ..sizing import build_resource_estimate as _build_resource_estimate
-from ..sizing import render_resource_estimate as _render_resource_estimate
-from ..spec import ExperimentSpec
+from ..resolver import explicit_input_bindings, upstream_bindings_from_run, upstream_bindings_from_stage_batch
+from ..spec import ExperimentSpec, stage_source_input_name
 
 
 def resolve_eval_inputs(
@@ -39,7 +30,8 @@ def resolve_eval_inputs(
             Path(checkpoint),
             source_role="checkpoint",
         )
-        return runs, bindings, f"checkpoint:{Path(checkpoint).resolve()}"
+        first_binding = bindings[runs[0].run_id][0]
+        return runs, bindings, f"checkpoint:{first_binding.resolved.path}"
     if from_train_batch:
         runs, bindings = upstream_bindings_from_stage_batch(
             spec,
@@ -50,7 +42,7 @@ def resolve_eval_inputs(
     if from_run:
         runs, bindings = upstream_bindings_from_run(spec, Path(from_run).resolve(), input_name=selected_input)
         return runs, bindings, f"run:{Path(from_run).resolve()}"
-    raise ValueError("eval requires one of --from-train-batch, --from-run, or --checkpoint")
+    raise UsageError("eval requires one of --from-train-batch, --from-run, or --checkpoint")
 
 
 def build_train_stage_batch(spec: ExperimentSpec):
@@ -84,28 +76,8 @@ def build_eval_stage_batch(
     )
 
 
-def build_train_eval_pipeline_plan(spec: ExperimentSpec):
-    return compile_train_eval_pipeline_plan(spec)
-
-
-def build_dry_run_audit(spec: ExperimentSpec, plan, *, command: str, full: bool = False):
-    return _build_dry_run_audit(spec, plan, command=command, full=full)
-
-
 def summarize_stage_batch(batch) -> list[str]:
     return _summarize_stage_batch(batch)
-
-
-def summarize_train_eval_pipeline_plan(plan) -> list[str]:
-    return _summarize_pipeline_plan(plan)
-
-
-def build_resource_estimate_for_plan(plan):
-    return _build_resource_estimate(plan)
-
-
-def render_resource_estimate_for_plan(plan) -> list[str]:
-    return _render_resource_estimate(_build_resource_estimate(plan))
 
 
 def build_prior_source_stage_batch(

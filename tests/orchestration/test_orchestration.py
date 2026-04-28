@@ -10,7 +10,7 @@ from tests.support.sforge import (
     write_train_eval_pipeline_layout,
     write_stage_batch_layout,
 )
-from tests.support.std import Path, io, redirect_stdout, tempfile
+from tests.support.std import Path, tempfile
 
 
 class OrchestrationTests(StageBatchSystemTestCase):
@@ -19,7 +19,7 @@ class OrchestrationTests(StageBatchSystemTestCase):
 
         self.assertTrue(hasattr(orchestration, "build_prior_source_stage_batch"))
         self.assertTrue(hasattr(orchestration, "emit_sourced_stage_batch"))
-        self.assertTrue(hasattr(orchestration, "render_status"))
+        self.assertTrue(hasattr(orchestration, "render_status_lines"))
         self.assertFalse(hasattr(orchestration, "compile_stage_batch_from_prior_source"))
         self.assertFalse(hasattr(orchestration, "materialize_sourced_stage_batch_plan"))
         self.assertFalse(hasattr(orchestration, "prepare_stage_submission"))
@@ -41,16 +41,17 @@ class OrchestrationTests(StageBatchSystemTestCase):
             )
             assert plan is not None
 
-            concrete, group_job_ids = emit_sourced_stage_batch(plan, submit=False)
+            result = emit_sourced_stage_batch(plan, submit=False)
+            concrete = result.plan
 
             batch_root = Path(concrete.batch.submission_root)
-            self.assertIsNone(group_job_ids)
+            self.assertFalse(result.submitted)
             self.assertTrue((batch_root / "source_plan.json").exists())
             self.assertTrue((batch_root / "submit" / "submit_manifest.json").exists())
             self.assertTrue(next(batch_root.glob("runs/*/input_bindings.json")).exists())
 
     def test_render_status_reports_stage_counts(self) -> None:
-        from slurmforge.orchestration import render_status
+        from slurmforge.orchestration import render_status_lines
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -58,10 +59,6 @@ class OrchestrationTests(StageBatchSystemTestCase):
             batch = compile_stage_batch_for_kind(spec, kind="train")
             write_stage_batch_layout(batch, spec_snapshot=spec.raw)
 
-            rendered = io.StringIO()
-            with redirect_stdout(rendered):
-                render_status(root=Path(batch.submission_root))
-
-            output = rendered.getvalue()
+            output = "\n".join(render_status_lines(root=Path(batch.submission_root)))
             self.assertIn("total_stages=1", output)
             self.assertIn("stage=train", output)

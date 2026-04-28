@@ -10,10 +10,70 @@ from tests.support.sforge import (
     write_demo_project,
     write_stage_batch_layout,
 )
-from tests.support.std import Namespace, Path, io, json, redirect_stderr, redirect_stdout, tempfile, yaml
+from tests.support.std import Namespace, Path, io, json, patch, redirect_stderr, redirect_stdout, tempfile, yaml
 
 
 class CliTests(StageBatchSystemTestCase):
+    def test_init_cli_rejects_removed_yaml_detail_flags(self) -> None:
+        from slurmforge.launcher import build_parser
+
+        parser = build_parser()
+        stderr = io.StringIO()
+        with redirect_stdout(io.StringIO()), redirect_stderr(stderr), self.assertRaises(SystemExit):
+            parser.parse_args(["init", "--project", "demo"])
+        self.assertIn("unrecognized arguments: --project", stderr.getvalue())
+
+    def test_init_help_only_exposes_scaffolding_options(self) -> None:
+        from slurmforge.launcher import build_parser
+
+        parser = build_parser()
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+            parser.parse_args(["init", "--help"])
+
+        self.assertEqual(raised.exception.code, 0)
+        help_text = stdout.getvalue()
+        for option in ("--list-templates", "--template", "--output", "--force"):
+            self.assertIn(option, help_text)
+        for removed in ("--project", "--experiment", "--storage-root", "--partition", "--python-bin"):
+            self.assertNotIn(removed, help_text)
+
+    def test_user_cli_errors_do_not_emit_traceback(self) -> None:
+        from slurmforge.launcher import main
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = root / "experiment.yaml"
+            self.assertEqual(
+                main(["init", "--template", "train-eval", "--output", str(cfg_path)]),
+                0,
+            )
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = main(["init", "--template", "train-eval", "--output", str(cfg_path)])
+
+            combined = stdout.getvalue() + stderr.getvalue()
+            self.assertEqual(code, 2)
+            self.assertIn("[ERROR] Refusing to overwrite existing files:", stderr.getvalue())
+            self.assertNotIn("Traceback", combined)
+
+    def test_unknown_cli_bugs_are_not_caught(self) -> None:
+        import slurmforge.launcher as launcher
+
+        def raise_bug(_args) -> None:
+            raise RuntimeError("internal bug")
+
+        parser = launcher.build_parser()
+        parsed = Namespace(handler=raise_bug)
+        with (
+            patch.object(parser, "parse_args", return_value=parsed),
+            patch.object(launcher, "build_parser", return_value=parser),
+            self.assertRaisesRegex(RuntimeError, "internal bug"),
+        ):
+            launcher.main([])
+
     def test_plan_subcommands_keep_eval_source_arguments_off_train(self) -> None:
         from slurmforge.launcher import build_parser
 
@@ -213,14 +273,14 @@ class CliTests(StageBatchSystemTestCase):
             self.assertEqual(payload["validation"]["selected_runs"], 0)
             self.assertFalse(stdout.getvalue().startswith("[RESUBMIT]"))
 
-    def test_root_cli_only_exposes_stage_batch_commands(self) -> None:
+    def test_root_cli_exposes_expected_commands(self) -> None:
         from slurmforge.launcher import build_parser
 
         parser = build_parser()
         subparser_action = next(action for action in parser._actions if getattr(action, "choices", None))
         self.assertEqual(
             set(subparser_action.choices),
-            {"validate", "estimate", "plan", "train", "eval", "run", "status", "resubmit"},
+            {"init", "validate", "estimate", "plan", "train", "eval", "run", "status", "resubmit"},
         )
         pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
         self.assertIn('sforge = "slurmforge.launcher:main"', pyproject)

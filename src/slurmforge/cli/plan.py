@@ -11,13 +11,13 @@ from ..orchestration import (
     execute_train_eval_pipeline_plan,
     execute_stage_batch_plan,
 )
-from .stage_common import (
-    add_config_args,
-    add_eval_source_args,
-    emit_machine_dry_run_if_requested,
-    execution_mode_from_args,
-    load_spec_from_args,
+from .args import add_config_args, add_eval_source_args, execution_mode_from_args
+from .builders import load_spec_from_args
+from .dry_run import emit_machine_dry_run_if_requested
+from .render import (
+    print_stage_batch_execution_result,
     print_train_eval_pipeline_plan,
+    print_train_eval_pipeline_execution_result,
     print_stage_batch_plan,
 )
 from .requests import eval_source_from_args
@@ -31,7 +31,9 @@ def handle_plan(args: argparse.Namespace) -> None:
         if emit_machine_dry_run_if_requested(args, spec, pipeline_plan, command="run"):
             return
         print_train_eval_pipeline_plan(pipeline_plan)
-        execute_train_eval_pipeline_plan(spec, pipeline_plan, mode=execution_mode_from_args(args, default="emit"))
+        print_train_eval_pipeline_execution_result(
+            execute_train_eval_pipeline_plan(spec, pipeline_plan, mode=execution_mode_from_args(args, default="emit"))
+        )
         return
     if command == "train":
         batch = build_train_stage_batch(spec)
@@ -55,7 +57,9 @@ def handle_plan(args: argparse.Namespace) -> None:
             "eval plan has unresolved required inputs; provide --checkpoint, --from-run, "
             "or --from-train-batch, or use --dry-run for logical preview only"
         )
-    execute_stage_batch_plan(spec, batch, mode=execution_mode_from_args(args, default="emit"))
+    print_stage_batch_execution_result(
+        execute_stage_batch_plan(spec, batch, mode=execution_mode_from_args(args, default="emit"))
+    )
 
 
 def _add_plan_mode_args(parser: argparse.ArgumentParser) -> None:

@@ -16,18 +16,19 @@ def _trim(value: str, limit: int = 120) -> str:
     return cleaned if len(cleaned) <= limit else cleaned[: limit - 3] + "..."
 
 
-def render_status(
+def render_status_lines(
     *,
     root: Path,
     status_query: str = "all",
     stage: str | None = None,
     reconcile: bool = False,
     missing_output_grace_seconds: int = 300,
-) -> None:
+) -> list[str]:
     if not root.exists():
         raise FileNotFoundError(f"status root does not exist: {root}")
     if not is_stage_batch_root(root) and not is_train_eval_pipeline_root(root):
         raise FileNotFoundError(f"not a stage batch or train/eval pipeline root: {root}")
+    lines: list[str] = []
     root_is_pipeline = is_train_eval_pipeline_root(root)
     if reconcile and root_is_pipeline:
         reconcile_controller_job(root)
@@ -43,7 +44,7 @@ def render_status(
         if materialization is not None:
             failure_class = materialization.failure_class or "-"
             reason = _trim(materialization.reason)
-            print(
+            lines.append(
                 f"[STATUS] materialization stage={materialization.stage_name} "
                 f"state={materialization.state} class={failure_class} reason={reason}"
             )
@@ -53,7 +54,7 @@ def render_status(
             controller_state = str(controller_status.get("state") or "unknown")
             job_id = str(controller_status.get("scheduler_job_id") or "-")
             reason = _trim(str(controller_status.get("reason") or ""))
-            print(f"[STATUS] controller state={controller_state} job={job_id} reason={reason}")
+            lines.append(f"[STATUS] controller state={controller_state} job={job_id} reason={reason}")
         for stage_root in sorted((root / "stage_batches").glob("*")):
             if not is_stage_batch_root(stage_root):
                 continue
@@ -64,7 +65,7 @@ def render_status(
                 continue
             failure_class = materialization.failure_class or "-"
             reason = _trim(materialization.reason)
-            print(
+            lines.append(
                 f"[STATUS] materialization stage={materialization.stage_name} "
                 f"state={materialization.state} class={failure_class} reason={reason}"
             )
@@ -78,17 +79,18 @@ def render_status(
         counts[status.state] = counts.get(status.state, 0) + 1
         by_stage = stage_counts.setdefault(status.stage_name, {})
         by_stage[status.state] = by_stage.get(status.state, 0) + 1
-    print(f"[STATUS] root={root} total_stages={len(statuses)} matched={len(matched)} query={status_query}")
+    lines.append(f"[STATUS] root={root} total_stages={len(statuses)} matched={len(matched)} query={status_query}")
     if counts:
-        print("[STATUS] counts: " + ", ".join(f"{key}={counts[key]}" for key in sorted(counts)))
+        lines.append("[STATUS] counts: " + ", ".join(f"{key}={counts[key]}" for key in sorted(counts)))
     for stage_name in sorted(stage_counts):
         summary = ", ".join(f"{key}={stage_counts[stage_name][key]}" for key in sorted(stage_counts[stage_name]))
-        print(f"[STATUS] stage={stage_name}: {summary}")
+        lines.append(f"[STATUS] stage={stage_name}: {summary}")
     for status in matched:
         failure_class = status.failure_class or "-"
         attempt = status.latest_attempt_id or "-"
         reason = _trim(status.reason)
-        print(
+        lines.append(
             f"{status.run_id}.{status.stage_name}: state={status.state} "
             f"class={failure_class} attempt={attempt} reason={reason}"
         )
+    return lines

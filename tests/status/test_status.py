@@ -64,7 +64,7 @@ class StatusTests(StageBatchSystemTestCase):
             self.assertEqual(status.state, "success")
 
     def test_status_is_read_only_unless_reconcile_is_requested(self) -> None:
-        from slurmforge.cli.status import render_status
+        from slurmforge.orchestration import render_status_lines
         from slurmforge.slurm import FakeSlurmClient
         from slurmforge.status import read_stage_status
 
@@ -83,19 +83,19 @@ class StatusTests(StageBatchSystemTestCase):
             assert status is not None
             self.assertEqual(status.state, "queued")
 
-            with patch("slurmforge.orchestration.render.reconcile_root_submissions") as reconcile:
-                render_status(root=Path(batch.submission_root))
+            with patch("slurmforge.orchestration.status_view.reconcile_root_submissions") as reconcile:
+                render_status_lines(root=Path(batch.submission_root))
                 reconcile.assert_not_called()
             status = read_stage_status(run_dir)
             assert status is not None
             self.assertEqual(status.state, "queued")
 
-            with patch("slurmforge.orchestration.render.reconcile_root_submissions") as reconcile:
-                render_status(root=Path(batch.submission_root), reconcile=True, missing_output_grace_seconds=12)
+            with patch("slurmforge.orchestration.status_view.reconcile_root_submissions") as reconcile:
+                render_status_lines(root=Path(batch.submission_root), reconcile=True, missing_output_grace_seconds=12)
                 reconcile.assert_called_once()
 
     def test_pipeline_status_reconcile_checks_controller_job(self) -> None:
-        from slurmforge.cli.status import render_status
+        from slurmforge.orchestration import render_status_lines
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -105,10 +105,10 @@ class StatusTests(StageBatchSystemTestCase):
             pipeline_root = Path(plan.root_dir)
 
             with (
-                patch("slurmforge.orchestration.render.reconcile_controller_job") as controller_reconcile,
-                patch("slurmforge.orchestration.render.reconcile_root_submissions") as stage_reconcile,
+                patch("slurmforge.orchestration.status_view.reconcile_controller_job") as controller_reconcile,
+                patch("slurmforge.orchestration.status_view.reconcile_root_submissions") as stage_reconcile,
             ):
-                render_status(root=pipeline_root, reconcile=True, missing_output_grace_seconds=7)
+                render_status_lines(root=pipeline_root, reconcile=True, missing_output_grace_seconds=7)
                 controller_reconcile.assert_called_once_with(pipeline_root)
                 stage_reconcile.assert_called_once()
             self.assertTrue((pipeline_root / "run_status.json").exists())

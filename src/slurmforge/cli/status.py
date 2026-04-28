@@ -4,17 +4,18 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from ..orchestration import render_status
+from ..orchestration import render_status_lines
 
 
 def handle_status(args: argparse.Namespace) -> None:
-    render_status(
+    for line in render_status_lines(
         root=Path(args.root).resolve(),
         status_query=args.query,
         stage=args.stage,
         reconcile=args.reconcile,
         missing_output_grace_seconds=args.missing_output_grace_seconds,
-    )
+    ):
+        print(line)
 
 
 def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

@@ -93,7 +93,7 @@ class SubmissionTests(StageBatchSystemTestCase):
                 submit_prepared_stage_batch(prepared, client=FakeSlurmClient())
 
     def test_batch_notification_finalizer_submits_after_terminal_groups(self) -> None:
-        from slurmforge.notifications import read_notification_record
+        from slurmforge.notifications.records import read_notification_record
         from slurmforge.submission.finalizer import (
             finalizer_dependency_group_ids,
             submit_stage_batch_finalizer,

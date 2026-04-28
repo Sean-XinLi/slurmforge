@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from ..io import utc_now
 from .email import send_email_summary
 from .models import NotificationDeliveryRecord, NotificationSummaryInput
+from .policy import email_notification_enabled
 from .records import (
     append_notification_event,
     read_notification_record,
@@ -14,12 +14,7 @@ from .records import (
 from .summary import build_notification_summary, render_summary_text
 
 
-def email_notification_enabled(notification_plan: Any, event: str) -> bool:
-    email = notification_plan.email
-    return email.enabled and event in set(email.events)
-
-
-def notification_subject(notification_plan: Any, summary) -> str:
+def notification_subject(notification_plan, summary) -> str:
     prefix = notification_plan.email.subject_prefix or "SlurmForge"
     noun = "train/eval pipeline" if summary.root_kind == "train_eval_pipeline" else "stage batch"
     return f"{prefix} {noun} finished: {summary.project}/{summary.experiment} {summary.state}"
@@ -29,7 +24,7 @@ def deliver_notification(
     root: Path,
     *,
     event: str,
-    notification_plan: Any,
+    notification_plan,
     summary_input: NotificationSummaryInput,
 ) -> NotificationDeliveryRecord | None:
     target = Path(root)

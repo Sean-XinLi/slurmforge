@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .delivery import (
     deliver_notification,
-    email_notification_enabled,
 )
 from .models import (
     FailedStageSummary,
@@ -12,13 +11,8 @@ from .models import (
     NotificationSummary,
     NotificationSummaryInput,
 )
-from .records import (
-    append_notification_event,
-    notification_record_path,
-    read_notification_record,
-    write_notification_record,
-)
 from .summary import build_notification_summary, render_summary_text
+from .policy import email_notification_enabled
 
 __all__ = [
     "FailedStageSummary",
@@ -27,12 +21,8 @@ __all__ = [
     "NotificationStageStatusInput",
     "NotificationSummary",
     "NotificationSummaryInput",
-    "append_notification_event",
     "build_notification_summary",
     "deliver_notification",
     "email_notification_enabled",
-    "notification_record_path",
-    "read_notification_record",
     "render_summary_text",
-    "write_notification_record",
 ]

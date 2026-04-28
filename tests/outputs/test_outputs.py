@@ -12,6 +12,31 @@ from tests.support.std import Path, json, patch, tempfile, yaml
 
 
 class OutputTests(StageBatchSystemTestCase):
+    def test_invalid_artifact_strategy_is_config_contract_error(self) -> None:
+        from slurmforge.errors import ConfigContractError
+        from slurmforge.outputs.artifact_store import manage_file
+        from slurmforge.plans import ArtifactStorePlan
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "checkpoint.pt"
+            source.write_text("checkpoint\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ConfigContractError, "Unsupported artifact store strategy"):
+                manage_file(
+                    str(source),
+                    attempt_dir=root / "attempt",
+                    kind="file",
+                    store_plan=ArtifactStorePlan(strategy="bad-strategy", verify_digest=False),
+                )
+
+    def test_invalid_metric_json_path_is_config_contract_error(self) -> None:
+        from slurmforge.errors import ConfigContractError
+        from slurmforge.outputs.selection import json_path_value
+
+        with self.assertRaisesRegex(ConfigContractError, "unsupported metric json_path"):
+            json_path_value({"accuracy": 0.9}, "accuracy")
+
     def test_artifact_store_hardlink_strategy_is_recorded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

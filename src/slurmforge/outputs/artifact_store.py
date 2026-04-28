@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from ..errors import ConfigContractError
 from ..io import file_digest
 from ..plans import ArtifactStorePlan
 from .models import ArtifactRef
@@ -33,7 +34,7 @@ def _store_file(source: Path, managed: Path, *, strategy: str) -> tuple[str, boo
     elif strategy == "symlink":
         managed.symlink_to(source)
     else:
-        raise ValueError(f"Unsupported artifact store strategy: {strategy}")
+        raise ConfigContractError(f"Unsupported artifact store strategy: {strategy}")
     return str(managed), True
 
 

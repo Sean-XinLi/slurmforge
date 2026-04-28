@@ -10,10 +10,8 @@ from slurmforge.io import SchemaVersion
 from slurmforge.planner import compile_train_eval_pipeline_plan, compile_stage_batch_for_kind
 from slurmforge.resolver import resolve_stage_inputs_for_train_eval_pipeline, upstream_bindings_from_train_batch
 from slurmforge.spec import load_experiment_spec
-from slurmforge.storage.layout import (
-    write_train_eval_pipeline_layout,
-    write_stage_batch_layout,
-)
+from slurmforge.storage.batch_layout import write_stage_batch_layout
+from slurmforge.storage.train_eval_pipeline_layout import write_train_eval_pipeline_layout
 from slurmforge.storage.loader import load_stage_batch_plan, load_stage_outputs
 from slurmforge.submission.generation import create_submit_generation
 from slurmforge.submission.ledger import read_submission_ledger, write_submission_ledger

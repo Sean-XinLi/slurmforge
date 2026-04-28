@@ -69,7 +69,7 @@ class InputResolutionTests(StageBatchSystemTestCase):
             self.assertTrue(binding.resolved.path.endswith(".pt"))
 
     def test_checkpoint_source_requires_explicit_input_name_when_ambiguous(self) -> None:
-        from slurmforge.resolver import stage_source_input_name
+        from slurmforge.spec import stage_source_input_name
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -99,7 +99,7 @@ class InputResolutionTests(StageBatchSystemTestCase):
                 stage_source_input_name(spec, stage_name="eval")
 
     def test_checkpoint_cli_source_is_external_path_with_checkpoint_role(self) -> None:
-        from slurmforge.cli.stage_common import resolve_eval_inputs
+        from slurmforge.orchestration import resolve_eval_inputs
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -119,4 +119,25 @@ class InputResolutionTests(StageBatchSystemTestCase):
             self.assertEqual(source_ref, f"checkpoint:{checkpoint.resolve()}")
             self.assertEqual(binding.source.kind, "external_path")
             self.assertEqual(binding.resolution["source_role"], "checkpoint")
+            self.assertEqual(binding.resolved.path, str(checkpoint.resolve()))
+
+    def test_checkpoint_cli_relative_path_resolves_from_config_root(self) -> None:
+        from slurmforge.orchestration import resolve_eval_inputs
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = write_demo_project(root)
+            checkpoint = root / "manual.pt"
+            checkpoint.write_text("manual", encoding="utf-8")
+            spec = load_experiment_spec(cfg_path)
+
+            runs, bindings, source_ref = resolve_eval_inputs(
+                spec,
+                from_train_batch=None,
+                from_run=None,
+                checkpoint="manual.pt",
+            )
+
+            binding = bindings[runs[0].run_id][0]
+            self.assertEqual(source_ref, f"checkpoint:{checkpoint.resolve()}")
             self.assertEqual(binding.resolved.path, str(checkpoint.resolve()))

@@ -163,7 +163,8 @@ def render_stage_notification_sbatch(batch: StageBatchPlan, event: str, *, gener
             "set -euo pipefail",
             *_environment_lines(_finalizer_environment(batch)),
             f"BATCH_ROOT={_q(batch.submission_root)}",
-            f'{_q(python_bin)} -m slurmforge.submission.finalizer --root "${{BATCH_ROOT}}" --event {_q(event)}',
+            f'{_q(python_bin)} -m slurmforge.notifications.finalizer_runtime --root "${{BATCH_ROOT}}" '
+            f"--event {_q(event)}",
             "",
         ]
     )

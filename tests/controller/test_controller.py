@@ -133,7 +133,7 @@ class ControllerTests(StageBatchSystemTestCase):
 
     def test_controller_sends_one_pipeline_terminal_notification(self) -> None:
         from slurmforge.controller.train_eval_pipeline import run_controller
-        from slurmforge.notifications import read_notification_record
+        from slurmforge.notifications.records import read_notification_record
         from slurmforge.slurm import FakeSlurmClient
         from slurmforge.status import StageStatusRecord, commit_stage_status
 

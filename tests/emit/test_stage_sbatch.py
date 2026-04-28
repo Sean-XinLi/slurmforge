@@ -117,7 +117,7 @@ class StageSbatchTests(StageBatchSystemTestCase):
             notify_path = Path(notifications[0]["sbatch_path"])
             self.assertTrue(notify_path.exists())
             notify_text = notify_path.read_text()
-            self.assertIn("slurmforge.submission.finalizer", notify_text)
+            self.assertIn("slurmforge.notifications.finalizer_runtime", notify_text)
             submit_text = Path(manifest["submit_script"]).read_text()
             self.assertNotIn("notify_batch_finished", submit_text)
 

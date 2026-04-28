@@ -67,9 +67,13 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
         self.assertFalse(hasattr(storage, "refresh_stage_batch_status"))
         self.assertFalse(Path("src/slurmforge/plans/loaders.py").exists())
         self.assertFalse(Path("src/slurmforge/storage/aggregate.py").exists())
+        self.assertFalse(Path("src/slurmforge/storage/layout.py").exists())
 
     def test_public_facades_do_not_export_internal_helpers(self) -> None:
+        import slurmforge.notifications as notifications
         import slurmforge.plans as plans
+        import slurmforge.planner as planner
+        import slurmforge.resolver as resolver
         import slurmforge.spec as spec
         import slurmforge.submission as submission
 
@@ -103,6 +107,19 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
             "read_submission_ledger",
             "write_submission_ledger",
         }
+        planner_internal = {
+            "expand_run_definitions",
+            "stage_name_for_kind",
+        }
+        resolver_internal = {
+            "stage_source_input_name",
+        }
+        notifications_internal = {
+            "append_notification_event",
+            "notification_record_path",
+            "read_notification_record",
+            "write_notification_record",
+        }
         for name in spec_internal:
             self.assertFalse(hasattr(spec, name), name)
             self.assertNotIn(name, spec.__all__)
@@ -112,6 +129,68 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
         for name in submission_internal:
             self.assertFalse(hasattr(submission, name), name)
             self.assertNotIn(name, submission.__all__)
+        for name in planner_internal:
+            self.assertFalse(hasattr(planner, name), name)
+            self.assertNotIn(name, planner.__all__)
+        for name in resolver_internal:
+            self.assertFalse(hasattr(resolver, name), name)
+            self.assertNotIn(name, resolver.__all__)
+        for name in notifications_internal:
+            self.assertFalse(hasattr(notifications, name), name)
+            self.assertNotIn(name, notifications.__all__)
+
+    def test_orchestration_returns_data_instead_of_printing(self) -> None:
+        violations: list[str] = []
+        for path in sorted(Path("src/slurmforge/orchestration").rglob("*.py")):
+            if "print(" in path.read_text(encoding="utf-8"):
+                violations.append(str(path))
+        self.assertEqual(violations, [])
+
+    def test_orchestration_build_is_split_by_workflow(self) -> None:
+        self.assertFalse(Path("src/slurmforge/orchestration/build.py").exists())
+        self.assertTrue(Path("src/slurmforge/orchestration/audit.py").exists())
+        self.assertTrue(Path("src/slurmforge/orchestration/estimate.py").exists())
+        self.assertTrue(Path("src/slurmforge/orchestration/pipeline_build.py").exists())
+        self.assertTrue(Path("src/slurmforge/orchestration/stage_build.py").exists())
+
+    def test_orchestration_status_view_is_named_for_status_workflow(self) -> None:
+        self.assertFalse(Path("src/slurmforge/orchestration/render.py").exists())
+        self.assertTrue(Path("src/slurmforge/orchestration/status_view.py").exists())
+
+    def test_cli_stage_common_is_split_by_concern(self) -> None:
+        self.assertFalse(Path("src/slurmforge/cli/stage_common.py").exists())
+        self.assertTrue(Path("src/slurmforge/cli/args.py").exists())
+        self.assertTrue(Path("src/slurmforge/cli/builders.py").exists())
+        self.assertTrue(Path("src/slurmforge/cli/dry_run.py").exists())
+        self.assertTrue(Path("src/slurmforge/cli/render.py").exists())
+
+    def test_notification_finalizer_runtime_is_not_submission_runtime(self) -> None:
+        submission_finalizer = Path("src/slurmforge/submission/finalizer.py").read_text(encoding="utf-8")
+        self.assertNotIn("deliver_notification", submission_finalizer)
+        self.assertNotIn("load_notification_summary_input", submission_finalizer)
+        self.assertNotIn("def run_finalizer", submission_finalizer)
+        runtime = Path("src/slurmforge/notifications/finalizer_runtime.py").read_text(encoding="utf-8")
+        self.assertIn("def run_finalizer", runtime)
+        self.assertIn("deliver_notification", runtime)
+
+    def test_storage_layout_is_split_by_root_type(self) -> None:
+        self.assertFalse(Path("src/slurmforge/storage/layout.py").exists())
+        self.assertTrue(Path("src/slurmforge/storage/batch_layout.py").exists())
+        self.assertTrue(Path("src/slurmforge/storage/train_eval_pipeline_layout.py").exists())
+        self.assertTrue(Path("src/slurmforge/storage/status_seed.py").exists())
+        self.assertTrue(Path("src/slurmforge/storage/controller_seed.py").exists())
+
+    def test_sizing_package_stays_plan_agnostic(self) -> None:
+        self.assertFalse(Path("src/slurmforge/sizing/estimate.py").exists())
+        sizing_text = "\n".join(path.read_text(encoding="utf-8") for path in Path("src/slurmforge/sizing").rglob("*.py"))
+        self.assertNotIn("hasattr(plan", sizing_text)
+        self.assertNotIn("StageBatchPlan", sizing_text)
+        self.assertNotIn("TrainEvalPipelinePlan", sizing_text)
+
+    def test_spec_models_do_not_import_parser(self) -> None:
+        text = Path("src/slurmforge/spec/models.py").read_text(encoding="utf-8")
+        self.assertNotIn("parse_experiment_spec", text)
+        self.assertNotIn("from .parser import", text)
 
     def test_storage_package_facade_and_paths_are_not_used_externally(self) -> None:
         violations: list[str] = []

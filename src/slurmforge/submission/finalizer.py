@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-import sys
 
 from ..emit import write_stage_notification_barrier_file, write_stage_notification_submit_file
 from ..errors import ConfigContractError
 from ..io import utc_now
-from ..notifications.delivery import deliver_notification, email_notification_enabled
 from ..notifications.models import NotificationDeliveryRecord
+from ..notifications.policy import email_notification_enabled
 from ..notifications.records import append_notification_event, write_notification_record
 from ..plans import StageBatchPlan
-from ..read_models import load_notification_summary_input, notification_plan_for_root
 from ..slurm import SlurmClient
-from .reconcile import reconcile_batch_submission
 
 
 MAX_DEPENDENCY_LENGTH = 3500
@@ -129,46 +126,3 @@ def submit_stage_batch_finalizer(
     )
     return record
 
-
-def run_finalizer(
-    root: Path,
-    *,
-    event: str,
-    missing_output_grace_seconds: int = 300,
-) -> int:
-    target = Path(root).resolve()
-    if event == "batch_finished":
-        reconcile_batch_submission(
-            target,
-            missing_output_grace_seconds=missing_output_grace_seconds,
-        )
-    record = deliver_notification(
-        target,
-        event=event,
-        notification_plan=notification_plan_for_root(target),
-        summary_input=load_notification_summary_input(target, event=event),
-    )
-    if record is not None and record.state == "failed":
-        return 1
-    return 0
-
-
-def main(argv: list[str] | None = None) -> None:
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Send a slurmforge terminal summary notification")
-    parser.add_argument("--root", required=True)
-    parser.add_argument("--event", required=True, choices=("batch_finished", "train_eval_pipeline_finished"))
-    parser.add_argument("--missing-output-grace-seconds", type=int, default=300)
-    args = parser.parse_args(argv)
-    raise SystemExit(
-        run_finalizer(
-            Path(args.root),
-            event=args.event,
-            missing_output_grace_seconds=args.missing_output_grace_seconds,
-        )
-    )
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

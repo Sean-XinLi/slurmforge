@@ -229,7 +229,6 @@ ignore_imports =
     slurmforge.submission -> slurmforge.submission.reconcile
     slurmforge.submission -> slurmforge.submission.state
     slurmforge.submission -> slurmforge.submission.submitter
-    slurmforge.submission.finalizer -> slurmforge.submission.reconcile
     slurmforge.submission.generation -> slurmforge.submission.ledger
     slurmforge.submission.ready -> slurmforge.submission.ledger
     slurmforge.submission.reconcile -> slurmforge.submission.ledger
@@ -305,12 +304,14 @@ forbidden_modules =
     slurmforge.submission
 
 # ----------------------------------------------------------------------------
-# Contract 9: notifications/ owns summaries, records, and delivery runtime.
-# Scheduler submission for batch notification finalizers belongs to submission/.
+# Contract 9: notifications/ owns summaries, records, delivery runtime, and
+# finalizer runtime. Scheduler submission for batch notification finalizers
+# belongs to submission/.
 # ----------------------------------------------------------------------------
 [importlinter:contract:9]
 name = notifications do not own scheduler submission
 type = forbidden
+allow_indirect_imports = True
 source_modules =
     slurmforge.notifications
 forbidden_modules =
@@ -338,6 +339,10 @@ forbidden_modules =
     slurmforge.submission.reconcile
     slurmforge.submission.state
     slurmforge.submission.submitter
+ignore_imports =
+    slurmforge.notifications.finalizer_runtime -> slurmforge.slurm
+    slurmforge.notifications.finalizer_runtime -> slurmforge.storage.loader
+    slurmforge.notifications.read_model -> slurmforge.storage.loader
 
 # ----------------------------------------------------------------------------
 # Contract 10: read_models/ projects persisted read models only.
@@ -370,7 +375,10 @@ forbidden_modules =
     slurmforge.slurm
     slurmforge.spec
     slurmforge.storage.controller
-    slurmforge.storage.layout
+    slurmforge.storage.batch_layout
+    slurmforge.storage.controller_seed
     slurmforge.storage.materialization
     slurmforge.storage.paths
+    slurmforge.storage.status_seed
+    slurmforge.storage.train_eval_pipeline_layout
     slurmforge.submission

@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-from typing import Any
-
 from ..io import to_jsonable
-from .models import ExperimentResourceEstimate, ResourceGroupEstimate, StageResourceEstimate
+from ..plans import StageBatchPlan, TrainEvalPipelinePlan
+from ..sizing import ExperimentResourceEstimate, ResourceGroupEstimate, StageResourceEstimate
 
 
-def _stage_batch_estimate(batch: Any) -> StageResourceEstimate:
-    groups = tuple(getattr(batch, "group_plans", ()))
-    budget_plan = getattr(batch, "budget_plan", None)
+def build_stage_batch_resource_estimate(batch: StageBatchPlan) -> StageResourceEstimate:
+    groups = batch.group_plans
+    budget_plan = batch.budget_plan
     total_requested = sum(int(group.gpus_per_task) * int(group.array_size) for group in groups)
-    waves = tuple(getattr(budget_plan, "waves", ()) or ())
+    waves = budget_plan.waves
     if waves:
-        peak = max(int(getattr(wave, "total_wave_gpus", 0) or 0) for wave in waves)
+        peak = max(int(wave.total_wave_gpus or 0) for wave in waves)
         wave_count = len(waves)
     else:
         peak = total_requested
@@ -32,46 +31,50 @@ def _stage_batch_estimate(batch: Any) -> StageResourceEstimate:
         )
     seen: set[str] = set()
     run_sizing = []
-    for instance in getattr(batch, "stage_instances", ()):
-        payload = to_jsonable(getattr(instance, "resource_sizing", {}) or {})
+    for instance in batch.stage_instances:
+        payload = to_jsonable(instance.resource_sizing)
         key = repr(sorted(payload.items()))
         if key in seen:
             continue
         seen.add(key)
         run_sizing.append(payload)
     return StageResourceEstimate(
-        stage_name=str(batch.stage_name),
-        runs=len(tuple(getattr(batch, "selected_runs", ()))),
-        max_available_gpus=int(getattr(budget_plan, "max_available_gpus", 0) or 0),
+        stage_name=batch.stage_name,
+        runs=len(batch.selected_runs),
+        max_available_gpus=budget_plan.max_available_gpus,
         total_requested_gpus=total_requested,
         peak_concurrent_gpus=peak,
         waves=wave_count,
         resource_groups=tuple(group_estimates),
         run_sizing=tuple(run_sizing),
-        warnings=tuple(str(item) for item in getattr(budget_plan, "warnings", ()) or ()),
+        warnings=budget_plan.warnings,
     )
 
 
-def build_resource_estimate(plan: Any) -> ExperimentResourceEstimate:
-    if hasattr(plan, "stage_batches"):
-        batches = [plan.stage_batches[name] for name in plan.stage_order]
-        stages = tuple(_stage_batch_estimate(batch) for batch in batches)
-        first = batches[0]
-        return ExperimentResourceEstimate(
-            project=str(first.project),
-            experiment=str(first.experiment),
-            runs=len(tuple(plan.run_set)),
-            max_available_gpus=max((stage.max_available_gpus for stage in stages), default=0),
-            stages=stages,
-        )
-    stage = _stage_batch_estimate(plan)
+def build_train_eval_pipeline_resource_estimate(plan: TrainEvalPipelinePlan) -> ExperimentResourceEstimate:
+    batches = [plan.stage_batches[name] for name in plan.stage_order]
+    stages = tuple(build_stage_batch_resource_estimate(batch) for batch in batches)
+    first = batches[0]
     return ExperimentResourceEstimate(
-        project=str(plan.project),
-        experiment=str(plan.experiment),
-        runs=len(tuple(plan.selected_runs)),
-        max_available_gpus=stage.max_available_gpus,
-        stages=(stage,),
+        project=first.project,
+        experiment=first.experiment,
+        runs=len(plan.run_set),
+        max_available_gpus=max((stage.max_available_gpus for stage in stages), default=0),
+        stages=stages,
     )
+
+
+def build_resource_estimate(plan: StageBatchPlan | TrainEvalPipelinePlan) -> ExperimentResourceEstimate:
+    if isinstance(plan, StageBatchPlan):
+        stage = build_stage_batch_resource_estimate(plan)
+        return ExperimentResourceEstimate(
+            project=plan.project,
+            experiment=plan.experiment,
+            runs=len(plan.selected_runs),
+            max_available_gpus=stage.max_available_gpus,
+            stages=(stage,),
+        )
+    return build_train_eval_pipeline_resource_estimate(plan)
 
 
 def render_resource_estimate(estimate: ExperimentResourceEstimate) -> list[str]:

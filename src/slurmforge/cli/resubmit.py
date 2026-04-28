@@ -11,7 +11,9 @@ from ..orchestration import (
     emit_sourced_stage_batch,
     summarize_stage_batch,
 )
-from .stage_common import dry_run_mode_from_args, emit_machine_dry_run_if_requested, print_lines
+from .args import dry_run_mode_from_args
+from .dry_run import emit_machine_dry_run_if_requested
+from .render import print_lines, print_sourced_stage_batch_execution_result
 
 
 def handle_resubmit(args: argparse.Namespace) -> None:
@@ -59,11 +61,9 @@ def handle_resubmit(args: argparse.Namespace) -> None:
         print_lines(summarize_stage_batch(plan.batch))
         return
 
-    concrete, group_job_ids = emit_sourced_stage_batch(plan, submit=not args.emit_only)
-    print_lines(summarize_stage_batch(concrete.batch))
-    if group_job_ids is not None:
-        print(f"[OK] submitted resubmit batch: {concrete.batch.submission_root}")
-        print(f"[OK] scheduler_job_ids={','.join(group_job_ids.values())}")
+    result = emit_sourced_stage_batch(plan, submit=not args.emit_only)
+    print_lines(summarize_stage_batch(result.plan.batch))
+    print_sourced_stage_batch_execution_result(result, noun="resubmit batch")
 
 
 def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

@@ -276,11 +276,12 @@ class ResubmitTests(StageBatchSystemTestCase):
             self.assertEqual(status["state"], "blocked")
             self.assertEqual(status["failure_class"], "input_contract_error")
 
-            from slurmforge.cli.status import render_status
+            from slurmforge.orchestration import render_status_lines
 
             rendered = io.StringIO()
             with redirect_stdout(rendered):
-                render_status(root=resubmit_roots[0])
+                for line in render_status_lines(root=resubmit_roots[0]):
+                    print(line)
             output = rendered.getvalue()
             self.assertIn("materialization stage=eval state=blocked", output)
             self.assertIn("state=blocked", output)

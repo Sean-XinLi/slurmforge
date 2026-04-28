@@ -39,7 +39,8 @@ def explicit_input_bindings(
         raise ConfigContractError(f"`stages.{consumer_stage}.inputs.{input_name}` is required")
     if input_spec.expects not in {"path", "manifest"}:
         raise ConfigContractError(f"`{input_name}` expects {input_spec.expects}; explicit path inputs require path or manifest")
-    resolved = path.resolve()
+    source_path = path.expanduser()
+    resolved = source_path.resolve() if source_path.is_absolute() else (spec.project_root / source_path).resolve()
     if not resolved.exists() or not resolved.is_file():
         raise ConfigContractError(f"Input path does not exist: {resolved}")
     selected_runs = runs or expand_run_definitions(spec)

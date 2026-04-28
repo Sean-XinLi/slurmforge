@@ -4,6 +4,8 @@ import glob
 import re
 from pathlib import Path
 
+from ..errors import ConfigContractError
+
 
 def glob_paths(workdir: Path, patterns: list[str]) -> list[str]:
     paths: set[str] = set()
@@ -45,7 +47,7 @@ def json_path_value(payload: object, path: str) -> object:
     if path == "$":
         return payload
     if not path.startswith("$."):
-        raise ValueError(f"unsupported metric json_path: {path}")
+        raise ConfigContractError(f"unsupported metric json_path: {path}")
     cursor = payload
     for part in path[2:].split("."):
         if not isinstance(cursor, dict) or part not in cursor:

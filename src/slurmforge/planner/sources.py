@@ -6,6 +6,7 @@ from typing import Iterable
 
 import yaml
 
+from ..errors import ConfigContractError
 from ..overrides import deep_set, parse_override
 from ..plans import PriorBatchLineage, RunDefinition, SelectedStageRun, SourcedStageBatchPlan, StageBatchSource
 from ..spec import parse_experiment_spec, validate_experiment_spec
@@ -18,10 +19,10 @@ from .core import compile_stage_batch
 def _load_snapshot_yaml(root: Path) -> dict:
     path = root / "spec_snapshot.yaml"
     if not path.exists():
-        raise FileNotFoundError(f"spec_snapshot.yaml not found under {root}")
+        raise ConfigContractError(f"spec_snapshot.yaml not found under {root}")
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError(f"spec_snapshot.yaml must contain a mapping: {path}")
+        raise ConfigContractError(f"spec_snapshot.yaml must contain a mapping: {path}")
     return payload
 
 

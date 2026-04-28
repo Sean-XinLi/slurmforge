@@ -114,7 +114,7 @@ def write_source_contract(plan: SourcedStageBatchPlan) -> None:
 
 
 def materialize_sourced_stage_batch_plan(plan: SourcedStageBatchPlan) -> SourcedStageBatchPlan:
-    from .layout import write_stage_batch_layout
+    from .batch_layout import write_stage_batch_layout
 
     source_root = Path(plan.lineage.source_root)
     reserved = reserve_derived_stage_batch_root(source_root, plan.batch.batch_id)

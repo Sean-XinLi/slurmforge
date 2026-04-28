@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import copy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -247,13 +245,3 @@ class ExperimentSpec:
             stages = {name: stage for name, stage in stages.items() if name in selected}
         order = [name for name in ("train", "eval") if name in stages]
         return tuple(order)
-
-    def with_raw(self, raw: JsonObject, digest: str) -> "ExperimentSpec":
-        from .parser import parse_experiment_spec
-
-        return parse_experiment_spec(
-            copy.deepcopy(raw),
-            config_path=self.config_path,
-            project_root=self.project_root,
-            forced_digest=digest,
-        )

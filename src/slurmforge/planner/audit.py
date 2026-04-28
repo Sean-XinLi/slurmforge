@@ -8,8 +8,8 @@ from ..runtime import check_runtime_contract
 from ..inputs import verify_stage_instance_inputs
 from ..io import SchemaVersion, stable_json, to_jsonable
 from ..plans import TrainEvalPipelinePlan, StageBatchPlan
-from ..sizing import build_resource_estimate
 from ..spec import ExperimentSpec
+from .resource_estimate import build_resource_estimate
 
 
 @dataclass(frozen=True)

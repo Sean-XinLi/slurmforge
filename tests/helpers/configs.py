@@ -1,119 +1,97 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 
+from slurmforge.starter import InitRequest, create_starter_project
 
-def write_demo_project(root: Path, *, extra: dict | None = None) -> Path:
-    (root / "train.py").write_text(
-        "\n".join(
-            [
-                "from pathlib import Path",
-                "import argparse",
-                "p = argparse.ArgumentParser()",
-                "p.add_argument('--lr')",
-                "args = p.parse_args()",
-                "out = Path('checkpoints')",
-                "out.mkdir(exist_ok=True)",
-                "(out / f'step_{str(args.lr).replace(\".\", \"\")}.pt').write_text('ckpt')",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (root / "eval.py").write_text(
-        "\n".join(
-            [
-                "from pathlib import Path",
-                "import argparse, os",
-                "p = argparse.ArgumentParser()",
-                "p.add_argument('--checkpoint_path')",
-                "args = p.parse_args()",
-                "assert args.checkpoint_path == os.environ['SFORGE_INPUT_CHECKPOINT']",
-                "out = Path('eval')",
-                "out.mkdir(exist_ok=True)",
-                "(out / 'metrics.csv').write_text('metric,value\\nacc,1\\n')",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    cfg = {
-        "project": "demo",
-        "experiment": "stage_pipeline",
-        "storage": {"root": str(root / "runs")},
-        "environments": {
-            "default": {
-                "modules": [],
-                "source": [],
-                "env": {"DEMO_ENV": "1"},
-            }
-        },
-        "runtime": {
-            "executor": {
-                "python": {"bin": "python3.11", "min_version": "3.10"},
-            },
-            "user": {"default": {"python": {"bin": "python3.11", "min_version": "3.10"}}},
-        },
-        "artifact_store": {"strategy": "copy", "verify_digest": True},
-        "runs": {"type": "grid", "axes": {"train.entry.args.lr": [0.001]}},
-        "stages": {
-            "train": {
-                "kind": "train",
-                "environment": "default",
-                "entry": {
-                    "type": "python_script",
-                    "script": "train.py",
-                    "workdir": str(root),
-                },
-                "resources": {"nodes": 1, "gpus_per_node": 1, "cpus_per_task": 1, "constraint": "base"},
-                "outputs": {
-                    "checkpoint": {
-                        "kind": "file",
-                        "required": True,
-                        "discover": {"globs": ["checkpoints/**/*.pt"], "select": "latest_step"},
-                    }
-                },
-            },
-            "eval": {
-                "kind": "eval",
-                "environment": "default",
-                "depends_on": ["train"],
-                "entry": {
-                    "type": "python_script",
-                    "script": "eval.py",
-                    "workdir": str(root),
-                },
-                "inputs": {
-                    "checkpoint": {
-                        "source": {"kind": "upstream_output", "stage": "train", "output": "checkpoint"},
-                        "expects": "path",
-                        "required": True,
-                        "inject": {"flag": "checkpoint_path", "env": "SFORGE_INPUT_CHECKPOINT"},
-                    }
-                },
-                "resources": {"nodes": 1, "gpus_per_node": 1, "cpus_per_task": 1},
-                "outputs": {
-                    "eval_csv": {
-                        "kind": "files",
-                        "discover": {"globs": ["eval/**/*.csv"]},
-                    }
-                },
-            },
-        },
-        "dispatch": {"max_available_gpus": 2, "overflow_policy": "serialize_groups"},
-        "orchestration": {
-            "controller": {
-                "partition": "cpu",
-                "cpus": 1,
-                "mem": "2G",
-                "time_limit": "01:00:00",
-            },
-        },
-    }
-    if extra:
-        cfg.update(extra)
+
+DEFAULT_PROFILE = "stage_batch_default"
+DEFAULT_REPLACE_SECTIONS = ("runs",)
+
+
+def write_demo_project(
+    root: Path,
+    *,
+    profile: str = DEFAULT_PROFILE,
+    extra: dict | None = None,
+    replace_sections: tuple[str, ...] = DEFAULT_REPLACE_SECTIONS,
+) -> Path:
     cfg_path = root / "experiment.yaml"
+    create_starter_project(InitRequest(template="train-eval", output=cfg_path, force=True))
+    cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    if profile == "stage_batch_default":
+        _apply_stage_batch_default_profile(cfg, root)
+    else:
+        raise ValueError(f"Unknown demo project profile: {profile}")
+    if extra:
+        cfg = _deep_merge(cfg, extra, replace_sections=frozenset(replace_sections))
     cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
     return cfg_path
+
+
+def _apply_stage_batch_default_profile(cfg: dict[str, Any], root: Path) -> None:
+    cfg["experiment"] = "stage_pipeline"
+    cfg["storage"] = {"root": str(root / "runs")}
+    cfg["environments"]["default"]["env"] = {"DEMO_ENV": "1"}
+    cfg["runs"] = {"type": "grid", "axes": {"train.entry.args.lr": [0.001]}}
+    cfg["stages"]["train"]["entry"]["workdir"] = str(root)
+    cfg["stages"]["train"]["entry"]["args"] = {"lr": 0.001}
+    cfg["stages"]["eval"]["entry"]["workdir"] = str(root)
+    cfg["stages"]["eval"]["entry"]["args"] = {}
+    cfg["stages"]["eval"]["outputs"] = {
+        "eval_csv": {
+            "kind": "files",
+            "discover": {"globs": ["eval/**/*.csv"]},
+        }
+    }
+    cfg["stages"]["train"]["resources"].update(
+        {
+            "nodes": 1,
+            "gpus_per_node": 1,
+            "cpus_per_task": 1,
+            "constraint": "base",
+        }
+    )
+    cfg["stages"]["eval"]["resources"].update(
+        {
+            "nodes": 1,
+            "gpus_per_node": 1,
+            "cpus_per_task": 1,
+        }
+    )
+    cfg["orchestration"]["controller"].update(
+        {
+            "partition": "cpu",
+            "cpus": 1,
+            "mem": "2G",
+            "time_limit": "01:00:00",
+            "environment": "",
+        }
+    )
+
+
+def _deep_merge(
+    base: dict[str, Any],
+    override: dict[str, Any],
+    *,
+    replace_sections: frozenset[str] = frozenset(),
+    path: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        section_path = (*path, str(key))
+        dotted_path = ".".join(section_path)
+        existing = merged.get(key)
+        if dotted_path not in replace_sections and isinstance(existing, dict) and isinstance(value, dict):
+            merged[key] = _deep_merge(
+                existing,
+                value,
+                replace_sections=replace_sections,
+                path=section_path,
+            )
+        else:
+            merged[key] = value
+    return merged
