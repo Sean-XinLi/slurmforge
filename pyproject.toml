@@ -7,7 +7,8 @@ name = "slurmforge"
 dynamic = ["version"]
 description = "Experiment orchestration toolkit for Slurm-based training and evaluation workflows."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [
   {name = "Xin Li", email = "seanxinlee@gmail.com"},
@@ -16,13 +17,11 @@ maintainers = [
   {name = "Xin Li", email = "seanxinlee@gmail.com"},
 ]
 dependencies = [
-  "Jinja2>=3.1",
   "PyYAML>=6.0",
 ]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -47,10 +46,6 @@ dev = [
 
 [project.scripts]
 sforge = "slurmforge.launcher:main"
-sforge-run-plan-executor = "slurmforge.execution.run_plan.cli:main"
-sforge-artifact-sync = "slurmforge.execution.artifacts.cli:main"
-sforge-write-train-outputs = "slurmforge.execution.write_train_outputs:main"
-sforge-write-attempt-result = "slurmforge.execution.write_attempt_result:main"
 
 [tool.setuptools]
 include-package-data = true
@@ -66,8 +61,7 @@ where = ["src"]
 include = ["slurmforge", "slurmforge.*"]
 
 [tool.setuptools.package-data]
-slurmforge = ["templates/*.j2", "examples/*.yaml"]
-"slurmforge.starter_templates" = ["*.tmpl"]
+slurmforge = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

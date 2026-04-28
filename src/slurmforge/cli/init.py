@@ -1,189 +1,118 @@
-"""
-`sforge init` — create a starter project scaffold.
+"""``sforge init`` -- scaffold starter experiment files."""
 
-Decision tree (two orthogonal choices):
-
-  TRAINING TYPE  (how is your training code invoked?)
-    script    → train.py with CLI args            [most common]
-    command   → complete shell command
-    registry  → shared team model registry
-    adapter   → interface bridge script
-
-  PROFILE  (cluster complexity)
-    starter   → single GPU, minimal config        [default]
-    hpc       → multi-GPU, sweep, eval, artifact sync
-
-Examples
---------
-  sforge init                          # interactive wizard
-  sforge init script                   # script · starter profile
-  sforge init script --profile hpc    # script · hpc profile
-  sforge init command
-  sforge init command  --profile hpc
-  sforge init registry
-  sforge init registry --profile hpc
-  sforge init adapter
-  sforge init adapter  --profile hpc
-"""
 from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
 from pathlib import Path
 
-from ..starter_catalog import PROFILES, TEMPLATE_TYPES, get_starter_spec
-from ..starter_projects import init_project
-from .init_wizard import run_wizard
-
-_TYPE_DESCRIPTIONS = {
-    "script":   "Scaffold for a train.py-style script — slurmforge manages args and submission.",
-    "command":  "Scaffold that wraps a complete shell command in Slurm.",
-    "registry": "Scaffold using a shared team model registry.",
-    "adapter":  "Scaffold with an interface-bridge adapter script (advanced).",
-}
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _default_out_dir(template_type: str, profile: str) -> Path:
-    return Path(f"./slurmforge_{template_type}_{profile}")
+from ..errors import UsageError
+from ..starter.defaults import DEFAULT_OUTPUT
+from ..starter import (
+    InitRequest,
+    StarterWriteError,
+    create_starter_project,
+    template_choices,
+    template_descriptions,
+)
+from ..starter.writers import existing_starter_files
 
 
-def _prompt_overwrite(out_dir: Path) -> bool:
-    """
-    Return True if it is safe to proceed (dir is empty/new, or user confirmed overwrite).
-    Exits the process if the user declines or stdin is not a TTY.
-    """
-    if not out_dir.exists() or not any(out_dir.iterdir()):
-        return True
-    if not sys.stdin.isatty():
-        print(
-            f"[sforge init] '{out_dir}' is not empty. Re-run with --force to overwrite.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    print(f"\n  '{out_dir.name}' already exists and is not empty.")
-    try:
-        answer = input("  Overwrite existing files? [y/N] ").strip().lower()
-    except (EOFError, KeyboardInterrupt):
-        print()
-        sys.exit(0)
-    return answer in ("y", "yes")
+def _is_interactive() -> bool:
+    return sys.stdin.isatty()
 
 
-# ---------------------------------------------------------------------------
-# Shared argument builder
-# ---------------------------------------------------------------------------
+def _prompt_template() -> str:
+    choices = template_choices()
+    print("Select template:")
+    for index, (name, description) in enumerate(template_descriptions(), start=1):
+        print(f"  {index}. {name} - {description}")
+    while True:
+        value = input("Template [1]: ").strip()
+        if not value:
+            return choices[0]
+        if value.isdigit() and 1 <= int(value) <= len(choices):
+            return choices[int(value) - 1]
+        if value in choices:
+            return value
+        print(f"Invalid template: {value}")
 
-def _add_common_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--profile",
-        default="starter",
-        choices=PROFILES,
-        metavar="PROFILE",
-        help=(
-            "Cluster complexity profile. "
-            "'starter' = single GPU, minimal config (default). "
-            "'hpc' = multi-GPU, sweep, eval, artifact sync."
-        ),
+
+def _prompt_output() -> Path:
+    value = input(f"Output config path [{DEFAULT_OUTPUT}]: ").strip()
+    return Path(value or DEFAULT_OUTPUT)
+
+
+def _confirm_overwrite(paths: tuple[Path, ...]) -> bool:
+    print("The following generated files already exist:")
+    for path in paths:
+        print(f"  {path}")
+    answer = input("Overwrite? [y/N]: ").strip().lower()
+    return answer in {"y", "yes"}
+
+
+def _request_from_args(args: argparse.Namespace) -> InitRequest | None:
+    if args.template is None:
+        if not _is_interactive():
+            raise UsageError(
+                "sforge init requires --template when stdin is not interactive"
+            )
+        template = _prompt_template()
+        output = _prompt_output()
+    else:
+        template = args.template
+        output = Path(args.output or DEFAULT_OUTPUT)
+    request = InitRequest(template=template, output=output, force=args.force)
+    existing = existing_starter_files(request)
+    if existing and not request.force:
+        if not _is_interactive():
+            joined = ", ".join(str(path) for path in existing)
+            raise StarterWriteError(
+                f"Refusing to overwrite existing files: {joined}. Use --force to replace them."
+            )
+        if not _confirm_overwrite(existing):
+            return None
+        request = replace(request, force=True)
+    return request
+
+
+def handle_init(args: argparse.Namespace) -> None:
+    if args.list_templates:
+        for name, description in template_descriptions():
+            print(f"{name}: {description}")
+        return
+    request = _request_from_args(args)
+    if request is None:
+        print("[INIT] cancelled")
+        return
+    result = create_starter_project(request)
+    print(f"[INIT] template={result.template} config={result.config_path}")
+    for file in result.files:
+        print(f"[INIT] wrote {file.role}: {file.path}")
+
+
+def add_subparser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    parser = subparsers.add_parser(
+        "init", help="Create a starter experiment config and scripts"
     )
     parser.add_argument(
-        "--out",
+        "--list-templates", action="store_true", help="List available starter templates"
+    )
+    parser.add_argument(
+        "--template",
+        choices=template_choices(),
         default=None,
-        metavar="DIR",
-        help=(
-            "Destination directory for the project scaffold "
-            "(default: ./slurmforge_<TYPE>_<PROFILE>)"
-        ),
+        help="Starter template to generate",
     )
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite existing files without prompting",
-    )
-
-
-# ---------------------------------------------------------------------------
-# Handlers
-# ---------------------------------------------------------------------------
-
-def _do_init(*, template_type: str, profile: str, out: str | None, force: bool) -> None:
-    out_dir = (
-        Path(out) if out is not None else _default_out_dir(template_type, profile)
-    ).expanduser().resolve()
-
-    if not force:
-        if not _prompt_overwrite(out_dir):
-            print("[sforge init] Aborted.")
-            return
-        force = True  # user confirmed or dir was empty — propagate to init_project
-
-    spec = get_starter_spec(template_type, profile)
-    written = init_project(template_type, profile, out_dir, force=force)
-    print(f"[OK] Initialized '{template_type}' scaffold (profile: {profile}) in: {out_dir}")
-    print(f"[INFO] {spec.post_init_guidance}")
-    print()
-    print("  Files created:")
-    for path in written:
-        print(f"    {path}")
-    print()
-    print("  Next steps:")
-    print(f"    1. Open  {out_dir / 'experiment.yaml'}")
-    print("    2. Fill in every field marked with ~  (required — see STEP 1 comments)")
-    print(f"    3. Run:  sforge validate --config {out_dir / 'experiment.yaml'}")
-    print(f"    4. Run:  sforge generate --config {out_dir / 'experiment.yaml'}")
-
-
-def handle_init_template(args: argparse.Namespace) -> None:
-    _do_init(
-        template_type=args.template_type,
-        profile=args.profile,
-        out=args.out,
-        force=args.force,
-    )
-
-
-def handle_init_wizard(args: argparse.Namespace) -> None:
-    """Fallback handler when no TYPE subcommand is given — launches interactive wizard."""
-    template_type, profile = run_wizard()
-    _do_init(template_type=template_type, profile=profile, out=args.out, force=args.force)
-
-
-# ---------------------------------------------------------------------------
-# Parser registration
-# ---------------------------------------------------------------------------
-
-def add_subparser(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    init_parser = subparsers.add_parser(
-        "init",
-        description=__doc__,
-        help="Create a starter project scaffold  (run 'sforge init' for interactive setup)",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    # Top-level --out/--force for wizard path (TYPE subcommand overrides these)
-    init_parser.add_argument(
-        "--out",
+        "--output",
         default=None,
-        metavar="DIR",
-        help="Output directory (wizard mode — overridden by TYPE subcommand flags)",
+        help=f"Config path to write (default: {DEFAULT_OUTPUT})",
     )
-    init_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite existing files without prompting",
+    parser.add_argument(
+        "--force", action="store_true", help="Overwrite existing generated files"
     )
-    init_parser.set_defaults(handler=handle_init_wizard)
-
-    # TYPE subcommands: script / command / registry / adapter
-    type_subparsers = init_parser.add_subparsers(dest="template_type")
-
-    for ttype in TEMPLATE_TYPES:
-        tp = type_subparsers.add_parser(
-            ttype,
-            help=_TYPE_DESCRIPTIONS.get(ttype, ""),
-            description=_TYPE_DESCRIPTIONS.get(ttype, ""),
-        )
-        tp.set_defaults(template_type=ttype, handler=handle_init_template)
-        _add_common_args(tp)
+    parser.set_defaults(handler=handle_init)

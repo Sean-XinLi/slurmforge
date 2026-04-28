@@ -1,0 +1,36 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Literal
+
+from ..plans.sources import SourcedStageBatchPlan
+
+
+ExecutionMode = Literal["preview", "emit", "submit"]
+
+
+@dataclass(frozen=True)
+class StageBatchExecutionResult:
+    root: str
+    mode: ExecutionMode
+    submitted: bool = False
+    scheduler_job_ids: dict[str, str] = field(default_factory=dict)
+    notification_job_id: str | None = None
+
+
+@dataclass(frozen=True)
+class SourcedStageBatchExecutionResult:
+    plan: SourcedStageBatchPlan
+    root: str
+    mode: ExecutionMode
+    submitted: bool = False
+    scheduler_job_ids: dict[str, str] = field(default_factory=dict)
+    notification_job_id: str | None = None
+
+
+@dataclass(frozen=True)
+class TrainEvalPipelineExecutionResult:
+    root: str
+    mode: ExecutionMode
+    submitted: bool = False
+    controller_job_id: str | None = None
