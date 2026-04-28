@@ -48,6 +48,12 @@ Available starter templates:
 - `train-only`: one train stage with a checkpoint output.
 - `eval-checkpoint`: one eval stage that consumes an explicit checkpoint path.
 
+The generated `train.py` and `eval.py` are structured as integration scaffolds:
+
+- `SECTION A - SlurmForge contract`: injected CLI args and environment contract.
+- `SECTION B - Your model code`: model construction, data loading, training, and eval logic to replace.
+- `SECTION C - Output contract`: checkpoint and metrics files declared by the YAML.
+
 ## Minimal Workflow
 
 ```bash

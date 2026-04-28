@@ -48,7 +48,19 @@ class GeneratedReadmeTests(StageBatchSystemTestCase):
                 cfg_path = root / "experiment.yaml"
                 create_starter_project(InitRequest(template=template, output=cfg_path))
                 readme = (root / "README.sforge.md").read_text(encoding="utf-8")
+                self.assertIn("## Connect Your Model", readme)
+                self.assertIn("SECTION A - SlurmForge contract", readme)
+                self.assertIn("SECTION B - Your model code", readme)
+                self.assertIn("SECTION C - Output contract", readme)
+                self.assertIn("SFORGE_INPUT_CHECKPOINT", readme)
+                self.assertIn("eval/metrics.json", readme)
                 self.assertIn("## Common Field Options", readme)
+                self.assertIn("| Field | Options | Meaning |", readme)
+                self.assertIn("`matrix`: Plan named cases, each with its own grid.", readme)
+                self.assertIn(
+                    "`notifications.email.on` | `batch_finished`, `train_eval_pipeline_finished`",
+                    readme,
+                )
                 self.assertIn(
                     "`stages.*.inputs.*.source.kind` | `upstream_output`, `external_path`",
                     readme,

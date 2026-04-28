@@ -6,6 +6,7 @@ from .sections import (
     render_artifact_store,
     render_dispatch,
     render_environments,
+    render_notifications,
     render_orchestration,
     render_project,
     render_runs,
@@ -25,6 +26,7 @@ def render_starter_config(template_name: str, config: dict[str, Any]) -> str:
     render_environments(lines, config)
     render_runtime(lines, config)
     render_artifact_store(lines, config)
+    render_notifications(lines, config)
     render_runs(lines, config)
     render_dispatch(lines, config)
     render_orchestration(lines, config)

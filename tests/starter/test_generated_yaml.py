@@ -33,7 +33,22 @@ class GeneratedYamlTests(StageBatchSystemTestCase):
                     option_comment("artifact_store.strategy", indent=2).strip(),
                     text,
                 )
-                self.assertIn('min_version: "3.10"', text)
+                self.assertIn(
+                    option_comment("notifications.email.on", indent=4).strip(),
+                    text,
+                )
+                self.assertIn(
+                    option_comment("notifications.email.mode", indent=4).strip(),
+                    text,
+                )
+                self.assertIn(
+                    'min_version: "3.10"  # Minimum version required for the executor.',
+                    text,
+                )
+                self.assertIn(
+                    'min_version: "3.10"  # Minimum version required for user scripts.',
+                    text,
+                )
                 if template == "eval-checkpoint":
                     self.assertIn(
                         "This starter writes checkpoint.pt as a sample input.",
@@ -42,4 +57,8 @@ class GeneratedYamlTests(StageBatchSystemTestCase):
                 self.assertEqual(
                     payload["runtime"]["executor"]["python"]["min_version"],
                     "3.10",
+                )
+                self.assertFalse(payload["notifications"]["email"]["enabled"])
+                self.assertEqual(
+                    payload["notifications"]["email"]["on"], ["batch_finished"]
                 )

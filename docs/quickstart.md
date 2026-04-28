@@ -24,6 +24,17 @@ Template choices:
 
 `sforge init` is intentionally narrow. It only selects the template, chooses the output path, and confirms overwrite behavior.
 
+## Connect Your Model
+
+The generated `train.py` and `eval.py` are runnable scaffolds. Keep the `SECTION A - SlurmForge contract` and `SECTION C - Output contract` blocks, then replace `SECTION B - Your model code` with your imports, model construction, data loading, training loop, and evaluation logic.
+
+The default `train-eval` contract is:
+
+- `stages.train.entry.args` become CLI flags such as `--epochs` and `--lr`.
+- Train writes a `.pt` checkpoint under `checkpoints/`; the starter YAML discovers it with `checkpoints/**/*.pt`.
+- Eval receives that checkpoint as `--checkpoint_path` and `SFORGE_INPUT_CHECKPOINT`.
+- Eval writes `eval/metrics.json` with a numeric `accuracy` field.
+
 ## Validate And Preview
 
 For a train/eval pipeline:

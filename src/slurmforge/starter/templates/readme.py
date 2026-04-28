@@ -49,6 +49,16 @@ Template: `{plan.template}`
 - Submitted plans and run artifacts land under `{DEFAULT_STORAGE_ROOT}/<project>/<experiment>/...`.
 - Stage attempts write per-run records under the generated batch root's `runs/<run_id>/attempts/<attempt>/`.
 {notes_text}
+## Connect Your Model
+
+Generated scripts are split into three sections:
+
+- `SECTION A - SlurmForge contract`: keep the injected args and environment contract; add your own CLI args here.
+- `SECTION B - Your model code`: replace the demo model, data loading, train, and eval functions.
+- `SECTION C - Output contract`: keep the file shapes that the YAML declares.
+
+Training stages must leave a `.pt` checkpoint under `checkpoints/`. Eval stages receive the resolved checkpoint as `--checkpoint_path` and `SFORGE_INPUT_CHECKPOINT`, then write `eval/metrics.json` with a numeric `accuracy` field.
+
 ## Common Fields To Edit
 
 {fields}

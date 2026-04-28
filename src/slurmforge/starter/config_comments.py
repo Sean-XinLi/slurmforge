@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from ..field_options import FIELD_OPTIONS, options_comment, options_csv
+from ..field_options import option_table as field_option_table
+from ..field_options import options_comment
 
 
 def option_comment(field: str, *, indent: int) -> str:
@@ -8,7 +9,4 @@ def option_comment(field: str, *, indent: int) -> str:
 
 
 def option_table() -> str:
-    rows = ["| Field | Options |", "| --- | --- |"]
-    for field in sorted(FIELD_OPTIONS):
-        rows.append(f"| `{field}` | `{options_csv(field).replace(', ', '`, `')}` |")
-    return "\n".join(rows)
+    return field_option_table()

@@ -29,3 +29,9 @@ class DocsShapeTests(StageBatchSystemTestCase):
             for path in [Path("README.md"), *Path("docs").rglob("*.md")]
         )
         self.assertNotIn(planner_core_facade, docs_text)
+
+    def test_config_docs_field_options_match_catalog(self) -> None:
+        from slurmforge.field_options import option_table
+
+        config_doc = Path("docs/config.md").read_text(encoding="utf-8")
+        self.assertIn(option_table(), config_doc)

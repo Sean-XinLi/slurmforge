@@ -1,52 +1,30 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
+from tests.starter.helpers import init_args, interactive_init_args
 import io
 import tempfile
 import yaml
-from argparse import Namespace
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
 
 class StarterTests(StageBatchSystemTestCase):
-    def _init_args(
-        self,
-        root: Path,
-        *,
-        template: str = "train-eval",
-        force: bool = False,
-    ) -> Namespace:
-        return Namespace(
-            template=template,
-            list_templates=False,
-            output=str(root / "experiment.yaml"),
-            force=force,
-        )
-
-    def _interactive_init_args(self) -> Namespace:
-        return Namespace(
-            template=None,
-            list_templates=False,
-            output=None,
-            force=False,
-        )
-
     def test_existing_files_are_not_overwritten_without_force_or_confirm(self) -> None:
         from slurmforge.starter import StarterWriteError
         from slurmforge.cli.init import handle_init
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            handle_init(self._init_args(root))
+            handle_init(init_args(root))
             original = (root / "experiment.yaml").read_text(encoding="utf-8")
 
             with (
                 patch("sys.stdin.isatty", return_value=False),
                 self.assertRaisesRegex(StarterWriteError, "--force"),
             ):
-                handle_init(self._init_args(root))
+                handle_init(init_args(root))
             self.assertEqual(
                 (root / "experiment.yaml").read_text(encoding="utf-8"), original
             )
@@ -64,7 +42,7 @@ class StarterTests(StageBatchSystemTestCase):
                 patch("builtins.input", side_effect=["2", str(cfg_path)]),
                 redirect_stdout(stdout),
             ):
-                handle_init(self._interactive_init_args())
+                handle_init(interactive_init_args())
 
             self.assertTrue(cfg_path.exists())
             spec = load_experiment_spec(cfg_path)
@@ -76,7 +54,7 @@ class StarterTests(StageBatchSystemTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            args = self._init_args(root)
+            args = init_args(root)
             handle_init(args)
             (root / "experiment.yaml").write_text("changed: true\n", encoding="utf-8")
 
@@ -96,7 +74,7 @@ class StarterTests(StageBatchSystemTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            args = self._init_args(root)
+            args = init_args(root)
             handle_init(args)
             original = (root / "experiment.yaml").read_text(encoding="utf-8")
             stdout = io.StringIO()
@@ -111,35 +89,3 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertEqual(
                 (root / "experiment.yaml").read_text(encoding="utf-8"), original
             )
-
-
-def _dry_run_command_for_template(template: str, _root: Path) -> list[str]:
-    if template == "train-eval":
-        return ["run"]
-    if template == "train-only":
-        return ["train"]
-    return ["eval", "--checkpoint", "checkpoint.pt"]
-
-
-def _bad_template(file_builder):
-    from slurmforge.starter.models import (
-        StarterCommandSet,
-        StarterReadmePlan,
-        StarterTemplate,
-    )
-
-    return StarterTemplate(
-        name="bad-template",
-        description="bad",
-        config_builder=lambda _request: {"project": "demo"},
-        readme_builder=lambda request: StarterReadmePlan(
-            template=request.template,
-            commands=StarterCommandSet(
-                validate="sforge validate --config experiment.yaml",
-                dry_run="sforge run --config experiment.yaml --dry-run=full",
-                submit="sforge run --config experiment.yaml",
-            ),
-            editable_fields=(),
-        ),
-        file_builders=(file_builder,),
-    )

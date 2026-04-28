@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..errors import ConfigContractError
+from ..field_options import options_for, options_sentence
 from .models import EmailNotificationSpec, NotificationsSpec
 from .parse_common import optional_mapping, reject_unknown_keys
 
@@ -23,7 +24,7 @@ def parse_notification_events(raw: Any) -> tuple[str, ...]:
     if not isinstance(raw, list):
         raise ConfigContractError("`notifications.email.on` must be a list")
     events = tuple(str(item) for item in raw)
-    allowed = {"batch_finished", "train_eval_pipeline_finished"}
+    allowed = set(options_for("notifications.email.on"))
     invalid = sorted(set(events) - allowed)
     if invalid:
         joined = ", ".join(invalid)
@@ -41,8 +42,10 @@ def parse_notifications(raw: Any) -> NotificationsSpec:
         name="notifications.email",
     )
     mode = str(email_data.get("mode") or "summary")
-    if mode != "summary":
-        raise ConfigContractError("`notifications.email.mode` must be summary")
+    if mode not in options_for("notifications.email.mode"):
+        raise ConfigContractError(
+            f"`notifications.email.mode` must be {options_sentence('notifications.email.mode')}"
+        )
     return NotificationsSpec(
         email=EmailNotificationSpec(
             enabled=bool(email_data.get("enabled", False)),

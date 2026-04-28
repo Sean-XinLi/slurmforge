@@ -11,9 +11,10 @@ class TopLevelContractTests(StageBatchSystemTestCase):
     def test_top_level_shape_requires_stages_and_known_keys(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cfg_path = Path(tmp) / "experiment.yaml"
-            cfg_path.write_text(
-                "project: demo\nexperiment_name: old\nrun: {}\n", encoding="utf-8"
+            invalid_top_level_shape = (
+                "project: demo\nexperiment_name: unsupported\nrun: {}\n"
             )
+            cfg_path.write_text(invalid_top_level_shape, encoding="utf-8")
             with self.assertRaisesRegex(Exception, "stages"):
                 load_experiment_spec(cfg_path)
         with tempfile.TemporaryDirectory() as tmp:

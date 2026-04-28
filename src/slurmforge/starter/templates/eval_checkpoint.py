@@ -7,7 +7,7 @@ from ..defaults import DEFAULT_CHECKPOINT_PATH, TEMPLATE_EVAL_CHECKPOINT
 from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import checkpoint_file, eval_script
-from .stages import eval_stage_external_checkpoint
+from .stage_specs import eval_stage_external_checkpoint
 
 
 def build_config(_request: InitRequest) -> dict[str, Any]:

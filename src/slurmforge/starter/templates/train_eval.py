@@ -7,7 +7,7 @@ from ..defaults import TEMPLATE_TRAIN_EVAL
 from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import eval_script, train_script
-from .stages import eval_stage_from_train, train_stage
+from .stage_specs import eval_stage_from_train, train_stage
 
 
 def build_config(_request: InitRequest) -> dict[str, Any]:

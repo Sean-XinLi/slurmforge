@@ -61,6 +61,18 @@ artifact_store:
   verify_digest: true
   fail_on_verify_error: true
 
+notifications:
+  email:
+    enabled: false
+    to: []
+    "on":
+      - "batch_finished"
+      - "train_eval_pipeline_finished"
+    mode: "summary"
+    from: "slurmforge@localhost"
+    sendmail: "/usr/sbin/sendmail"
+    subject_prefix: "SlurmForge"
+
 runs:
   type: "matrix"
   cases:
@@ -233,11 +245,38 @@ sforge validate --config experiment.yaml --set train.entry.args.lr=0.001
 sforge validate --config experiment.yaml --set stages.train.entry.args.lr=0.001
 ```
 
+## Field Options
+
+This table is generated from `slurmforge.field_options.FieldCatalog`.
+
+| Field | Options | Meaning |
+| --- | --- | --- |
+| `artifact_store.fallback_strategy` | `null`, `copy`, `hardlink`, `symlink`, `register_only` | `null`: Disable fallback handling.<br>`copy`: Copy artifacts when the primary strategy fails.<br>`hardlink`: Hardlink artifacts when supported.<br>`symlink`: Symlink artifacts when supported.<br>`register_only`: Record artifacts without copying files. |
+| `artifact_store.strategy` | `copy`, `hardlink`, `symlink`, `register_only` | `copy`: Copy managed artifacts into the run store.<br>`hardlink`: Hardlink managed artifacts into the run store.<br>`symlink`: Symlink managed artifacts into the run store.<br>`register_only`: Track artifact paths without copying files. |
+| `dispatch.overflow_policy` | `serialize_groups`, `error`, `best_effort` | `serialize_groups`: Queue array groups within GPU budget.<br>`error`: Reject plans that exceed the GPU budget.<br>`best_effort`: Submit groups without strict serialization. |
+| `notifications.email.mode` | `summary` | `summary`: Send a compact workflow summary. |
+| `notifications.email.on` | `batch_finished`, `train_eval_pipeline_finished` | `batch_finished`: Send after a stage batch reaches terminal state.<br>`train_eval_pipeline_finished`: Send after a train/eval pipeline reaches terminal state. |
+| `runs.type` | `single`, `grid`, `cases`, `matrix` | `single`: Plan one run.<br>`grid`: Plan every combination from top-level axes.<br>`cases`: Plan named hand-authored run variants.<br>`matrix`: Plan named cases, each with its own grid. |
+| `stages.*.entry.type` | `python_script`, `command` | `python_script`: Run a Python file.<br>`command`: Run a shell command. |
+| `stages.*.inputs.*.expects` | `path`, `manifest`, `value` | `path`: Inject a filesystem path.<br>`manifest`: Inject a manifest payload.<br>`value`: Inject a scalar value. |
+| `stages.*.inputs.*.inject.mode` | `path`, `value`, `json` | `path`: Pass the resolved input path.<br>`value`: Pass the resolved input value.<br>`json`: Pass the resolved input encoded as JSON. |
+| `stages.*.inputs.*.source.kind` | `upstream_output`, `external_path` | `upstream_output`: Read an output from a previous stage.<br>`external_path`: Read an explicit user-provided path. |
+| `stages.*.launcher.mode` | `single_node`, `multi_node` | `single_node`: Launch on one node.<br>`multi_node`: Launch across multiple nodes. |
+| `stages.*.launcher.type` | `single`, `python`, `torchrun`, `srun`, `mpirun`, `command` | `single`: Run one process directly.<br>`python`: Launch through Python.<br>`torchrun`: Launch distributed PyTorch.<br>`srun`: Launch through Slurm srun.<br>`mpirun`: Launch through MPI.<br>`command`: Launch a raw command. |
+| `stages.*.outputs.*.discover.select` | `latest_step`, `first`, `last` | `latest_step`: Pick the path with the highest step number.<br>`first`: Pick the first sorted match.<br>`last`: Pick the last sorted match. |
+| `stages.*.outputs.*.kind` | `file`, `files`, `metric`, `manifest` | `file`: One managed file.<br>`files`: Multiple discovered files.<br>`metric`: A metric value read from JSON.<br>`manifest`: A manifest JSON file. |
+
 ## Runtime
 
 `runtime.executor.python.bin` is the Python used to run `python -m slurmforge.executor.stage`.
 
 `runtime.user.<name>.python.bin` is the Python used for user stage code. Both contracts are recorded in plans, checked by `--dry-run=full`, and written to `runtime_probe.json` during execution.
+
+## Notifications
+
+Notifications are disabled unless `notifications.email.enabled` is true. When enabled, `notifications.email.to` must contain at least one email address and `notifications.email.on` must contain one or more supported terminal workflow events.
+
+`batch_finished` is emitted by stage-batch finalizer jobs. `train_eval_pipeline_finished` is emitted by the train/eval controller when the whole pipeline reaches a terminal state.
 
 ## Resources And Sizing
 
@@ -251,4 +290,4 @@ Stage inputs are resolved by the contract kernel, not by CLI-specific code paths
 
 `checkpoint` is a conventional input/output name, not a schema requirement. A config may use another input name when it declares the source and injection contract explicitly.
 
-`artifact_store.strategy` controls how produced checkpoints and declared artifacts are managed. Supported strategies are `copy`, `hardlink`, `symlink`, and `register_only`.
+`artifact_store.strategy` controls how produced checkpoints and declared artifacts are managed. Supported strategies are listed in Field Options.

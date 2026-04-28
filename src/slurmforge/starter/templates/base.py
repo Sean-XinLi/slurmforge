@@ -47,6 +47,17 @@ def base_config() -> dict[str, Any]:
             "verify_digest": True,
             "fail_on_verify_error": True,
         },
+        "notifications": {
+            "email": {
+                "enabled": False,
+                "to": [],
+                "on": ["batch_finished"],
+                "mode": "summary",
+                "from": "slurmforge@localhost",
+                "sendmail": "/usr/sbin/sendmail",
+                "subject_prefix": "SlurmForge",
+            }
+        },
         "runs": {"type": "single"},
         "dispatch": {
             "max_available_gpus": 1,

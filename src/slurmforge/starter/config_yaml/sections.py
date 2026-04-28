@@ -50,7 +50,7 @@ def render_runtime(lines: list[str], config: dict[str, Any]) -> None:
             "    python:",
             "      # Python used by slurmforge's executor wrapper on compute nodes.",
             f"      bin: {scalar(executor_python['bin'])}",
-            f"      min_version: {scalar(executor_python['min_version'])}",
+            f"      min_version: {scalar(executor_python['min_version'])}  # Minimum version required for the executor.",
             "    # Executor module; most users should keep this default.",
             f"    module: {scalar(executor['module'])}",
             "  user:",
@@ -58,7 +58,7 @@ def render_runtime(lines: list[str], config: dict[str, Any]) -> None:
             "      python:",
             "        # Python used to run your stage scripts.",
             f"        bin: {scalar(user_python['bin'])}",
-            f"        min_version: {scalar(user_python['min_version'])}",
+            f"        min_version: {scalar(user_python['min_version'])}  # Minimum version required for user scripts.",
             "      # Environment variables visible to user scripts.",
             f"      env: {scalar(user_default['env'])}",
             "",
@@ -80,6 +80,35 @@ def render_artifact_store(lines: list[str], config: dict[str, Any]) -> None:
             f"  verify_digest: {scalar(store['verify_digest'])}",
             "  # Fail the run if artifact verification cannot prove integrity.",
             f"  fail_on_verify_error: {scalar(store['fail_on_verify_error'])}",
+            "",
+        ]
+    )
+
+
+def render_notifications(lines: list[str], config: dict[str, Any]) -> None:
+    email = config["notifications"]["email"]
+    lines.extend(
+        [
+            "notifications:",
+            "  email:",
+            "    # Enable email summary notifications for terminal workflow events.",
+            f"    enabled: {scalar(email['enabled'])}",
+            "    # Required when enabled is true.",
+            f"    to: {scalar(email['to'])}",
+            option_comment("notifications.email.on", indent=4),
+            '    "on":',
+        ]
+    )
+    for event in email["on"]:
+        lines.append(f"      - {scalar(event)}")
+    lines.extend(
+        [
+            option_comment("notifications.email.mode", indent=4),
+            f"    mode: {scalar(email['mode'])}",
+            "    # Sender and local sendmail binary used by email delivery.",
+            f"    from: {scalar(email['from'])}",
+            f"    sendmail: {scalar(email['sendmail'])}",
+            f"    subject_prefix: {scalar(email['subject_prefix'])}",
             "",
         ]
     )

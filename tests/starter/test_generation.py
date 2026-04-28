@@ -1,38 +1,16 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
+from tests.starter.helpers import dry_run_command_for_template
 import io
 import json
 import tempfile
 import yaml
-from argparse import Namespace
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 
 class StarterTests(StageBatchSystemTestCase):
-    def _init_args(
-        self,
-        root: Path,
-        *,
-        template: str = "train-eval",
-        force: bool = False,
-    ) -> Namespace:
-        return Namespace(
-            template=template,
-            list_templates=False,
-            output=str(root / "experiment.yaml"),
-            force=force,
-        )
-
-    def _interactive_init_args(self) -> Namespace:
-        return Namespace(
-            template=None,
-            list_templates=False,
-            output=None,
-            force=False,
-        )
-
     def test_templates_generate_loadable_projects(self) -> None:
         from slurmforge.spec import load_experiment_spec
         from slurmforge.starter import (
@@ -99,6 +77,32 @@ class StarterTests(StageBatchSystemTestCase):
                 any((root / "runs").glob("**/train_eval_pipeline_plan.json"))
             )
 
+    def test_generated_scripts_are_model_integration_scaffolds(self) -> None:
+        from slurmforge.starter import InitRequest, create_starter_project
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = root / "experiment.yaml"
+            create_starter_project(InitRequest(template="train-eval", output=cfg_path))
+
+            train_text = (root / "train.py").read_text(encoding="utf-8")
+            eval_text = (root / "eval.py").read_text(encoding="utf-8")
+
+            for section in (
+                "SECTION A - SlurmForge contract",
+                "SECTION B - Your model code",
+                "SECTION C - Output contract",
+            ):
+                self.assertIn(section, train_text)
+                self.assertIn(section, eval_text)
+            self.assertIn("def build_model", train_text)
+            self.assertIn("def train_one_run", train_text)
+            self.assertIn("checkpoints/**/*.pt", train_text)
+            self.assertIn("def load_model_from_checkpoint", eval_text)
+            self.assertIn("def evaluate", eval_text)
+            self.assertIn("SFORGE_INPUT_CHECKPOINT", eval_text)
+            self.assertIn("eval/metrics.json", eval_text)
+
     def test_all_templates_support_their_full_dry_run_command(self) -> None:
         from slurmforge.launcher import main
         from slurmforge.starter import InitRequest, create_starter_project
@@ -109,7 +113,7 @@ class StarterTests(StageBatchSystemTestCase):
                 root = Path(tmp)
                 cfg_path = root / "experiment.yaml"
                 create_starter_project(InitRequest(template=template, output=cfg_path))
-                command = _dry_run_command_for_template(template, root)
+                command = dry_run_command_for_template(template)
                 args = [*command, "--config", str(cfg_path), "--dry-run=full"]
 
                 stdout = io.StringIO()
@@ -117,37 +121,5 @@ class StarterTests(StageBatchSystemTestCase):
                 with redirect_stdout(stdout), redirect_stderr(stderr):
                     code = main(args)
 
-                self.assertEqual(code, 0, stderr.getvalue())
-                self.assertEqual(json.loads(stdout.getvalue())["state"], "valid")
-
-
-def _dry_run_command_for_template(template: str, _root: Path) -> list[str]:
-    if template == "train-eval":
-        return ["run"]
-    if template == "train-only":
-        return ["train"]
-    return ["eval", "--checkpoint", "checkpoint.pt"]
-
-
-def _bad_template(file_builder):
-    from slurmforge.starter.models import (
-        StarterCommandSet,
-        StarterReadmePlan,
-        StarterTemplate,
-    )
-
-    return StarterTemplate(
-        name="bad-template",
-        description="bad",
-        config_builder=lambda _request: {"project": "demo"},
-        readme_builder=lambda request: StarterReadmePlan(
-            template=request.template,
-            commands=StarterCommandSet(
-                validate="sforge validate --config experiment.yaml",
-                dry_run="sforge run --config experiment.yaml --dry-run=full",
-                submit="sforge run --config experiment.yaml",
-            ),
-            editable_fields=(),
-        ),
-        file_builders=(file_builder,),
-    )
+            self.assertEqual(code, 0, stderr.getvalue())
+            self.assertEqual(json.loads(stdout.getvalue())["state"], "valid")

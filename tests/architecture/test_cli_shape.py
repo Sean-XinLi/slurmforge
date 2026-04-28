@@ -14,7 +14,7 @@ class CliShapeTests(StageBatchSystemTestCase):
         self.assertTrue(Path("src/slurmforge/cli/render.py").exists())
 
     def test_cli_flags_are_kebab_case_only(self) -> None:
-        old_flags = ("--dry_run", "--emit_only", "--project_root")
+        disallowed_flags = ("--dry_run", "--emit_only", "--project_root")
         checked = list(Path("src/slurmforge").rglob("*.py")) + [
             Path("README.md"),
             Path("docs/record-contract.md"),
@@ -22,7 +22,7 @@ class CliShapeTests(StageBatchSystemTestCase):
         violations: list[str] = []
         for path in checked:
             text = path.read_text(encoding="utf-8")
-            for flag in old_flags:
+            for flag in disallowed_flags:
                 if flag in text:
                     violations.append(f"{path} contains {flag}")
         self.assertEqual(violations, [])
