@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..defaults import DEFAULT_STORAGE_ROOT
+from ..defaults import DEFAULT_CONFIG_FILENAME, DEFAULT_STORAGE_ROOT
 from ..models import InitRequest, StarterCommandSet, StarterReadmePlan
 from ..config_comments import option_table
 
@@ -13,11 +13,10 @@ def starter_readme_plan(
     editable_fields: tuple[str, ...],
     notes: tuple[str, ...] = (),
 ) -> StarterReadmePlan:
-    config_name = request.output.name
     return StarterReadmePlan(
         template=request.template,
         commands=StarterCommandSet(
-            validate=f"sforge validate --config {config_name}",
+            validate=f"sforge validate --config {DEFAULT_CONFIG_FILENAME}",
             dry_run=dry_run_command,
             submit=submit_command,
         ),

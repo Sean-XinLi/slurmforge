@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .catalog import get_template
+from .defaults import DEFAULT_CONFIG_FILENAME
 from .errors import StarterWriteError
 from .models import GeneratedFile, InitRequest, InitResult, StarterWritePlan
 from .render import render_starter_files
@@ -13,6 +14,7 @@ def existing_starter_files(request: InitRequest) -> tuple[Path, ...]:
 
 
 def plan_starter_write(request: InitRequest) -> StarterWritePlan:
+    _validate_output_dir(request.output_dir)
     files = render_starter_files(request, get_template(request.template))
     return StarterWritePlan(
         files=files,
@@ -21,7 +23,8 @@ def plan_starter_write(request: InitRequest) -> StarterWritePlan:
 
 
 def create_starter_project(request: InitRequest) -> InitResult:
-    config_path = request.output.resolve()
+    output_dir = request.output_dir.resolve()
+    config_path = output_dir / DEFAULT_CONFIG_FILENAME
     plan = plan_starter_write(request)
     if plan.existing_paths and not request.force:
         joined = ", ".join(str(path) for path in plan.existing_paths)
@@ -31,6 +34,13 @@ def create_starter_project(request: InitRequest) -> InitResult:
         file.path.write_text(file.content, encoding="utf-8")
     return InitResult(
         template=request.template,
+        output_dir=output_dir,
         config_path=config_path,
         files=tuple(GeneratedFile(path=file.path, role=file.role) for file in plan.files),
     )
+
+
+def _validate_output_dir(output_dir: Path) -> None:
+    resolved = output_dir.resolve()
+    if resolved.exists() and not resolved.is_dir():
+        raise StarterWriteError(f"Output path is not a directory: {resolved}")

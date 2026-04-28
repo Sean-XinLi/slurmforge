@@ -26,9 +26,7 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertRaisesRegex(StarterTemplateError, "duplicate path"),
         ):
             render_starter_files(
-                InitRequest(
-                    template="bad-template", output=Path(tmp) / "experiment.yaml"
-                ),
+                InitRequest(template="bad-template", output_dir=Path(tmp)),
                 template,
             )
 
@@ -47,9 +45,7 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertRaisesRegex(StarterTemplateError, "must be relative"),
         ):
             render_starter_files(
-                InitRequest(
-                    template="bad-template", output=Path(tmp) / "experiment.yaml"
-                ),
+                InitRequest(template="bad-template", output_dir=Path(tmp)),
                 bad_template(absolute_path),
             )
 
@@ -68,9 +64,7 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertRaisesRegex(StarterTemplateError, "output root"),
         ):
             render_starter_files(
-                InitRequest(
-                    template="bad-template", output=Path(tmp) / "experiment.yaml"
-                ),
+                InitRequest(template="bad-template", output_dir=Path(tmp)),
                 bad_template(parent_path),
             )
 

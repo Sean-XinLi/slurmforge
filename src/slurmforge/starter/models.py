@@ -22,7 +22,7 @@ class StarterTemplate:
 @dataclass(frozen=True)
 class InitRequest:
     template: str
-    output: Path
+    output_dir: Path
     force: bool = False
 
 
@@ -70,5 +70,6 @@ class StarterWritePlan:
 @dataclass(frozen=True)
 class InitResult:
     template: str
+    output_dir: Path
     config_path: Path
     files: tuple[GeneratedFile, ...]

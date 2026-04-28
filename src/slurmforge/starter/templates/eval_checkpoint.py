@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
-from ..defaults import DEFAULT_CHECKPOINT_PATH, TEMPLATE_EVAL_CHECKPOINT
+from ..defaults import (
+    DEFAULT_CHECKPOINT_PATH,
+    DEFAULT_CONFIG_FILENAME,
+    TEMPLATE_EVAL_CHECKPOINT,
+)
 from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import checkpoint_file, eval_script
@@ -17,11 +21,16 @@ def build_config(_request: InitRequest) -> dict[str, Any]:
 
 
 def build_readme(request: InitRequest) -> StarterReadmePlan:
-    config_name = request.output.name
     return starter_readme_plan(
         request,
-        dry_run_command=f"sforge eval --config {config_name} --checkpoint {DEFAULT_CHECKPOINT_PATH} --dry-run=full",
-        submit_command=f"sforge eval --config {config_name} --checkpoint {DEFAULT_CHECKPOINT_PATH}",
+        dry_run_command=(
+            f"sforge eval --config {DEFAULT_CONFIG_FILENAME} "
+            f"--checkpoint {DEFAULT_CHECKPOINT_PATH} --dry-run=full"
+        ),
+        submit_command=(
+            f"sforge eval --config {DEFAULT_CONFIG_FILENAME} "
+            f"--checkpoint {DEFAULT_CHECKPOINT_PATH}"
+        ),
         editable_fields=(
             "project",
             "experiment",

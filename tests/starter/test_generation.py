@@ -27,12 +27,14 @@ class StarterTests(StageBatchSystemTestCase):
         for template in template_choices():
             with self.subTest(template=template), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
-                cfg_path = root / "experiment.yaml"
                 result = create_starter_project(
-                    InitRequest(template=template, output=cfg_path)
+                    InitRequest(template=template, output_dir=root)
                 )
 
                 self.assertEqual(result.template, template)
+                self.assertEqual(result.output_dir, root.resolve())
+                cfg_path = root / "experiment.yaml"
+                self.assertEqual(result.config_path, cfg_path.resolve())
                 self.assertTrue(cfg_path.exists())
                 self.assertTrue((root / "README.sforge.md").exists())
                 spec = load_experiment_spec(cfg_path)
@@ -45,7 +47,7 @@ class StarterTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             cfg_path = root / "experiment.yaml"
-            create_starter_project(InitRequest(template="train-eval", output=cfg_path))
+            create_starter_project(InitRequest(template="train-eval", output_dir=root))
 
             payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
             self.assertEqual(payload["project"], "demo")
@@ -82,8 +84,7 @@ class StarterTests(StageBatchSystemTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            cfg_path = root / "experiment.yaml"
-            create_starter_project(InitRequest(template="train-eval", output=cfg_path))
+            create_starter_project(InitRequest(template="train-eval", output_dir=root))
 
             train_text = (root / "train.py").read_text(encoding="utf-8")
             eval_text = (root / "eval.py").read_text(encoding="utf-8")
@@ -112,7 +113,7 @@ class StarterTests(StageBatchSystemTestCase):
             with self.subTest(template=template), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 cfg_path = root / "experiment.yaml"
-                create_starter_project(InitRequest(template=template, output=cfg_path))
+                create_starter_project(InitRequest(template=template, output_dir=root))
                 command = dry_run_command_for_template(template)
                 args = [*command, "--config", str(cfg_path), "--dry-run=full"]
 

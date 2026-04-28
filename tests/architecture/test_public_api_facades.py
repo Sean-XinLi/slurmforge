@@ -103,7 +103,8 @@ class PublicApiFacadeTests(StageBatchSystemTestCase):
         }
         starter_internal = {
             "DEFAULT_CHECKPOINT_PATH",
-            "DEFAULT_OUTPUT",
+            "DEFAULT_CONFIG_FILENAME",
+            "DEFAULT_OUTPUT_DIR",
             "TEMPLATE_EVAL_CHECKPOINT",
             "TEMPLATE_TRAIN_EVAL",
             "TEMPLATE_TRAIN_ONLY",

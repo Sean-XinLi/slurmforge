@@ -16,9 +16,8 @@ class GeneratedReadmeTests(StageBatchSystemTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            cfg_path = root / "experiment.yaml"
             create_starter_project(
-                InitRequest(template="eval-checkpoint", output=cfg_path)
+                InitRequest(template="eval-checkpoint", output_dir=root)
             )
 
             self.assertEqual(
@@ -45,8 +44,7 @@ class GeneratedReadmeTests(StageBatchSystemTestCase):
         for template in ("train-eval", "train-only", "eval-checkpoint"):
             with self.subTest(template=template), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
-                cfg_path = root / "experiment.yaml"
-                create_starter_project(InitRequest(template=template, output=cfg_path))
+                create_starter_project(InitRequest(template=template, output_dir=root))
                 readme = (root / "README.sforge.md").read_text(encoding="utf-8")
                 self.assertIn("## Connect Your Model", readme)
                 self.assertIn("SECTION A - SlurmForge contract", readme)

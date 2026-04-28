@@ -35,11 +35,12 @@ class StarterTests(StageBatchSystemTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            cfg_path = root / "custom.yaml"
+            output_dir = root / "custom_project"
+            cfg_path = output_dir / "experiment.yaml"
             stdout = io.StringIO()
             with (
                 patch("sys.stdin.isatty", return_value=True),
-                patch("builtins.input", side_effect=["2", str(cfg_path)]),
+                patch("builtins.input", side_effect=["2", str(output_dir)]),
                 redirect_stdout(stdout),
             ):
                 handle_init(interactive_init_args())
@@ -89,3 +90,14 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertEqual(
                 (root / "experiment.yaml").read_text(encoding="utf-8"), original
             )
+
+    def test_output_must_be_a_directory(self) -> None:
+        from slurmforge.cli.init import handle_init
+        from slurmforge.starter import StarterWriteError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "not-a-directory"
+            output.write_text("content\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(StarterWriteError, "not a directory"):
+                handle_init(init_args(output))

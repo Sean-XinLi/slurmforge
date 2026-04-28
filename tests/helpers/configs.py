@@ -24,7 +24,7 @@ def write_demo_project(
 ) -> Path:
     cfg_path = root / "experiment.yaml"
     create_starter_project(
-        InitRequest(template="train-eval", output=cfg_path, force=True)
+        InitRequest(template="train-eval", output_dir=root, force=True)
     )
     cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
     cfg = apply_overlay(

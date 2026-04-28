@@ -3,14 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from .config_yaml import render_starter_config
+from .defaults import DEFAULT_CONFIG_FILENAME
 from .errors import StarterTemplateError
 from .models import InitRequest, RenderedFile, StarterTemplate
 from .templates.readme import render_starter_readme
 
 
 def render_starter_files(request: InitRequest, template: StarterTemplate) -> tuple[RenderedFile, ...]:
-    config_path = request.output.resolve()
-    root = config_path.parent.resolve()
+    root = request.output_dir.resolve()
+    config_path = root / DEFAULT_CONFIG_FILENAME
     rendered = [
         RenderedFile(
             path=config_path,
