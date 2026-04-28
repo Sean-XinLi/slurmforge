@@ -57,10 +57,10 @@ class StarterTests(StageBatchSystemTestCase):
                 payload["stages"]["train"]["resources"]["partition"], "gpu"
             )
             self.assertEqual(
-                payload["runtime"]["executor"]["python"]["bin"], "python3.11"
+                payload["runtime"]["executor"]["python"]["bin"], "python3"
             )
             self.assertEqual(
-                payload["runtime"]["user"]["default"]["python"]["bin"], "python3.11"
+                payload["runtime"]["user"]["default"]["python"]["bin"], "python3"
             )
 
             stdout = io.StringIO()
