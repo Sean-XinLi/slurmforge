@@ -6,7 +6,10 @@ from tests.support.public import (
     load_experiment_spec,
     write_demo_project,
 )
-from tests.support.std import Path, json, replace, tempfile
+import json
+import tempfile
+from dataclasses import replace
+from pathlib import Path
 
 
 class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
@@ -15,11 +18,15 @@ class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
             root = Path(tmp)
             workdir = root / "work"
             (workdir / "checkpoints").mkdir(parents=True)
-            (workdir / "checkpoints" / "model_1.pt").write_text("old\n", encoding="utf-8")
+            (workdir / "checkpoints" / "model_1.pt").write_text(
+                "old\n", encoding="utf-8"
+            )
             latest = workdir / "checkpoints" / "model_2.pt"
             latest.write_text("new\n", encoding="utf-8")
 
-            result = self._discover(root, workdir, self._output_contract("checkpoint", "file"))
+            result = self._discover(
+                root, workdir, self._output_contract("checkpoint", "file")
+            )
 
             ref = result.stage_outputs.outputs["checkpoint"]
             self.assertIsNone(result.failure_reason)
@@ -35,7 +42,9 @@ class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
             (workdir / "eval" / "a.csv").write_text("a\n", encoding="utf-8")
             (workdir / "eval" / "b.csv").write_text("b\n", encoding="utf-8")
 
-            result = self._discover(root, workdir, self._output_contract("reports", "files"))
+            result = self._discover(
+                root, workdir, self._output_contract("reports", "files")
+            )
 
             ref = result.stage_outputs.outputs["reports"]
             manifest = json.loads(Path(ref.path).read_text(encoding="utf-8"))
@@ -51,9 +60,13 @@ class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
             root = Path(tmp)
             workdir = root / "work"
             workdir.mkdir()
-            (workdir / "metrics.json").write_text('{"accuracy": 0.9}\n', encoding="utf-8")
+            (workdir / "metrics.json").write_text(
+                '{"accuracy": 0.9}\n', encoding="utf-8"
+            )
 
-            result = self._discover(root, workdir, self._output_contract("accuracy", "metric"))
+            result = self._discover(
+                root, workdir, self._output_contract("accuracy", "metric")
+            )
 
             ref = result.stage_outputs.outputs["accuracy"]
             self.assertIsNone(result.failure_reason)
@@ -66,7 +79,9 @@ class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
             root = Path(tmp)
             workdir = root / "work"
             workdir.mkdir()
-            (workdir / "metrics.json").write_text('{"accuracy": 0.9}\n', encoding="utf-8")
+            (workdir / "metrics.json").write_text(
+                '{"accuracy": 0.9}\n', encoding="utf-8"
+            )
 
             result = self._discover(
                 root,
@@ -75,7 +90,10 @@ class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
             )
 
             self.assertNotIn("accuracy", result.stage_outputs.outputs)
-            self.assertIn("required output `accuracy` did not resolve", result.failure_reason or "")
+            self.assertIn(
+                "required output `accuracy` did not resolve",
+                result.failure_reason or "",
+            )
             self.assertIn("unsupported metric json_path", result.failure_reason or "")
 
     def test_manifest_output_records_manifest_file(self) -> None:
@@ -86,7 +104,9 @@ class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
             manifest_file = workdir / "manifest.json"
             manifest_file.write_text('{"items": []}\n', encoding="utf-8")
 
-            result = self._discover(root, workdir, self._output_contract("index", "manifest"))
+            result = self._discover(
+                root, workdir, self._output_contract("index", "manifest")
+            )
 
             ref = result.stage_outputs.outputs["index"]
             self.assertIsNone(result.failure_reason)
@@ -121,14 +141,21 @@ class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
         *,
         json_path: str = "$.accuracy",
     ) -> object:
-        from slurmforge.contracts import FileOutputDiscoveryRule, OutputDiscoveryRule, StageOutputContract, StageOutputSpec
+        from slurmforge.contracts import (
+            FileOutputDiscoveryRule,
+            OutputDiscoveryRule,
+            StageOutputContract,
+            StageOutputSpec,
+        )
 
         if kind == "file":
             spec = StageOutputSpec(
                 name=output_name,
                 kind=kind,
                 required=True,
-                discover=FileOutputDiscoveryRule(globs=("checkpoints/*.pt",), select="latest_step"),
+                discover=FileOutputDiscoveryRule(
+                    globs=("checkpoints/*.pt",), select="latest_step"
+                ),
             )
         elif kind == "files":
             spec = StageOutputSpec(

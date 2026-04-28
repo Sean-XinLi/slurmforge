@@ -12,7 +12,9 @@ from tests.support.internal_records import (
     write_train_eval_pipeline_layout,
     write_stage_batch_layout,
 )
-from tests.support.std import Path, json, tempfile
+import json
+import tempfile
+from pathlib import Path
 
 
 class StorageContractTests(StageBatchSystemTestCase):
@@ -27,16 +29,22 @@ class StorageContractTests(StageBatchSystemTestCase):
             batch_payload = json.loads(batch_plan_path.read_text())
             removed_batch_schema = dict(batch_payload)
             del removed_batch_schema["schema_version"]
-            batch_plan_path.write_text(json.dumps(removed_batch_schema), encoding="utf-8")
+            batch_plan_path.write_text(
+                json.dumps(removed_batch_schema), encoding="utf-8"
+            )
             from slurmforge.errors import RecordContractError
 
-            with self.assertRaisesRegex(RecordContractError, "stage_batch_plan.schema_version is required"):
+            with self.assertRaisesRegex(
+                RecordContractError, "stage_batch_plan.schema_version is required"
+            ):
                 load_stage_batch_plan(Path(train_batch.submission_root))
 
             batch_payload["schema_version"] = 1
             del batch_payload["stage_instances"][0]["output_contract"]["schema_version"]
             batch_plan_path.write_text(json.dumps(batch_payload), encoding="utf-8")
-            with self.assertRaisesRegex(Exception, "stage_output_contract.schema_version"):
+            with self.assertRaisesRegex(
+                Exception, "stage_output_contract.schema_version"
+            ):
                 load_stage_batch_plan(Path(train_batch.submission_root))
 
     def test_stage_instance_plan_requires_current_contract_fields(self) -> None:
@@ -64,10 +72,14 @@ class StorageContractTests(StageBatchSystemTestCase):
                     train_batch = compile_stage_batch_for_kind(spec, kind="train")
                     write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
 
-                    batch_plan_path = Path(train_batch.submission_root) / "batch_plan.json"
+                    batch_plan_path = (
+                        Path(train_batch.submission_root) / "batch_plan.json"
+                    )
                     batch_payload = json.loads(batch_plan_path.read_text())
                     del batch_payload[field]
-                    batch_plan_path.write_text(json.dumps(batch_payload), encoding="utf-8")
+                    batch_plan_path.write_text(
+                        json.dumps(batch_payload), encoding="utf-8"
+                    )
 
                     with self.assertRaisesRegex(KeyError, field):
                         load_stage_batch_plan(Path(train_batch.submission_root))
@@ -79,7 +91,9 @@ class StorageContractTests(StageBatchSystemTestCase):
             pipeline = compile_train_eval_pipeline_plan(spec)
             write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
 
-            pipeline_plan_path = Path(pipeline.root_dir) / "train_eval_pipeline_plan.json"
+            pipeline_plan_path = (
+                Path(pipeline.root_dir) / "train_eval_pipeline_plan.json"
+            )
             payload = json.loads(pipeline_plan_path.read_text())
             del payload["controller_plan"]["runtime_plan"]
             pipeline_plan_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -96,7 +110,9 @@ class StorageContractTests(StageBatchSystemTestCase):
             pipeline = compile_train_eval_pipeline_plan(spec)
             write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
 
-            pipeline_plan_path = Path(pipeline.root_dir) / "train_eval_pipeline_plan.json"
+            pipeline_plan_path = (
+                Path(pipeline.root_dir) / "train_eval_pipeline_plan.json"
+            )
             payload = json.loads(pipeline_plan_path.read_text())
             del payload["pipeline_kind"]
             pipeline_plan_path.write_text(json.dumps(payload), encoding="utf-8")

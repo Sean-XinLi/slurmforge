@@ -12,7 +12,8 @@ from tests.support.internal_records import (
     write_train_eval_pipeline_layout,
     write_stage_batch_layout,
 )
-from tests.support.std import Path, tempfile
+import tempfile
+from pathlib import Path
 
 
 class RootModelTests(StageBatchSystemTestCase):
@@ -33,17 +34,25 @@ class RootModelTests(StageBatchSystemTestCase):
             write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
             pipeline_descriptor = detect_root(Path(pipeline.root_dir))
             self.assertEqual(pipeline_descriptor.kind, "train_eval_pipeline")
-            self.assertEqual(len(tuple(iter_stage_run_dirs(pipeline_descriptor.root))), 2)
+            self.assertEqual(
+                len(tuple(iter_stage_run_dirs(pipeline_descriptor.root))), 2
+            )
 
     def test_invalid_root_is_user_facing_config_error(self) -> None:
         from slurmforge.errors import ConfigContractError
         from slurmforge.root_model import detect_root
 
-        with tempfile.TemporaryDirectory() as tmp, self.assertRaisesRegex(ConfigContractError, "not a stage batch"):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            self.assertRaisesRegex(ConfigContractError, "not a stage batch"),
+        ):
             detect_root(Path(tmp))
 
     def test_refresh_status_snapshots_write_root_read_models(self) -> None:
-        from slurmforge.root_model import refresh_stage_batch_status, refresh_train_eval_pipeline_status
+        from slurmforge.root_model import (
+            refresh_stage_batch_status,
+            refresh_train_eval_pipeline_status,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -57,14 +66,21 @@ class RootModelTests(StageBatchSystemTestCase):
 
             pipeline = compile_train_eval_pipeline_plan(spec)
             write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
-            pipeline_snapshot = refresh_train_eval_pipeline_status(Path(pipeline.root_dir))
+            pipeline_snapshot = refresh_train_eval_pipeline_status(
+                Path(pipeline.root_dir)
+            )
             self.assertEqual(pipeline_snapshot.kind, "train_eval_pipeline")
             self.assertEqual(pipeline_snapshot.pipeline_status.state, "planned")
             self.assertTrue((Path(pipeline.root_dir) / "run_status.json").exists())
-            self.assertTrue((Path(pipeline.root_dir) / "train_eval_pipeline_status.json").exists())
+            self.assertTrue(
+                (Path(pipeline.root_dir) / "train_eval_pipeline_status.json").exists()
+            )
 
     def test_status_aggregation_has_one_canonical_state_order(self) -> None:
-        from slurmforge.root_model import aggregate_run_status, aggregate_train_eval_pipeline_status
+        from slurmforge.root_model import (
+            aggregate_run_status,
+            aggregate_train_eval_pipeline_status,
+        )
         from slurmforge.status import StageStatusRecord
 
         statuses = [
@@ -91,7 +107,10 @@ class RootModelTests(StageBatchSystemTestCase):
         self.assertEqual(pipeline_status.stage_counts["eval"]["failed"], 1)
 
     def test_notification_summary_uses_root_status_snapshot(self) -> None:
-        from slurmforge.root_model import iter_stage_run_dirs, load_root_notification_snapshot
+        from slurmforge.root_model import (
+            iter_stage_run_dirs,
+            load_root_notification_snapshot,
+        )
         from slurmforge.status import StageStatusRecord, commit_stage_status
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -113,8 +132,12 @@ class RootModelTests(StageBatchSystemTestCase):
                 ),
             )
 
-            snapshot = load_root_notification_snapshot(Path(batch.submission_root), event="stage_batch_finished")
+            snapshot = load_root_notification_snapshot(
+                Path(batch.submission_root), event="stage_batch_finished"
+            )
             self.assertEqual(snapshot.status.run_statuses[0].state, "failed")
             self.assertEqual(snapshot.summary_input.state, "failed")
             self.assertEqual(snapshot.summary_input.run_statuses[0].state, "failed")
-            self.assertEqual(snapshot.summary_input.stage_statuses[0].failure_class, "script_error")
+            self.assertEqual(
+                snapshot.summary_input.stage_statuses[0].failure_class, "script_error"
+            )

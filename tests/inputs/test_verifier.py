@@ -6,7 +6,8 @@ from tests.support.public import (
     load_experiment_spec,
     write_demo_project,
 )
-from tests.support.std import Path, tempfile
+import tempfile
+from pathlib import Path
 
 
 class InputVerifierTests(StageBatchSystemTestCase):
@@ -29,7 +30,9 @@ class InputVerifierTests(StageBatchSystemTestCase):
                 inject={"mode": "path", "required": True},
             )
 
-            report = verify_stage_instance_inputs(instance, (binding,), phase="preflight")
+            report = verify_stage_instance_inputs(
+                instance, (binding,), phase="preflight"
+            )
 
             self.assertEqual(report.state, "failed")
             self.assertEqual(report.records[0].failure_class, "input_contract_error")
@@ -53,7 +56,9 @@ class InputVerifierTests(StageBatchSystemTestCase):
                 resolution={"expected_digest": "0" * 64},
             )
 
-            report = verify_stage_instance_inputs(instance, (binding,), phase="preflight")
+            report = verify_stage_instance_inputs(
+                instance, (binding,), phase="preflight"
+            )
 
             self.assertEqual(report.state, "failed")
             self.assertIn("digest mismatch", report.records[0].reason)
@@ -73,7 +78,9 @@ class InputVerifierTests(StageBatchSystemTestCase):
                 inject={"mode": "path", "required": True},
             )
 
-            report = verify_stage_instance_inputs(instance, (binding,), phase="preflight")
+            report = verify_stage_instance_inputs(
+                instance, (binding,), phase="preflight"
+            )
 
             self.assertEqual(report.state, "failed")
             self.assertIn("does not satisfy expects `path`", report.records[0].reason)

@@ -12,7 +12,8 @@ from tests.support.internal_records import (
     write_train_eval_pipeline_layout,
     write_stage_batch_layout,
 )
-from tests.support.std import Path, tempfile
+import tempfile
+from pathlib import Path
 
 
 class OrchestrationTests(StageBatchSystemTestCase):
@@ -22,20 +23,32 @@ class OrchestrationTests(StageBatchSystemTestCase):
         self.assertTrue(hasattr(orchestration, "build_prior_source_stage_batch"))
         self.assertTrue(hasattr(orchestration, "emit_sourced_stage_batch"))
         self.assertTrue(hasattr(orchestration, "render_status_lines"))
-        self.assertFalse(hasattr(orchestration, "compile_stage_batch_from_prior_source"))
+        self.assertFalse(
+            hasattr(orchestration, "compile_stage_batch_from_prior_source")
+        )
         self.assertFalse(hasattr(orchestration, "materialize_sourced_stage_batch_plan"))
         self.assertFalse(hasattr(orchestration, "prepare_stage_submission"))
         self.assertFalse(hasattr(orchestration, "read_controller_status"))
 
-    def test_emit_sourced_stage_batch_materializes_and_prepares_submit_files(self) -> None:
-        from slurmforge.orchestration import build_prior_source_stage_batch, emit_sourced_stage_batch
+    def test_emit_sourced_stage_batch_materializes_and_prepares_submit_files(
+        self,
+    ) -> None:
+        from slurmforge.orchestration import (
+            build_prior_source_stage_batch,
+            emit_sourced_stage_batch,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             pipeline = compile_train_eval_pipeline_plan(spec)
             write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
-            self.assertEqual(execute_stage_task(Path(pipeline.stage_batches["train"].submission_root), 1, 0), 0)
+            self.assertEqual(
+                execute_stage_task(
+                    Path(pipeline.stage_batches["train"].submission_root), 1, 0
+                ),
+                0,
+            )
             plan = build_prior_source_stage_batch(
                 source_root=Path(pipeline.root_dir),
                 stage_name="eval",
@@ -50,7 +63,9 @@ class OrchestrationTests(StageBatchSystemTestCase):
             self.assertFalse(result.submitted)
             self.assertTrue((batch_root / "source_plan.json").exists())
             self.assertTrue((batch_root / "submit" / "submit_manifest.json").exists())
-            self.assertTrue(next(batch_root.glob("runs/*/input_bindings.json")).exists())
+            self.assertTrue(
+                next(batch_root.glob("runs/*/input_bindings.json")).exists()
+            )
 
     def test_render_status_reports_stage_counts(self) -> None:
         from slurmforge.orchestration import render_status_lines

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.std import Path
+from pathlib import Path
 
 
 class SpecModelBoundaryTests(StageBatchSystemTestCase):

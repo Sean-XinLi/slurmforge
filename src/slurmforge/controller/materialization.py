@@ -5,9 +5,13 @@ from pathlib import Path
 from typing import Any
 
 from ..io import SchemaVersion, write_json
-from ..planner import compile_stage_batch
+from ..planner.stage_batch import compile_stage_batch
 from ..resolver import resolve_stage_inputs_for_train_eval_pipeline
-from ..root_model import iter_stage_run_dirs, refresh_stage_batch_status, refresh_train_eval_pipeline_status
+from ..root_model import (
+    iter_stage_run_dirs,
+    refresh_stage_batch_status,
+    refresh_train_eval_pipeline_status,
+)
 from ..status import StageStatusRecord, commit_stage_status, read_stage_status
 from ..status.models import TERMINAL_STATES
 from ..storage.batch_layout import write_selected_stage_batch_layout
@@ -46,19 +50,24 @@ def _mark_stage_blocked(
                 run_id=plan.run_id,
                 stage_name=plan.stage_name,
                 state="blocked",
-                reason=blocked_reasons.get(plan.run_id) or "required upstream stage output was not available",
+                reason=blocked_reasons.get(plan.run_id)
+                or "required upstream stage output was not available",
             ),
             source="controller",
         )
     return sorted(blocked_run_ids)
 
 
-def ensure_stage_materialized(pipeline_root: Path, plan, spec, state: dict[str, Any], stage_name: str):
+def ensure_stage_materialized(
+    pipeline_root: Path, plan, spec, state: dict[str, Any], stage_name: str
+):
     materialized = set(state.get("materialized_stages") or [])
     stage_root = Path(plan.stage_batches[stage_name].submission_root)
     if stage_name in materialized:
         return load_execution_stage_batch_plan(stage_root)
-    resolved = resolve_stage_inputs_for_train_eval_pipeline(spec, plan, stage_name=stage_name)
+    resolved = resolve_stage_inputs_for_train_eval_pipeline(
+        spec, plan, stage_name=stage_name
+    )
     selected_run_ids = {run.run_id for run in resolved.selected_runs}
     blocked = _mark_stage_blocked(
         stage_root,
@@ -66,12 +75,17 @@ def ensure_stage_materialized(pipeline_root: Path, plan, spec, state: dict[str, 
         blocked_reasons=resolved.blocked_reasons,
     )
     if not resolved.selected_runs:
-        write_json(stage_root / "blocked_runs.json", {"schema_version": SchemaVersion.BLOCKED_RUNS, "run_ids": blocked})
+        write_json(
+            stage_root / "blocked_runs.json",
+            {"schema_version": SchemaVersion.BLOCKED_RUNS, "run_ids": blocked},
+        )
         refresh_stage_batch_status(stage_root)
         refresh_train_eval_pipeline_status(pipeline_root)
         state["materialized_stages"] = sorted(materialized | {stage_name})
         save_controller_state(pipeline_root, state)
-        record_controller_event(pipeline_root, "stage_materialized", stage=stage_name, selected_runs=0)
+        record_controller_event(
+            pipeline_root, "stage_materialized", stage=stage_name, selected_runs=0
+        )
         return load_execution_stage_batch_plan(stage_root)
     batch = compile_stage_batch(
         spec,
@@ -87,5 +101,10 @@ def ensure_stage_materialized(pipeline_root: Path, plan, spec, state: dict[str, 
     refresh_train_eval_pipeline_status(pipeline_root)
     state["materialized_stages"] = sorted(materialized | {stage_name})
     save_controller_state(pipeline_root, state)
-    record_controller_event(pipeline_root, "stage_materialized", stage=stage_name, selected_runs=len(resolved.selected_runs))
+    record_controller_event(
+        pipeline_root,
+        "stage_materialized",
+        stage=stage_name,
+        selected_runs=len(resolved.selected_runs),
+    )
     return batch

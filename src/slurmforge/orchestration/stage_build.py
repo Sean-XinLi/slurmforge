@@ -4,13 +4,15 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from ..errors import UsageError
-from ..planner import (
-    compile_stage_batch_from_prior_source,
-    compile_stage_batch_for_kind,
-    summarize_stage_batch as _summarize_stage_batch,
-)
+from ..planner.sources import compile_stage_batch_from_prior_source
+from ..planner.stage_batch import compile_stage_batch_for_kind
+from ..planner.summaries import summarize_stage_batch as _summarize_stage_batch
 from ..plans.sources import SourcedStageBatchPlan
-from ..resolver import explicit_input_bindings, upstream_bindings_from_run, upstream_bindings_from_stage_batch
+from ..resolver import (
+    explicit_input_bindings,
+    upstream_bindings_from_run,
+    upstream_bindings_from_stage_batch,
+)
 from ..spec import ExperimentSpec
 from ..spec.queries import stage_source_input_name
 
@@ -41,9 +43,13 @@ def resolve_eval_inputs(
         )
         return runs, bindings, f"train_batch:{Path(from_train_batch).resolve()}"
     if from_run:
-        runs, bindings = upstream_bindings_from_run(spec, Path(from_run).resolve(), input_name=selected_input)
+        runs, bindings = upstream_bindings_from_run(
+            spec, Path(from_run).resolve(), input_name=selected_input
+        )
         return runs, bindings, f"run:{Path(from_run).resolve()}"
-    raise UsageError("eval requires one of --from-train-batch, --from-run, or --checkpoint")
+    raise UsageError(
+        "eval requires one of --from-train-batch, --from-run, or --checkpoint"
+    )
 
 
 def build_train_stage_batch(spec: ExperimentSpec):

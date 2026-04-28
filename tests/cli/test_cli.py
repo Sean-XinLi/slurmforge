@@ -10,7 +10,14 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import write_stage_batch_layout
-from tests.support.std import Namespace, Path, io, json, patch, redirect_stderr, redirect_stdout, tempfile, yaml
+import io
+import json
+import tempfile
+import yaml
+from argparse import Namespace
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+from unittest.mock import patch
 
 
 class CliTests(StageBatchSystemTestCase):
@@ -19,7 +26,11 @@ class CliTests(StageBatchSystemTestCase):
 
         parser = build_parser()
         stderr = io.StringIO()
-        with redirect_stdout(io.StringIO()), redirect_stderr(stderr), self.assertRaises(SystemExit):
+        with (
+            redirect_stdout(io.StringIO()),
+            redirect_stderr(stderr),
+            self.assertRaises(SystemExit),
+        ):
             parser.parse_args(["init", "--project", "demo"])
         self.assertIn("unrecognized arguments: --project", stderr.getvalue())
 
@@ -28,15 +39,38 @@ class CliTests(StageBatchSystemTestCase):
 
         parser = build_parser()
         stdout = io.StringIO()
-        with redirect_stdout(stdout), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+        with (
+            redirect_stdout(stdout),
+            redirect_stderr(io.StringIO()),
+            self.assertRaises(SystemExit) as raised,
+        ):
             parser.parse_args(["init", "--help"])
 
         self.assertEqual(raised.exception.code, 0)
         help_text = stdout.getvalue()
         for option in ("--list-templates", "--template", "--output", "--force"):
             self.assertIn(option, help_text)
-        for removed in ("--project", "--experiment", "--storage-root", "--partition", "--python-bin"):
+        for removed in (
+            "--project",
+            "--experiment",
+            "--storage-root",
+            "--partition",
+            "--python-bin",
+        ):
             self.assertNotIn(removed, help_text)
+
+    def test_validate_force_flag_is_removed(self) -> None:
+        from slurmforge.launcher import build_parser
+
+        parser = build_parser()
+        stderr = io.StringIO()
+        with (
+            redirect_stdout(io.StringIO()),
+            redirect_stderr(stderr),
+            self.assertRaises(SystemExit),
+        ):
+            parser.parse_args(["validate", "--config", "experiment.yaml", "--force"])
+        self.assertIn("unrecognized arguments: --force", stderr.getvalue())
 
     def test_user_cli_errors_do_not_emit_traceback(self) -> None:
         from slurmforge.launcher import main
@@ -52,11 +86,15 @@ class CliTests(StageBatchSystemTestCase):
             stdout = io.StringIO()
             stderr = io.StringIO()
             with redirect_stdout(stdout), redirect_stderr(stderr):
-                code = main(["init", "--template", "train-eval", "--output", str(cfg_path)])
+                code = main(
+                    ["init", "--template", "train-eval", "--output", str(cfg_path)]
+                )
 
             combined = stdout.getvalue() + stderr.getvalue()
             self.assertEqual(code, 2)
-            self.assertIn("[ERROR] Refusing to overwrite existing files:", stderr.getvalue())
+            self.assertIn(
+                "[ERROR] Refusing to overwrite existing files:", stderr.getvalue()
+            )
             self.assertNotIn("Traceback", combined)
 
     def test_unknown_cli_bugs_are_not_caught(self) -> None:
@@ -79,11 +117,33 @@ class CliTests(StageBatchSystemTestCase):
 
         parser = build_parser()
         stderr = io.StringIO()
-        with redirect_stdout(io.StringIO()), redirect_stderr(stderr), self.assertRaises(SystemExit):
-            parser.parse_args(["plan", "train", "--config", "unused.yaml", "--checkpoint", "/tmp/checkpoint.pt"])
+        with (
+            redirect_stdout(io.StringIO()),
+            redirect_stderr(stderr),
+            self.assertRaises(SystemExit),
+        ):
+            parser.parse_args(
+                [
+                    "plan",
+                    "train",
+                    "--config",
+                    "unused.yaml",
+                    "--checkpoint",
+                    "/tmp/checkpoint.pt",
+                ]
+            )
         self.assertIn("unrecognized arguments: --checkpoint", stderr.getvalue())
 
-        args = parser.parse_args(["plan", "eval", "--config", "unused.yaml", "--checkpoint", "/tmp/checkpoint.pt"])
+        args = parser.parse_args(
+            [
+                "plan",
+                "eval",
+                "--config",
+                "unused.yaml",
+                "--checkpoint",
+                "/tmp/checkpoint.pt",
+            ]
+        )
         self.assertEqual(args.command, "plan")
         self.assertEqual(args.plan_command, "eval")
         self.assertEqual(args.checkpoint, "/tmp/checkpoint.pt")
@@ -131,7 +191,9 @@ class CliTests(StageBatchSystemTestCase):
                 )
 
             text = stdout.getvalue()
-            self.assertIn("[ESTIMATE] project=demo experiment=stage_pipeline runs=1", text)
+            self.assertIn(
+                "[ESTIMATE] project=demo experiment=stage_pipeline runs=1", text
+            )
             self.assertIn("Stage train:", text)
             self.assertIn("peak_concurrent_gpus", text)
 
@@ -152,15 +214,26 @@ class CliTests(StageBatchSystemTestCase):
                             }
                         }
                     },
-                    "sizing": {"gpu": {"defaults": {"safety_factor": 1.0, "round_to": 1}}},
+                    "sizing": {
+                        "gpu": {"defaults": {"safety_factor": 1.0, "round_to": 1}}
+                    },
                     "runs": {
                         "type": "cases",
                         "cases": [
-                            {"name": "small", "set": {"train.gpu_sizing.target_memory_gb": 80}},
-                            {"name": "large", "set": {"train.gpu_sizing.target_memory_gb": 192}},
+                            {
+                                "name": "small",
+                                "set": {"train.gpu_sizing.target_memory_gb": 80},
+                            },
+                            {
+                                "name": "large",
+                                "set": {"train.gpu_sizing.target_memory_gb": 192},
+                            },
                         ],
                     },
-                    "dispatch": {"max_available_gpus": 8, "overflow_policy": "serialize_groups"},
+                    "dispatch": {
+                        "max_available_gpus": 8,
+                        "overflow_policy": "serialize_groups",
+                    },
                 },
             )
             payload = yaml.safe_load(cfg_path.read_text())
@@ -198,8 +271,12 @@ class CliTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
             write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
-            self.assertEqual(execute_stage_task(Path(train_batch.submission_root), 1, 0), 0)
-            runs, bindings = upstream_bindings_from_train_batch(spec, Path(train_batch.submission_root))
+            self.assertEqual(
+                execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
+            )
+            runs, bindings = upstream_bindings_from_train_batch(
+                spec, Path(train_batch.submission_root)
+            )
             eval_batch = compile_stage_batch_for_kind(
                 spec,
                 kind="eval",
@@ -309,10 +386,22 @@ class CliTests(StageBatchSystemTestCase):
         from slurmforge.launcher import build_parser
 
         parser = build_parser()
-        subparser_action = next(action for action in parser._actions if getattr(action, "choices", None))
+        subparser_action = next(
+            action for action in parser._actions if getattr(action, "choices", None)
+        )
         self.assertEqual(
             set(subparser_action.choices),
-            {"init", "validate", "estimate", "plan", "train", "eval", "run", "status", "resubmit"},
+            {
+                "init",
+                "validate",
+                "estimate",
+                "plan",
+                "train",
+                "eval",
+                "run",
+                "status",
+                "resubmit",
+            },
         )
         pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
         self.assertIn('sforge = "slurmforge.launcher:main"', pyproject)

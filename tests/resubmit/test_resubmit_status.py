@@ -10,7 +10,13 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import write_stage_batch_layout
-from tests.support.std import Namespace, Path, io, json, redirect_stdout, tempfile
+import io
+import json
+import tempfile
+from argparse import Namespace
+from contextlib import redirect_stdout
+from pathlib import Path
+
 
 class ResubmitTests(StageBatchSystemTestCase):
     def test_resubmit_blocks_emit_when_lineage_checkpoint_is_missing(self) -> None:
@@ -22,8 +28,12 @@ class ResubmitTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
             write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
-            self.assertEqual(execute_stage_task(Path(train_batch.submission_root), 1, 0), 0)
-            runs, bindings = upstream_bindings_from_train_batch(spec, Path(train_batch.submission_root))
+            self.assertEqual(
+                execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
+            )
+            runs, bindings = upstream_bindings_from_train_batch(
+                spec, Path(train_batch.submission_root)
+            )
             checkpoint_path = Path(bindings[runs[0].run_id][0].resolved.path)
             self.assertTrue(checkpoint_path.exists())
             eval_batch = compile_stage_batch_for_kind(
@@ -63,18 +73,32 @@ class ResubmitTests(StageBatchSystemTestCase):
                     )
                 )
 
-            resubmit_roots = sorted((eval_root / "derived_batches").glob("eval_batch_*"))
+            resubmit_roots = sorted(
+                (eval_root / "derived_batches").glob("eval_batch_*")
+            )
             self.assertEqual(len(resubmit_roots), 1)
             self.assertTrue((resubmit_roots[0] / "source_plan.json").exists())
             self.assertTrue((resubmit_roots[0] / "source_lineage.json").exists())
-            self.assertFalse((resubmit_roots[0] / "submit" / "submit_manifest.json").exists())
-            report = json.loads(next(resubmit_roots[0].glob("runs/*/input_verification.json")).read_text())
+            self.assertFalse(
+                (resubmit_roots[0] / "submit" / "submit_manifest.json").exists()
+            )
+            report = json.loads(
+                next(
+                    resubmit_roots[0].glob("runs/*/input_verification.json")
+                ).read_text()
+            )
             self.assertEqual(report["state"], "failed")
-            self.assertEqual(report["records"][0]["failure_class"], "input_contract_error")
-            materialization = json.loads((resubmit_roots[0] / "materialization_status.json").read_text())
+            self.assertEqual(
+                report["records"][0]["failure_class"], "input_contract_error"
+            )
+            materialization = json.loads(
+                (resubmit_roots[0] / "materialization_status.json").read_text()
+            )
             self.assertEqual(materialization["state"], "blocked")
             self.assertEqual(materialization["failure_class"], "input_contract_error")
-            status = json.loads(next(resubmit_roots[0].glob("runs/*/status.json")).read_text())
+            status = json.loads(
+                next(resubmit_roots[0].glob("runs/*/status.json")).read_text()
+            )
             self.assertEqual(status["state"], "blocked")
             self.assertEqual(status["failure_class"], "input_contract_error")
 

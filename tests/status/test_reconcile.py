@@ -7,13 +7,18 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import write_stage_batch_layout
-from tests.support.std import Path, json, tempfile
+import json
+import tempfile
+from pathlib import Path
 
 
 class ReconcileTests(StageBatchSystemTestCase):
     def test_reconcile_grace_waits_before_missing_output_failure(self) -> None:
-        from slurmforge.status import read_stage_status, reconcile_stage_batch_with_slurm
-        from slurmforge.slurm import FakeSlurmClient
+        from slurmforge.status import (
+            read_stage_status,
+            reconcile_stage_batch_with_slurm,
+        )
+        from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -28,20 +33,28 @@ class ReconcileTests(StageBatchSystemTestCase):
                 client=client,
                 missing_output_grace_seconds=300,
             )
-            status_path = Path(batch.submission_root) / batch.stage_instances[0].run_dir_rel
+            status_path = (
+                Path(batch.submission_root) / batch.stage_instances[0].run_dir_rel
+            )
             status = read_stage_status(status_path)
             assert status is not None
             self.assertEqual(status.state, "running")
             self.assertTrue((status_path / "reconcile.json").exists())
-            attempt = json.loads((status_path / "attempts" / "0001" / "attempt.json").read_text())
+            attempt = json.loads(
+                (status_path / "attempts" / "0001" / "attempt.json").read_text()
+            )
             self.assertEqual(attempt["attempt_source"], "scheduler_reconcile")
             self.assertFalse(attempt["started_by_executor"])
             self.assertEqual(attempt["scheduler_state"], "COMPLETED")
 
     def test_reconcile_completes_executor_skeleton_attempt(self) -> None:
-        from slurmforge.status import StageAttemptRecord, commit_attempt, read_stage_status
+        from slurmforge.status import (
+            StageAttemptRecord,
+            commit_attempt,
+            read_stage_status,
+        )
         from slurmforge.status import reconcile_stage_batch_with_slurm
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -72,7 +85,9 @@ class ReconcileTests(StageBatchSystemTestCase):
                 missing_output_grace_seconds=0,
             )
 
-            attempt = json.loads((run_dir / "attempts" / "0001" / "attempt.json").read_text())
+            attempt = json.loads(
+                (run_dir / "attempts" / "0001" / "attempt.json").read_text()
+            )
             self.assertEqual(attempt["attempt_source"], "executor")
             self.assertEqual(attempt["attempt_state"], "reconciled")
             self.assertEqual(attempt["scheduler_state"], "FAILED")
@@ -82,9 +97,14 @@ class ReconcileTests(StageBatchSystemTestCase):
             self.assertEqual(status.latest_attempt_id, "0001")
             self.assertEqual(status.state, "failed")
 
-    def test_reconcile_missing_output_expiry_creates_scheduler_attempt_failure(self) -> None:
-        from slurmforge.status import read_stage_status, reconcile_stage_batch_with_slurm
-        from slurmforge.slurm import FakeSlurmClient
+    def test_reconcile_missing_output_expiry_creates_scheduler_attempt_failure(
+        self,
+    ) -> None:
+        from slurmforge.status import (
+            read_stage_status,
+            reconcile_stage_batch_with_slurm,
+        )
+        from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -107,7 +127,9 @@ class ReconcileTests(StageBatchSystemTestCase):
             self.assertEqual(status.state, "failed")
             self.assertEqual(status.failure_class, "missing_attempt_result")
             self.assertEqual(status.latest_attempt_id, "0001")
-            attempt = json.loads((run_dir / "attempts" / "0001" / "attempt.json").read_text())
+            attempt = json.loads(
+                (run_dir / "attempts" / "0001" / "attempt.json").read_text()
+            )
             self.assertEqual(attempt["attempt_source"], "scheduler_reconcile")
             self.assertEqual(attempt["attempt_state"], "reconciled")
             self.assertEqual(attempt["scheduler_job_id"], "123")
@@ -135,14 +157,22 @@ class ReconcileTests(StageBatchSystemTestCase):
         self.assertEqual(states["123_1"].state, "FAILED")
 
     def test_reconcile_does_not_apply_array_master_state_to_every_task(self) -> None:
-        from slurmforge.status import read_stage_status, reconcile_stage_batch_with_slurm
-        from slurmforge.slurm import FakeSlurmClient
+        from slurmforge.status import (
+            read_stage_status,
+            reconcile_stage_batch_with_slurm,
+        )
+        from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             cfg_path = write_demo_project(
                 root,
-                extra={"runs": {"type": "grid", "axes": {"train.entry.args.lr": [0.001, 0.002]}}},
+                extra={
+                    "runs": {
+                        "type": "grid",
+                        "axes": {"train.entry.args.lr": [0.001, 0.002]},
+                    }
+                },
             )
             spec = load_experiment_spec(cfg_path)
             batch = compile_stage_batch_for_kind(spec, kind="train")
@@ -159,25 +189,37 @@ class ReconcileTests(StageBatchSystemTestCase):
             )
 
             for instance in batch.stage_instances:
-                status = read_stage_status(Path(batch.submission_root) / instance.run_dir_rel)
+                status = read_stage_status(
+                    Path(batch.submission_root) / instance.run_dir_rel
+                )
                 assert status is not None
                 self.assertEqual(status.state, "planned")
 
     def test_reconcile_applies_failed_array_master_to_each_task(self) -> None:
-        from slurmforge.status import read_stage_status, reconcile_stage_batch_with_slurm
-        from slurmforge.slurm import FakeSlurmClient
+        from slurmforge.status import (
+            read_stage_status,
+            reconcile_stage_batch_with_slurm,
+        )
+        from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             cfg_path = write_demo_project(
                 root,
-                extra={"runs": {"type": "grid", "axes": {"train.entry.args.lr": [0.001, 0.002]}}},
+                extra={
+                    "runs": {
+                        "type": "grid",
+                        "axes": {"train.entry.args.lr": [0.001, 0.002]},
+                    }
+                },
             )
             spec = load_experiment_spec(cfg_path)
             batch = compile_stage_batch_for_kind(spec, kind="train")
             write_stage_batch_layout(batch, spec_snapshot=spec.raw)
             client = FakeSlurmClient()
-            client.set_job_state("123", "CANCELLED", exit_code="0:15", reason="cancelled by user")
+            client.set_job_state(
+                "123", "CANCELLED", exit_code="0:15", reason="cancelled by user"
+            )
 
             reconcile_stage_batch_with_slurm(
                 batch,
@@ -191,13 +233,20 @@ class ReconcileTests(StageBatchSystemTestCase):
                 status = read_stage_status(run_dir)
                 assert status is not None
                 self.assertEqual(status.state, "cancelled")
-                attempt = json.loads((run_dir / "attempts" / "0001" / "attempt.json").read_text())
+                attempt = json.loads(
+                    (run_dir / "attempts" / "0001" / "attempt.json").read_text()
+                )
                 self.assertEqual(attempt["attempt_state"], "reconciled")
                 self.assertEqual(attempt["scheduler_state"], "CANCELLED")
 
-    def test_squeue_observation_updates_running_status_when_sacct_is_empty(self) -> None:
+    def test_squeue_observation_updates_running_status_when_sacct_is_empty(
+        self,
+    ) -> None:
         from slurmforge.slurm import SlurmClient, SlurmJobState, parse_squeue_rows
-        from slurmforge.status import read_stage_status, reconcile_stage_batch_with_slurm
+        from slurmforge.status import (
+            read_stage_status,
+            reconcile_stage_batch_with_slurm,
+        )
 
         class SqueueOnlyClient(SlurmClient):
             def query_jobs(self, job_ids):
@@ -235,4 +284,6 @@ class ReconcileTests(StageBatchSystemTestCase):
             status = read_stage_status(run_dir)
             assert status is not None
             self.assertEqual(status.state, "running")
-            self.assertTrue((Path(batch.submission_root) / "scheduler_observations.jsonl").exists())
+            self.assertTrue(
+                (Path(batch.submission_root) / "scheduler_observations.jsonl").exists()
+            )

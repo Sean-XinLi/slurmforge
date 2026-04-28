@@ -10,11 +10,15 @@ from tests.support.public import (
     write_stage_submit_files,
 )
 from tests.support.internal_records import write_stage_batch_layout
-from tests.support.std import Path, tempfile, yaml
+import tempfile
+import yaml
+from pathlib import Path
 
 
 class StageSbatchTests(StageBatchSystemTestCase):
-    def test_stage_sbatch_loads_environment_and_uses_python_module_executor(self) -> None:
+    def test_stage_sbatch_loads_environment_and_uses_python_module_executor(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             cfg_path = write_demo_project(
@@ -34,10 +38,17 @@ class StageSbatchTests(StageBatchSystemTestCase):
                     },
                     "runtime": {
                         "executor": {
-                            "python": {"bin": "/opt/env/bin/python", "min_version": "3.10"},
+                            "python": {
+                                "bin": "/opt/env/bin/python",
+                                "min_version": "3.10",
+                            },
                             "module": "slurmforge.executor.stage",
                         },
-                        "user": {"default": {"python": {"bin": "python3.11", "min_version": "3.10"}}},
+                        "user": {
+                            "default": {
+                                "python": {"bin": "python3.11", "min_version": "3.10"}
+                            }
+                        },
                     },
                     "stages": {
                         "train": {
@@ -51,12 +62,19 @@ class StageSbatchTests(StageBatchSystemTestCase):
                             "before": [
                                 {"name": "check-gpu", "run": "nvidia-smi"},
                             ],
-                            "resources": {"nodes": 1, "gpus_per_node": 1, "cpus_per_task": 1},
+                            "resources": {
+                                "nodes": 1,
+                                "gpus_per_node": 1,
+                                "cpus_per_task": 1,
+                            },
                             "outputs": {
                                 "checkpoint": {
                                     "kind": "file",
                                     "required": True,
-                                    "discover": {"globs": ["checkpoints/**/*.pt"], "select": "latest_step"},
+                                    "discover": {
+                                        "globs": ["checkpoints/**/*.pt"],
+                                        "select": "latest_step",
+                                    },
                                 }
                             },
                         },
@@ -74,7 +92,10 @@ class StageSbatchTests(StageBatchSystemTestCase):
             )
             spec = load_experiment_spec(cfg_path)
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            self.assertEqual(batch.stage_instances[0].runtime_plan.executor.python.bin, "/opt/env/bin/python")
+            self.assertEqual(
+                batch.stage_instances[0].runtime_plan.executor.python.bin,
+                "/opt/env/bin/python",
+            )
             self.assertEqual(batch.stage_instances[0].environment_name, "train_env")
             self.assertEqual(batch.stage_instances[0].launcher_plan.type, "single")
             write_stage_batch_layout(batch, spec_snapshot=spec.raw)
@@ -127,7 +148,10 @@ class StageSbatchTests(StageBatchSystemTestCase):
             cfg_path = write_demo_project(
                 root,
                 extra={
-                    "dispatch": {"max_available_gpus": 8, "overflow_policy": "serialize_groups"},
+                    "dispatch": {
+                        "max_available_gpus": 8,
+                        "overflow_policy": "serialize_groups",
+                    },
                     "stages": {
                         "train": {
                             "kind": "train",
@@ -136,13 +160,24 @@ class StageSbatchTests(StageBatchSystemTestCase):
                                 "script": "train.py",
                                 "workdir": str(root),
                             },
-                            "launcher": {"type": "torchrun", "nnodes": "auto", "nproc_per_node": "auto"},
-                            "resources": {"nodes": 2, "gpus_per_node": 4, "cpus_per_task": 1},
+                            "launcher": {
+                                "type": "torchrun",
+                                "nnodes": "auto",
+                                "nproc_per_node": "auto",
+                            },
+                            "resources": {
+                                "nodes": 2,
+                                "gpus_per_node": 4,
+                                "cpus_per_task": 1,
+                            },
                             "outputs": {
                                 "checkpoint": {
                                     "kind": "file",
                                     "required": True,
-                                    "discover": {"globs": ["checkpoints/**/*.pt"], "select": "latest_step"},
+                                    "discover": {
+                                        "globs": ["checkpoints/**/*.pt"],
+                                        "select": "latest_step",
+                                    },
                                 }
                             },
                         },
@@ -156,16 +191,22 @@ class StageSbatchTests(StageBatchSystemTestCase):
                             },
                             "inputs": {
                                 "checkpoint": {
-                                    "source": {"kind": "upstream_output", "stage": "train", "output": "checkpoint"},
+                                    "source": {
+                                        "kind": "upstream_output",
+                                        "stage": "train",
+                                        "output": "checkpoint",
+                                    },
                                     "expects": "path",
                                     "required": True,
                                 }
                             },
                         },
-                    }
+                    },
                 },
             )
-            batch = compile_stage_batch_for_kind(load_experiment_spec(cfg_path), kind="train")
+            batch = compile_stage_batch_for_kind(
+                load_experiment_spec(cfg_path), kind="train"
+            )
             launcher = batch.stage_instances[0].launcher_plan
             self.assertEqual(launcher.type, "torchrun")
             self.assertEqual(launcher.mode, "multi_node")
@@ -183,13 +224,20 @@ class StageSbatchTests(StageBatchSystemTestCase):
             cfg_path = write_demo_project(root)
             payload = yaml.safe_load(cfg_path.read_text())
             payload["stages"]["eval"]["enabled"] = False
-            payload["stages"]["train"]["launcher"] = {"type": "torchrun", "mode": "single_node"}
+            payload["stages"]["train"]["launcher"] = {
+                "type": "torchrun",
+                "mode": "single_node",
+            }
             payload["stages"]["train"]["resources"]["nodes"] = 2
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
             with self.assertRaisesRegex(Exception, "resources.nodes == 1"):
                 load_experiment_spec(cfg_path)
 
-            payload["stages"]["train"]["launcher"] = {"type": "torchrun", "mode": "multi_node", "nnodes": 3}
+            payload["stages"]["train"]["launcher"] = {
+                "type": "torchrun",
+                "mode": "multi_node",
+                "nnodes": 3,
+            }
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
             with self.assertRaisesRegex(Exception, "must equal resources.nodes"):
                 load_experiment_spec(cfg_path)
@@ -202,7 +250,9 @@ class StageSbatchTests(StageBatchSystemTestCase):
             }
             payload["stages"]["train"]["resources"]["gpus_per_node"] = 4
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
-            with self.assertRaisesRegex(Exception, "cannot exceed resources.gpus_per_node"):
+            with self.assertRaisesRegex(
+                Exception, "cannot exceed resources.gpus_per_node"
+            ):
                 load_experiment_spec(cfg_path)
 
             payload["stages"]["train"]["launcher"] = {

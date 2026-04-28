@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.std import Path
 
 
 class ModuleShapeTests(StageBatchSystemTestCase):
@@ -26,7 +27,13 @@ class ModuleShapeTests(StageBatchSystemTestCase):
     def test_output_discovery_is_split_by_output_kind(self) -> None:
         discovery_root = Path("src/slurmforge/outputs/discovery")
         self.assertFalse(Path("src/slurmforge/outputs/discovery.py").exists())
-        for name in ("context.py", "models.py", "registry.py", "service.py", "writer.py"):
+        for name in (
+            "context.py",
+            "models.py",
+            "registry.py",
+            "service.py",
+            "writer.py",
+        ):
             self.assertTrue((discovery_root / name).exists())
         for name in ("file.py", "files.py", "manifest.py", "metric.py"):
             self.assertTrue((discovery_root / "handlers" / name).exists())
@@ -48,20 +55,40 @@ class ModuleShapeTests(StageBatchSystemTestCase):
             text = path.read_text(encoding="utf-8")
             if "_load_snapshot_yaml" in text or "load_snapshot_yaml" in text:
                 violations.append(str(path))
-            if path != Path("src/slurmforge/spec/snapshot.py") and "spec_snapshot.yaml" in text and "yaml.safe_load" in text:
+            if (
+                path != Path("src/slurmforge/spec/snapshot.py")
+                and "spec_snapshot.yaml" in text
+                and "yaml.safe_load" in text
+            ):
                 violations.append(f"{path} reads spec snapshots directly")
             if "resolver.core" in text or "resolver.sources" in text:
                 violations.append(str(path))
-            if "from .core import" in text and Path("src/slurmforge/resolver") in path.parents:
+            if (
+                "from .core import" in text
+                and Path("src/slurmforge/resolver") in path.parents
+            ):
                 violations.append(str(path))
-            if "from .sources import" in text and Path("src/slurmforge/resolver") in path.parents:
+            if (
+                "from .sources import" in text
+                and Path("src/slurmforge/resolver") in path.parents
+            ):
                 violations.append(str(path))
         self.assertEqual(violations, [])
 
     def test_plans_package_is_not_a_wide_public_model_facade(self) -> None:
-        plans_init = Path("src/slurmforge/plans/__init__.py").read_text(encoding="utf-8")
+        plans_init = Path("src/slurmforge/plans/__init__.py").read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("from .", plans_init)
         self.assertIn("__all__", plans_init)
+
+    def test_planner_package_is_not_a_wide_workflow_facade(self) -> None:
+        planner_init = Path("src/slurmforge/planner/__init__.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertFalse(Path("src/slurmforge/planner/core.py").exists())
+        self.assertNotIn("from .", planner_init)
+        self.assertIn("__all__", planner_init)
 
     def test_planner_payloads_are_split_by_payload_kind(self) -> None:
         payload_root = Path("src/slurmforge/planner/payloads")
@@ -112,10 +139,31 @@ class ModuleShapeTests(StageBatchSystemTestCase):
         self.assertTrue(Path("src/slurmforge/executor/attempt.py").exists())
         self.assertTrue(Path("src/slurmforge/executor/runner.py").exists())
         self.assertTrue(Path("src/slurmforge/executor/finalize.py").exists())
-        stage_text = Path("src/slurmforge/executor/stage.py").read_text(encoding="utf-8")
+        stage_text = Path("src/slurmforge/executor/stage.py").read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("subprocess.run", stage_text)
         self.assertNotIn("discover_stage_outputs", stage_text)
         self.assertNotIn("require_runtime_contract", stage_text)
+
+    def test_slurm_fake_client_is_test_support_only(self) -> None:
+        self.assertTrue(Path("src/slurmforge/slurm/parsers.py").exists())
+        self.assertTrue(Path("tests/support/slurm.py").exists())
+        source_text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in Path("src/slurmforge").rglob("*.py")
+        )
+        self.assertNotIn("FakeSlurmClient", source_text)
+
+    def test_train_eval_controller_runtime_is_split_by_responsibility(self) -> None:
+        controller_root = Path("src/slurmforge/controller")
+        self.assertTrue((controller_root / "stage_runtime.py").exists())
+        self.assertTrue((controller_root / "terminal.py").exists())
+        runtime_text = (controller_root / "train_eval_pipeline.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("def _wait_terminal", runtime_text)
+        self.assertNotIn("deliver_notification", runtime_text)
 
     def test_resolver_explicit_sources_are_split(self) -> None:
         self.assertFalse(Path("src/slurmforge/resolver/explicit.py").exists())
@@ -146,8 +194,11 @@ class ModuleShapeTests(StageBatchSystemTestCase):
         ):
             self.assertTrue(Path(path).exists())
 
-    def test_test_support_is_split_between_public_workflows_and_internal_records(self) -> None:
+    def test_test_support_is_split_between_public_workflows_and_internal_records(
+        self,
+    ) -> None:
         self.assertFalse(Path("tests/support/sforge.py").exists())
+        self.assertFalse(Path("tests/support/std.py").exists())
         self.assertTrue(Path("tests/support/public.py").exists())
         self.assertTrue(Path("tests/support/internal_records.py").exists())
 
@@ -157,7 +208,10 @@ class ModuleShapeTests(StageBatchSystemTestCase):
         violations: list[str] = []
         for path in sorted(Path("src/slurmforge").rglob("*.py")):
             text = path.read_text(encoding="utf-8")
-            if "_pipeline_root_for_batch_root" in text or "_parent_pipeline_root" in text:
+            if (
+                "_pipeline_root_for_batch_root" in text
+                or "_parent_pipeline_root" in text
+            ):
                 violations.append(str(path))
             if "from .paths import parent_pipeline_root_for_stage_batch" in text:
                 violations.append(str(path))
@@ -171,30 +225,42 @@ class ModuleShapeTests(StageBatchSystemTestCase):
         self.assertTrue(Path("src/slurmforge/cli/render.py").exists())
 
     def test_notification_finalizer_runtime_is_not_submission_runtime(self) -> None:
-        submission_finalizer = Path("src/slurmforge/submission/finalizer.py").read_text(encoding="utf-8")
+        submission_finalizer = Path("src/slurmforge/submission/finalizer.py").read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("deliver_notification", submission_finalizer)
         self.assertNotIn("load_notification_summary_input", submission_finalizer)
         self.assertNotIn("def run_finalizer", submission_finalizer)
-        runtime = Path("src/slurmforge/notifications/finalizer_runtime.py").read_text(encoding="utf-8")
+        runtime = Path("src/slurmforge/notifications/finalizer_runtime.py").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("def run_finalizer", runtime)
         self.assertIn("deliver_notification", runtime)
 
     def test_storage_layout_is_split_by_root_type(self) -> None:
         self.assertFalse(Path("src/slurmforge/storage/layout.py").exists())
         self.assertTrue(Path("src/slurmforge/storage/batch_layout.py").exists())
-        self.assertTrue(Path("src/slurmforge/storage/train_eval_pipeline_layout.py").exists())
+        self.assertTrue(
+            Path("src/slurmforge/storage/train_eval_pipeline_layout.py").exists()
+        )
         self.assertTrue(Path("src/slurmforge/storage/status_seed.py").exists())
         self.assertTrue(Path("src/slurmforge/storage/controller_seed.py").exists())
 
     def test_sizing_package_stays_plan_agnostic(self) -> None:
         self.assertFalse(Path("src/slurmforge/sizing/estimate.py").exists())
-        sizing_text = "\n".join(path.read_text(encoding="utf-8") for path in Path("src/slurmforge/sizing").rglob("*.py"))
+        sizing_text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in Path("src/slurmforge/sizing").rglob("*.py")
+        )
         self.assertNotIn("hasattr(plan", sizing_text)
         self.assertNotIn("StageBatchPlan", sizing_text)
         self.assertNotIn("TrainEvalPipelinePlan", sizing_text)
 
     def test_spec_models_do_not_import_parser(self) -> None:
-        text = "\n".join(path.read_text(encoding="utf-8") for path in Path("src/slurmforge/spec/models").rglob("*.py"))
+        text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in Path("src/slurmforge/spec/models").rglob("*.py")
+        )
         self.assertNotIn("parse_experiment_spec", text)
         self.assertNotIn("from .parser import", text)
 
@@ -212,10 +278,22 @@ class ModuleShapeTests(StageBatchSystemTestCase):
                     violations.append(f"{path} contains {flag}")
         self.assertEqual(violations, [])
 
+    def test_validate_cli_has_no_hidden_force_flag(self) -> None:
+        validate_text = Path("src/slurmforge/cli/validate.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("--force", validate_text)
+
     def test_run_record_contract_is_split_into_topic_docs(self) -> None:
         record_index = Path("docs/record-contract.md").read_text(encoding="utf-8")
         self.assertLess(len(record_index.splitlines()), 20)
-        for name in ("artifacts.md", "planning.md", "runtime.md", "status.md", "submission.md"):
+        for name in (
+            "artifacts.md",
+            "planning.md",
+            "runtime.md",
+            "status.md",
+            "submission.md",
+        ):
             self.assertTrue(Path("docs/records", name).exists())
 
     def test_import_linter_config_was_removed(self) -> None:

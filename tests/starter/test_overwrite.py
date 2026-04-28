@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.std import Namespace, Path, io, patch, redirect_stdout, tempfile, yaml
+import io
+import tempfile
+import yaml
+from argparse import Namespace
+from contextlib import redirect_stdout
+from pathlib import Path
+from unittest.mock import patch
+
 
 class StarterTests(StageBatchSystemTestCase):
     def _init_args(
@@ -17,6 +24,7 @@ class StarterTests(StageBatchSystemTestCase):
             output=str(root / "experiment.yaml"),
             force=force,
         )
+
     def _interactive_init_args(self) -> Namespace:
         return Namespace(
             template=None,
@@ -24,6 +32,7 @@ class StarterTests(StageBatchSystemTestCase):
             output=None,
             force=False,
         )
+
     def test_existing_files_are_not_overwritten_without_force_or_confirm(self) -> None:
         from slurmforge.starter import StarterWriteError
         from slurmforge.cli.init import handle_init
@@ -33,9 +42,15 @@ class StarterTests(StageBatchSystemTestCase):
             handle_init(self._init_args(root))
             original = (root / "experiment.yaml").read_text(encoding="utf-8")
 
-            with patch("sys.stdin.isatty", return_value=False), self.assertRaisesRegex(StarterWriteError, "--force"):
+            with (
+                patch("sys.stdin.isatty", return_value=False),
+                self.assertRaisesRegex(StarterWriteError, "--force"),
+            ):
                 handle_init(self._init_args(root))
-            self.assertEqual((root / "experiment.yaml").read_text(encoding="utf-8"), original)
+            self.assertEqual(
+                (root / "experiment.yaml").read_text(encoding="utf-8"), original
+            )
+
     def test_interactive_selects_template_and_output(self) -> None:
         from slurmforge.cli.init import handle_init
         from slurmforge.spec import load_experiment_spec
@@ -55,6 +70,7 @@ class StarterTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(cfg_path)
             self.assertEqual(spec.stage_order(), ("train",))
             self.assertIn("Select template:", stdout.getvalue())
+
     def test_interactive_confirm_allows_overwrite(self) -> None:
         from slurmforge.cli.init import handle_init
 
@@ -70,8 +86,11 @@ class StarterTests(StageBatchSystemTestCase):
             ):
                 handle_init(args)
 
-            payload = yaml.safe_load((root / "experiment.yaml").read_text(encoding="utf-8"))
+            payload = yaml.safe_load(
+                (root / "experiment.yaml").read_text(encoding="utf-8")
+            )
             self.assertEqual(payload["project"], "demo")
+
     def test_interactive_cancel_preserves_existing_files(self) -> None:
         from slurmforge.cli.init import handle_init
 
@@ -89,8 +108,9 @@ class StarterTests(StageBatchSystemTestCase):
                 handle_init(args)
 
             self.assertIn("[INIT] cancelled", stdout.getvalue())
-            self.assertEqual((root / "experiment.yaml").read_text(encoding="utf-8"), original)
-
+            self.assertEqual(
+                (root / "experiment.yaml").read_text(encoding="utf-8"), original
+            )
 
 
 def _dry_run_command_for_template(template: str, _root: Path) -> list[str]:
@@ -102,7 +122,11 @@ def _dry_run_command_for_template(template: str, _root: Path) -> list[str]:
 
 
 def _bad_template(file_builder):
-    from slurmforge.starter.models import StarterCommandSet, StarterReadmePlan, StarterTemplate
+    from slurmforge.starter.models import (
+        StarterCommandSet,
+        StarterReadmePlan,
+        StarterTemplate,
+    )
 
     return StarterTemplate(
         name="bad-template",

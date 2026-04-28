@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import ast
 
-from tests.architecture.helpers import absolute_import_module, find_cycles, inside_function, top_level_package_edges
+from tests.architecture.helpers import (
+    absolute_import_module,
+    find_cycles,
+    inside_function,
+    top_level_package_edges,
+)
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.std import Path
+from pathlib import Path
 
 
 class ImportBoundaryTests(StageBatchSystemTestCase):
@@ -22,8 +27,12 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                     continue
                 if not inside_function(node, parents):
                     continue
-                if node.level > 1 or (node.level == 0 and (node.module or "").startswith("slurmforge.")):
-                    violations.append(f"{path}:{node.lineno} imports {'.' * node.level}{node.module or ''}")
+                if node.level > 1 or (
+                    node.level == 0 and (node.module or "").startswith("slurmforge.")
+                ):
+                    violations.append(
+                        f"{path}:{node.lineno} imports {'.' * node.level}{node.module or ''}"
+                    )
         self.assertEqual(violations, [])
 
     def test_cli_does_not_directly_import_execution_layers(self) -> None:
@@ -50,12 +59,16 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                 if not isinstance(node, ast.ImportFrom):
                     continue
                 module = absolute_import_module(path, node)
-                if any(module == item or module.startswith(f"{item}.") for item in blocked):
+                if any(
+                    module == item or module.startswith(f"{item}.") for item in blocked
+                ):
                     violations.append(f"{path}:{node.lineno} imports {module}")
         self.assertEqual(violations, [])
 
     def test_no_top_level_package_cycles(self) -> None:
-        self.assertEqual(find_cycles(top_level_package_edges(Path("src/slurmforge"))), [])
+        self.assertEqual(
+            find_cycles(top_level_package_edges(Path("src/slurmforge"))), []
+        )
 
     def test_contracts_package_is_leaf(self) -> None:
         blocked = {
@@ -85,7 +98,9 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                 if not isinstance(node, ast.ImportFrom):
                     continue
                 module = absolute_import_module(path, node)
-                if any(module == item or module.startswith(f"{item}.") for item in blocked):
+                if any(
+                    module == item or module.startswith(f"{item}.") for item in blocked
+                ):
                     violations.append(f"{path}:{node.lineno} imports {module}")
         self.assertEqual(violations, [])
 
@@ -98,7 +113,9 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                 if not isinstance(node, ast.ImportFrom):
                     continue
                 module = absolute_import_module(path, node)
-                if any(module == item or module.startswith(f"{item}.") for item in blocked):
+                if any(
+                    module == item or module.startswith(f"{item}.") for item in blocked
+                ):
                     violations.append(f"{path}:{node.lineno} imports {module}")
         self.assertEqual(violations, [])
 
@@ -115,6 +132,9 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                 module = absolute_import_module(path, node)
                 if module == "slurmforge.storage":
                     violations.append(f"{path}:{node.lineno} imports storage facade")
-                if module == "slurmforge.storage.paths" and root / "storage" not in path.parents:
+                if (
+                    module == "slurmforge.storage.paths"
+                    and root / "storage" not in path.parents
+                ):
                     violations.append(f"{path}:{node.lineno} imports storage paths")
         self.assertEqual(violations, [])

@@ -7,7 +7,9 @@ from tests.support.public import (
     load_experiment_spec,
     write_demo_project,
 )
-from tests.support.std import Path, tempfile, yaml
+import tempfile
+import yaml
+from pathlib import Path
 
 
 class PlannerTests(StageBatchSystemTestCase):
@@ -23,7 +25,7 @@ class PlannerTests(StageBatchSystemTestCase):
                             "axes": {
                                 "train.entry.args.lr": [0.001, 0.002],
                                 "train.resources.constraint": ["a", "b"],
-                            }
+                            },
                         },
                     },
                 )
@@ -34,7 +36,9 @@ class PlannerTests(StageBatchSystemTestCase):
             self.assertEqual(batch.stage_name, "train")
             self.assertEqual(len(batch.selected_runs), 4)
             self.assertEqual(sum(group.array_size for group in batch.group_plans), 4)
-            self.assertEqual({group.resources.constraint for group in batch.group_plans}, {"a", "b"})
+            self.assertEqual(
+                {group.resources.constraint for group in batch.group_plans}, {"a", "b"}
+            )
 
     def test_compile_stage_batch_accepts_case_runs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -69,7 +73,9 @@ class PlannerTests(StageBatchSystemTestCase):
             batch = compile_stage_batch_for_kind(spec, kind="train")
 
             self.assertEqual(batch.selected_runs, ("small_gpu", "large_gpu"))
-            self.assertEqual({group.resources.constraint for group in batch.group_plans}, {"a", "b"})
+            self.assertEqual(
+                {group.resources.constraint for group in batch.group_plans}, {"a", "b"}
+            )
 
     def test_compile_stage_batch_materializes_auto_gpu_sizing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -89,7 +95,10 @@ class PlannerTests(StageBatchSystemTestCase):
                             }
                         },
                         "sizing": {"gpu": {"defaults": {"safety_factor": 1.15}}},
-                        "dispatch": {"max_available_gpus": 8, "overflow_policy": "serialize_groups"},
+                        "dispatch": {
+                            "max_available_gpus": 8,
+                            "overflow_policy": "serialize_groups",
+                        },
                     },
                 )
             )
@@ -115,7 +124,9 @@ class PlannerTests(StageBatchSystemTestCase):
             self.assertEqual(instance.resource_sizing.resolved_total_gpus, 4)
             self.assertEqual(batch.group_plans[0].gpus_per_task, 4)
 
-    def test_compile_train_eval_pipeline_plan_keeps_train_and_eval_as_separate_batches(self) -> None:
+    def test_compile_train_eval_pipeline_plan_keeps_train_and_eval_as_separate_batches(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             spec = load_experiment_spec(write_demo_project(Path(tmp)))
 
@@ -132,8 +143,10 @@ class PlannerTests(StageBatchSystemTestCase):
                 plan.stage_batches["eval"].submission_root,
             )
 
-    def test_dry_run_audit_reports_unresolved_upstream_eval_as_valid_deferred_input(self) -> None:
-        from slurmforge.planner import build_dry_run_audit
+    def test_dry_run_audit_reports_unresolved_upstream_eval_as_valid_deferred_input(
+        self,
+    ) -> None:
+        from slurmforge.planner.audit import build_dry_run_audit
 
         with tempfile.TemporaryDirectory() as tmp:
             spec = load_experiment_spec(write_demo_project(Path(tmp)))
@@ -149,4 +162,6 @@ class PlannerTests(StageBatchSystemTestCase):
 
             full_audit = build_dry_run_audit(spec, batch, command="eval", full=True)
             self.assertIn("stages", full_audit.resource_estimate)
-            self.assertEqual(full_audit.resource_estimate["stages"][0]["stage_name"], "eval")
+            self.assertEqual(
+                full_audit.resource_estimate["stages"][0]["stage_name"], "eval"
+            )

@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from ..planner import build_resource_estimate as _build_resource_estimate
-from ..planner import render_resource_estimate as _render_resource_estimate
+from ..planner.resource_estimate import (
+    build_resource_estimate as _build_resource_estimate,
+)
+from ..planner.resource_estimate import (
+    render_resource_estimate as _render_resource_estimate,
+)
 
 
 def build_resource_estimate_for_plan(plan):

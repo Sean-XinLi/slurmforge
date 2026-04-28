@@ -6,13 +6,18 @@ from typing import Iterable
 
 from ..overrides import deep_set, parse_override
 from ..contracts import RunDefinition
-from ..plans.sources import PriorBatchLineage, SelectedStageRun, SourcedStageBatchPlan, StageBatchSource
+from ..plans.sources import (
+    PriorBatchLineage,
+    SelectedStageRun,
+    SourcedStageBatchPlan,
+    StageBatchSource,
+)
 from ..root_model import iter_stage_run_dirs
 from ..spec import load_spec_snapshot, parse_experiment_spec, validate_experiment_spec
 from ..status import read_stage_status, state_matches
 from ..storage.loader import plan_for_run_dir
 from ..resolver.prior_source import resolve_stage_inputs_from_prior_source
-from .core import compile_stage_batch
+from .stage_batch import compile_stage_batch
 
 
 def select_stage_runs(
@@ -50,7 +55,9 @@ def select_stage_runs(
     return tuple(selected)
 
 
-def _project_root_for_prior_source(source_root: Path, selected: tuple[SelectedStageRun, ...]) -> Path:
+def _project_root_for_prior_source(
+    source_root: Path, selected: tuple[SelectedStageRun, ...]
+) -> Path:
     if not selected:
         return source_root
     first_plan = plan_for_run_dir(selected[0].run_dir)
@@ -68,7 +75,9 @@ def compile_stage_batch_from_prior_source(
     overrides: Iterable[str] = (),
 ) -> SourcedStageBatchPlan | None:
     root = Path(source_root).resolve()
-    selected = select_stage_runs(root, stage_name=stage_name, query=query, run_ids=run_ids)
+    selected = select_stage_runs(
+        root, stage_name=stage_name, query=query, run_ids=run_ids
+    )
     if not selected:
         return None
     raw = load_spec_snapshot(root)
@@ -108,7 +117,10 @@ def compile_stage_batch_from_prior_source(
         source_ref=source_ref,
         input_bindings_by_run=bindings_by_run,
     )
-    batch = replace(batch, submission_root=str((root / "derived_batches" / batch.batch_id).resolve()))
+    batch = replace(
+        batch,
+        submission_root=str((root / "derived_batches" / batch.batch_id).resolve()),
+    )
     lineage = PriorBatchLineage(
         source_root=str(root),
         stage=stage_name,

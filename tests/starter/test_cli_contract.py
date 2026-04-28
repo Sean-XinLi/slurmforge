@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.std import Namespace, Path, io, redirect_stderr, redirect_stdout, tempfile
+import io
+import tempfile
+from argparse import Namespace
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+
 
 class StarterTests(StageBatchSystemTestCase):
     def _init_args(
@@ -17,6 +22,7 @@ class StarterTests(StageBatchSystemTestCase):
             output=str(root / "experiment.yaml"),
             force=force,
         )
+
     def _interactive_init_args(self) -> Namespace:
         return Namespace(
             template=None,
@@ -24,11 +30,19 @@ class StarterTests(StageBatchSystemTestCase):
             output=None,
             force=False,
         )
+
     def test_starter_facade_exports_only_stable_api(self) -> None:
         import slurmforge.starter as starter
 
-        for name in ("FilePayload", "RenderedFile", "StarterWritePlan", "StarterTemplate", "get_template"):
+        for name in (
+            "FilePayload",
+            "RenderedFile",
+            "StarterWritePlan",
+            "StarterTemplate",
+            "get_template",
+        ):
             self.assertFalse(hasattr(starter, name), name)
+
     def test_lists_templates_without_writing_files(self) -> None:
         from slurmforge.cli.init import handle_init
 
@@ -42,15 +56,19 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertIn("train-eval:", stdout.getvalue())
             self.assertIn("eval-checkpoint:", stdout.getvalue())
             self.assertFalse((root / "experiment.yaml").exists())
+
     def test_removed_init_detail_flags_are_rejected(self) -> None:
         from slurmforge.launcher import build_parser
 
         parser = build_parser()
         stderr = io.StringIO()
-        with redirect_stdout(io.StringIO()), redirect_stderr(stderr), self.assertRaises(SystemExit):
+        with (
+            redirect_stdout(io.StringIO()),
+            redirect_stderr(stderr),
+            self.assertRaises(SystemExit),
+        ):
             parser.parse_args(["init", "--project", "demo"])
         self.assertIn("unrecognized arguments: --project", stderr.getvalue())
-
 
 
 def _dry_run_command_for_template(template: str, _root: Path) -> list[str]:
@@ -62,7 +80,11 @@ def _dry_run_command_for_template(template: str, _root: Path) -> list[str]:
 
 
 def _bad_template(file_builder):
-    from slurmforge.starter.models import StarterCommandSet, StarterReadmePlan, StarterTemplate
+    from slurmforge.starter.models import (
+        StarterCommandSet,
+        StarterReadmePlan,
+        StarterTemplate,
+    )
 
     return StarterTemplate(
         name="bad-template",

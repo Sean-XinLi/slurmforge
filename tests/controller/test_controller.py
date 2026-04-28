@@ -14,7 +14,10 @@ from tests.support.internal_records import (
     write_train_eval_pipeline_layout,
     write_submission_ledger,
 )
-from tests.support.std import Path, json, patch, tempfile
+import json
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 
 class ControllerTests(StageBatchSystemTestCase):
@@ -23,8 +26,11 @@ class ControllerTests(StageBatchSystemTestCase):
             reconcile_controller_job,
             submit_controller_job,
         )
-        from slurmforge.slurm import FakeSlurmClient
-        from slurmforge.storage.controller import read_controller_job, read_controller_status
+        from tests.support.slurm import FakeSlurmClient
+        from slurmforge.storage.controller import (
+            read_controller_job,
+            read_controller_status,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -102,9 +108,11 @@ class ControllerTests(StageBatchSystemTestCase):
             self.assertIn("RuntimeError: controller boom", text)
             self.assertIn("Traceback", text)
 
-    def test_failed_pipeline_controller_submit_does_not_create_submission_fact(self) -> None:
+    def test_failed_pipeline_controller_submit_does_not_create_submission_fact(
+        self,
+    ) -> None:
         from slurmforge.orchestration import submit_controller_job
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
         from slurmforge.storage.controller import read_controller_status
 
         class FailingSlurm(FakeSlurmClient):
@@ -121,8 +129,12 @@ class ControllerTests(StageBatchSystemTestCase):
             with self.assertRaisesRegex(RuntimeError, "sbatch unavailable"):
                 submit_controller_job(plan, client=FailingSlurm())
 
-            self.assertFalse((pipeline_root / "controller" / "controller_job.json").exists())
-            diagnostic = pipeline_root / "controller" / "controller_submit_traceback.log"
+            self.assertFalse(
+                (pipeline_root / "controller" / "controller_job.json").exists()
+            )
+            diagnostic = (
+                pipeline_root / "controller" / "controller_submit_traceback.log"
+            )
             self.assertTrue(diagnostic.exists())
             diagnostic_text = diagnostic.read_text(encoding="utf-8")
             self.assertIn("RuntimeError: sbatch unavailable", diagnostic_text)
@@ -132,10 +144,12 @@ class ControllerTests(StageBatchSystemTestCase):
             self.assertEqual(status["state"], "failed")
             self.assertEqual(status["reason"], "sbatch unavailable")
 
-    def test_controller_persists_state_and_blocked_pipeline_is_not_success(self) -> None:
+    def test_controller_persists_state_and_blocked_pipeline_is_not_success(
+        self,
+    ) -> None:
         from slurmforge.controller.train_eval_pipeline import run_controller
         from slurmforge.orchestration import submit_controller_job
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -148,22 +162,41 @@ class ControllerTests(StageBatchSystemTestCase):
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertNotEqual(execute_stage_task(train_root, 1, 0), 0)
 
-            exit_code = run_controller(Path(plan.root_dir), client=FakeSlurmClient(), poll_seconds=0)
+            exit_code = run_controller(
+                Path(plan.root_dir), client=FakeSlurmClient(), poll_seconds=0
+            )
             self.assertEqual(exit_code, 1)
-            controller_state = json.loads((Path(plan.root_dir) / "controller" / "controller_state.json").read_text())
+            controller_state = json.loads(
+                (
+                    Path(plan.root_dir) / "controller" / "controller_state.json"
+                ).read_text()
+            )
             self.assertEqual(controller_state["state"], "failed")
             self.assertNotIn("submitted_batches", controller_state)
-            controller_status = json.loads((Path(plan.root_dir) / "controller" / "controller_status.json").read_text())
+            controller_status = json.loads(
+                (
+                    Path(plan.root_dir) / "controller" / "controller_status.json"
+                ).read_text()
+            )
             self.assertEqual(controller_status["state"], "failed")
-            self.assertEqual(controller_status["scheduler_job_id"], controller_record.scheduler_job_id)
-            eval_statuses = list((Path(plan.stage_batches["eval"].submission_root) / "runs").glob("*/status.json"))
+            self.assertEqual(
+                controller_status["scheduler_job_id"],
+                controller_record.scheduler_job_id,
+            )
+            eval_statuses = list(
+                (Path(plan.stage_batches["eval"].submission_root) / "runs").glob(
+                    "*/status.json"
+                )
+            )
             self.assertEqual(len(eval_statuses), 1)
-            self.assertEqual(json.loads(eval_statuses[0].read_text())["state"], "blocked")
+            self.assertEqual(
+                json.loads(eval_statuses[0].read_text())["state"], "blocked"
+            )
 
     def test_controller_sends_one_pipeline_terminal_notification(self) -> None:
         from slurmforge.controller.train_eval_pipeline import run_controller
         from slurmforge.notifications.records import read_notification_record
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
         from slurmforge.status import StageStatusRecord, commit_stage_status
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -205,20 +238,35 @@ class ControllerTests(StageBatchSystemTestCase):
             def fake_send(**kwargs):
                 sent.append(kwargs)
 
-            with patch("slurmforge.notifications.delivery.send_email_summary", side_effect=fake_send):
-                self.assertEqual(run_controller(pipeline_root, client=FakeSlurmClient(), poll_seconds=0), 0)
-                self.assertEqual(run_controller(pipeline_root, client=FakeSlurmClient(), poll_seconds=0), 0)
+            with patch(
+                "slurmforge.notifications.delivery.send_email_summary",
+                side_effect=fake_send,
+            ):
+                self.assertEqual(
+                    run_controller(
+                        pipeline_root, client=FakeSlurmClient(), poll_seconds=0
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    run_controller(
+                        pipeline_root, client=FakeSlurmClient(), poll_seconds=0
+                    ),
+                    0,
+                )
 
             self.assertEqual(len(sent), 1)
             self.assertIn("SlurmForge train/eval pipeline finished", sent[0]["body"])
-            record = read_notification_record(pipeline_root, "train_eval_pipeline_finished")
+            record = read_notification_record(
+                pipeline_root, "train_eval_pipeline_finished"
+            )
             assert record is not None
             self.assertEqual(record.state, "sent")
             self.assertEqual(record.recipients, ("you@example.com",))
 
     def test_controller_resume_does_not_duplicate_submitted_stage(self) -> None:
         from slurmforge.controller.train_eval_pipeline import run_controller
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
 
         class CompletingFakeSlurm(FakeSlurmClient):
             def submit(self, path, *, dependency=None):
@@ -255,7 +303,9 @@ class ControllerTests(StageBatchSystemTestCase):
             self.assertEqual(len(client.submissions), 1)
 
     def test_controller_reads_submission_state_through_public_api(self) -> None:
-        source = Path("src/slurmforge/controller/train_eval_pipeline.py").read_text(encoding="utf-8")
+        source = Path("src/slurmforge/controller/stage_runtime.py").read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("submission._ledger", source)
         self.assertNotIn("from ..submission._ledger", source)
         self.assertNotIn("from ..submission.ledger", source)
@@ -264,7 +314,7 @@ class ControllerTests(StageBatchSystemTestCase):
 
     def test_controller_stops_on_uncertain_submission_ledger(self) -> None:
         from slurmforge.controller.train_eval_pipeline import run_controller
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -279,12 +329,16 @@ class ControllerTests(StageBatchSystemTestCase):
             ledger.groups["group_001"].state = "submitting"
             write_submission_ledger(Path(train_batch.submission_root), ledger)
             client = FakeSlurmClient()
-            self.assertEqual(run_controller(Path(plan.root_dir), client=client, poll_seconds=0), 1)
+            self.assertEqual(
+                run_controller(Path(plan.root_dir), client=client, poll_seconds=0), 1
+            )
             self.assertEqual(len(client.submissions), 0)
 
-    def test_controller_recovers_partial_group_submission_without_duplicate(self) -> None:
+    def test_controller_recovers_partial_group_submission_without_duplicate(
+        self,
+    ) -> None:
         from slurmforge.controller.train_eval_pipeline import run_controller
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
 
         class CompletingFakeSlurm(FakeSlurmClient):
             def submit(self, path, *, dependency=None):
@@ -297,8 +351,14 @@ class ControllerTests(StageBatchSystemTestCase):
             cfg_path = write_demo_project(
                 root,
                 extra={
-                    "runs": {"type": "grid", "axes": {"train.resources.constraint": ["a", "b"]}},
-                    "dispatch": {"max_available_gpus": 2, "overflow_policy": "serialize_groups"},
+                    "runs": {
+                        "type": "grid",
+                        "axes": {"train.resources.constraint": ["a", "b"]},
+                    },
+                    "dispatch": {
+                        "max_available_gpus": 2,
+                        "overflow_policy": "serialize_groups",
+                    },
                 },
             )
             spec = load_experiment_spec(cfg_path)
@@ -315,7 +375,9 @@ class ControllerTests(StageBatchSystemTestCase):
             ledger.groups[first_group].scheduler_job_id = "111"
             write_submission_ledger(Path(train_batch.submission_root), ledger)
             self.assertEqual(
-                read_submission_ledger(Path(train_batch.submission_root)).groups[first_group].scheduler_job_id,
+                read_submission_ledger(Path(train_batch.submission_root))
+                .groups[first_group]
+                .scheduler_job_id,
                 "111",
             )
             client = CompletingFakeSlurm()

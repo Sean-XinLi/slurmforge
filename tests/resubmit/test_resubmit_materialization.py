@@ -15,12 +15,16 @@ from tests.support.internal_records import (
     write_train_eval_pipeline_layout,
     write_stage_batch_layout,
 )
-from tests.support.std import Namespace, Path, patch, tempfile
+import tempfile
+from argparse import Namespace
+from pathlib import Path
+from unittest.mock import patch
+
 
 class ResubmitTests(StageBatchSystemTestCase):
     def test_resubmit_true_submit_writes_new_batch_ledger(self) -> None:
         from slurmforge.cli.resubmit import handle_resubmit
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -31,7 +35,9 @@ class ResubmitTests(StageBatchSystemTestCase):
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             client = FakeSlurmClient()
 
-            with patch("slurmforge.submission.submitter.SlurmClient", return_value=client):
+            with patch(
+                "slurmforge.submission.submitter.SlurmClient", return_value=client
+            ):
                 handle_resubmit(
                     Namespace(
                         root=plan.root_dir,
@@ -44,12 +50,15 @@ class ResubmitTests(StageBatchSystemTestCase):
                     )
                 )
 
-            resubmit_roots = sorted((Path(plan.root_dir) / "derived_batches").glob("eval_batch_*"))
+            resubmit_roots = sorted(
+                (Path(plan.root_dir) / "derived_batches").glob("eval_batch_*")
+            )
             self.assertEqual(len(resubmit_roots), 1)
             ledger = read_submission_ledger(resubmit_roots[0])
             assert ledger is not None
             self.assertEqual(ledger.state, "submitted")
             self.assertEqual(len(client.submissions), 1)
+
     def test_resubmit_validates_overrides_before_materialization(self) -> None:
         from slurmforge.cli.resubmit import handle_resubmit
 
@@ -73,6 +82,7 @@ class ResubmitTests(StageBatchSystemTestCase):
                 )
 
             self.assertFalse((Path(plan.root_dir) / "derived_batches").exists())
+
     def test_resubmit_dry_run_does_not_verify_missing_lineage_checkpoint(self) -> None:
         from slurmforge.cli.resubmit import handle_resubmit
         from slurmforge.status import StageStatusRecord, commit_stage_status
@@ -82,8 +92,12 @@ class ResubmitTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
             write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
-            self.assertEqual(execute_stage_task(Path(train_batch.submission_root), 1, 0), 0)
-            runs, bindings = upstream_bindings_from_train_batch(spec, Path(train_batch.submission_root))
+            self.assertEqual(
+                execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
+            )
+            runs, bindings = upstream_bindings_from_train_batch(
+                spec, Path(train_batch.submission_root)
+            )
             checkpoint_path = Path(bindings[runs[0].run_id][0].resolved.path)
             eval_batch = compile_stage_batch_for_kind(
                 spec,

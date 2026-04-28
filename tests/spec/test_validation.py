@@ -6,7 +6,10 @@ from tests.support.public import (
     load_experiment_spec,
     write_demo_project,
 )
-from tests.support.std import Namespace, Path, tempfile, yaml
+import tempfile
+import yaml
+from argparse import Namespace
+from pathlib import Path
 
 
 class SpecValidationTests(StageBatchSystemTestCase):
@@ -52,7 +55,11 @@ class SpecValidationTests(StageBatchSystemTestCase):
                             },
                             "inputs": {
                                 "checkpoint": {
-                                    "source": {"kind": "upstream_output", "stage": "train", "output": "checkpoint"},
+                                    "source": {
+                                        "kind": "upstream_output",
+                                        "stage": "train",
+                                        "output": "checkpoint",
+                                    },
                                     "expects": "path",
                                     "required": True,
                                 }
@@ -68,7 +75,9 @@ class SpecValidationTests(StageBatchSystemTestCase):
     def test_legacy_top_level_schema_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             cfg_path = Path(tmp) / "experiment.yaml"
-            cfg_path.write_text("project: demo\nexperiment_name: old\nrun: {}\n", encoding="utf-8")
+            cfg_path.write_text(
+                "project: demo\nexperiment_name: old\nrun: {}\n", encoding="utf-8"
+            )
             with self.assertRaisesRegex(Exception, "stages"):
                 load_experiment_spec(cfg_path)
         with tempfile.TemporaryDirectory() as tmp:
@@ -77,7 +86,9 @@ class SpecValidationTests(StageBatchSystemTestCase):
             payload = yaml.safe_load(cfg_path.read_text())
             payload["common"] = {"env": {"extra_env": {"OLD": "1"}}}
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
-            with self.assertRaisesRegex(Exception, "Unsupported top-level keys: common"):
+            with self.assertRaisesRegex(
+                Exception, "Unsupported top-level keys: common"
+            ):
                 load_experiment_spec(cfg_path)
 
     def test_top_level_matrix_is_rejected(self) -> None:
@@ -89,7 +100,9 @@ class SpecValidationTests(StageBatchSystemTestCase):
             payload["matrix"] = {"axes": {"train.entry.args.lr": [0.001, 0.002]}}
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
-            with self.assertRaisesRegex(Exception, "Top-level `matrix` is not supported"):
+            with self.assertRaisesRegex(
+                Exception, "Top-level `matrix` is not supported"
+            ):
                 load_experiment_spec(cfg_path)
 
     def test_case_runs_require_valid_unique_names(self) -> None:
@@ -105,7 +118,9 @@ class SpecValidationTests(StageBatchSystemTestCase):
             }
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
-            with self.assertRaisesRegex(Exception, "letters, numbers, underscores, dots, and dashes"):
+            with self.assertRaisesRegex(
+                Exception, "letters, numbers, underscores, dots, and dashes"
+            ):
                 load_experiment_spec(cfg_path)
 
             payload["runs"] = {
@@ -133,7 +148,9 @@ class SpecValidationTests(StageBatchSystemTestCase):
             }
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
-            with self.assertRaisesRegex(Exception, "runs.cases.bad_path.set.train.resources.missing"):
+            with self.assertRaisesRegex(
+                Exception, "runs.cases.bad_path.set.train.resources.missing"
+            ):
                 load_experiment_spec(cfg_path)
 
     def test_email_notifications_require_recipients_and_events(self) -> None:
@@ -154,7 +171,10 @@ class SpecValidationTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(cfg_path)
             self.assertTrue(spec.notifications.email.enabled)
             self.assertEqual(spec.notifications.email.to, ("you@example.com",))
-            self.assertEqual(spec.notifications.email.events, ("batch_finished", "train_eval_pipeline_finished"))
+            self.assertEqual(
+                spec.notifications.email.events,
+                ("batch_finished", "train_eval_pipeline_finished"),
+            )
 
             payload["notifications"]["email"]["to"] = []
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
@@ -181,7 +201,9 @@ class SpecValidationTests(StageBatchSystemTestCase):
                     }
                 }
             }
-            payload["sizing"] = {"gpu": {"defaults": {"safety_factor": 1.15, "round_to": 1}}}
+            payload["sizing"] = {
+                "gpu": {"defaults": {"safety_factor": 1.15, "round_to": 1}}
+            }
             payload["dispatch"]["max_available_gpus"] = 8
             payload["stages"]["train"]["resources"]["gpu_type"] = "a100_80gb"
             payload["stages"]["train"]["resources"]["gpus_per_node"] = "auto"
@@ -221,7 +243,10 @@ class SpecValidationTests(StageBatchSystemTestCase):
             payload = yaml.safe_load(cfg_path.read_text())
             payload["orchestration"] = {"controller_partition": "cpu"}
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
-            with self.assertRaisesRegex(Exception, "Unsupported keys under `orchestration`: controller_partition"):
+            with self.assertRaisesRegex(
+                Exception,
+                "Unsupported keys under `orchestration`: controller_partition",
+            ):
                 load_experiment_spec(cfg_path)
 
     def test_runtime_bootstrap_is_replaced_by_environments(self) -> None:
@@ -232,7 +257,9 @@ class SpecValidationTests(StageBatchSystemTestCase):
             payload["runtime"]["executor"]["bootstrap"] = {"steps": []}
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
-            with self.assertRaisesRegex(Exception, "Unsupported keys under `runtime.executor`: bootstrap"):
+            with self.assertRaisesRegex(
+                Exception, "Unsupported keys under `runtime.executor`: bootstrap"
+            ):
                 load_experiment_spec(cfg_path)
 
     def test_stage_environment_must_reference_declared_environment(self) -> None:
@@ -275,10 +302,14 @@ class SpecValidationTests(StageBatchSystemTestCase):
             root = Path(tmp)
             cfg_path = write_demo_project(root)
             payload = yaml.safe_load(cfg_path.read_text())
-            payload["stages"]["eval"]["inputs"]["checkpoint"]["source"]["output"] = "missing_checkpoint"
+            payload["stages"]["eval"]["inputs"]["checkpoint"]["source"]["output"] = (
+                "missing_checkpoint"
+            )
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
-            with self.assertRaisesRegex(Exception, "missing output `train.missing_checkpoint`"):
+            with self.assertRaisesRegex(
+                Exception, "missing output `train.missing_checkpoint`"
+            ):
                 load_experiment_spec(cfg_path)
 
     def test_input_expects_must_match_upstream_output_kind(self) -> None:
@@ -293,10 +324,18 @@ class SpecValidationTests(StageBatchSystemTestCase):
                 "required": True,
             }
             payload["stages"]["eval"]["inputs"]["checkpoint"] = {
-                "source": {"kind": "upstream_output", "stage": "train", "output": "score"},
+                "source": {
+                    "kind": "upstream_output",
+                    "stage": "train",
+                    "output": "score",
+                },
                 "expects": "path",
                 "required": True,
-                "inject": {"flag": "score", "env": "SFORGE_INPUT_SCORE", "mode": "path"},
+                "inject": {
+                    "flag": "score",
+                    "env": "SFORGE_INPUT_SCORE",
+                    "mode": "path",
+                },
             }
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
@@ -308,7 +347,9 @@ class SpecValidationTests(StageBatchSystemTestCase):
             root = Path(tmp)
             cfg_path = write_demo_project(root)
             payload = yaml.safe_load(cfg_path.read_text())
-            payload["stages"]["eval"]["inputs"]["checkpoint"]["inject"]["mode"] = "value"
+            payload["stages"]["eval"]["inputs"]["checkpoint"]["inject"]["mode"] = (
+                "value"
+            )
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
             with self.assertRaisesRegex(Exception, "inject.mode.*expects=path"):

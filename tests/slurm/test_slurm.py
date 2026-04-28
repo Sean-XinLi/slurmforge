@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.std import Path
+from pathlib import Path
 
 
 class SlurmParsingTests(StageBatchSystemTestCase):
@@ -14,7 +14,9 @@ class SlurmParsingTests(StageBatchSystemTestCase):
     def test_parse_array_task_rows(self) -> None:
         from slurmforge.slurm import parse_sacct_rows, parse_squeue_rows
 
-        sacct = parse_sacct_rows("100_3|100_3|100|3|COMPLETED|0:0|\n100.batch|100.batch|||COMPLETED|0:0|\n")
+        sacct = parse_sacct_rows(
+            "100_3|100_3|100|3|COMPLETED|0:0|\n100.batch|100.batch|||COMPLETED|0:0|\n"
+        )
         self.assertEqual(sacct["100_3"].array_job_id, "100")
         self.assertEqual(sacct["100_3"].array_task_id, 3)
         self.assertNotIn("100.batch", sacct)
@@ -24,7 +26,7 @@ class SlurmParsingTests(StageBatchSystemTestCase):
         self.assertEqual(squeue["200_4"].array_task_id, 4)
 
     def test_fake_slurm_tracks_array_tasks(self) -> None:
-        from slurmforge.slurm import FakeSlurmClient
+        from tests.support.slurm import FakeSlurmClient
 
         client = FakeSlurmClient()
         job_id = client.submit(Path("group.sbatch"))

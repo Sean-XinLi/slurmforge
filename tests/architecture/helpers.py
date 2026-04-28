@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 
-from tests.support.std import Path
+from pathlib import Path
 
 
 def inside_function(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> bool:

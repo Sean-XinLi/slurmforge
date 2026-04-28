@@ -9,7 +9,9 @@ from slurmforge.notifications import deliver_notification
 from slurmforge.notifications.records import read_notification_record
 from slurmforge.plans.notifications import EmailNotificationPlan, NotificationPlan
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.std import Path, patch, tempfile
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 
 class NotificationDeliveryTests(StageBatchSystemTestCase):
@@ -32,7 +34,9 @@ class NotificationDeliveryTests(StageBatchSystemTestCase):
                 experiment="baseline",
                 object_id="train-batch",
                 state="failed",
-                run_statuses=(NotificationRunStatusInput(run_id="run_001", state="failed"),),
+                run_statuses=(
+                    NotificationRunStatusInput(run_id="run_001", state="failed"),
+                ),
                 stage_statuses=(
                     NotificationStageStatusInput(
                         run_id="run_001",

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
 from tests.support.public import write_demo_project
-from tests.support.std import Path, tempfile
+import tempfile
+from pathlib import Path
 
 
 class ContractTests(StageBatchSystemTestCase):
@@ -51,7 +52,10 @@ class ContractTests(StageBatchSystemTestCase):
 
     def test_stage_output_contract_parse_and_from_dict_share_type(self) -> None:
         from slurmforge.contracts import StageOutputContract
-        from slurmforge.contracts.outputs import parse_stage_output_contract, stage_output_contract_from_dict
+        from slurmforge.contracts.outputs import (
+            parse_stage_output_contract,
+            stage_output_contract_from_dict,
+        )
 
         contract = parse_stage_output_contract(
             {
@@ -90,12 +94,21 @@ class ContractTests(StageBatchSystemTestCase):
         from slurmforge.contracts.outputs import parse_stage_output_contract
         from slurmforge.errors import ConfigContractError
 
-        with self.assertRaisesRegex(ConfigContractError, "`stages.train.outputs.bad.kind`"):
-            parse_stage_output_contract({"bad": {"kind": "unknown"}}, stage_name="train")
+        with self.assertRaisesRegex(
+            ConfigContractError, "`stages.train.outputs.bad.kind`"
+        ):
+            parse_stage_output_contract(
+                {"bad": {"kind": "unknown"}}, stage_name="train"
+            )
 
     def test_notification_summary_input_lives_in_contracts(self) -> None:
-        from slurmforge.contracts import NotificationRunStatusInput, NotificationSummaryInput
-        from slurmforge.notifications import NotificationSummaryInput as NotificationFacadeSummaryInput
+        from slurmforge.contracts import (
+            NotificationRunStatusInput,
+            NotificationSummaryInput,
+        )
+        from slurmforge.notifications import (
+            NotificationSummaryInput as NotificationFacadeSummaryInput,
+        )
 
         payload = NotificationSummaryInput(
             event="stage_batch_finished",
@@ -118,4 +131,6 @@ class ContractTests(StageBatchSystemTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             spec = load_experiment_spec(write_demo_project(Path(tmp)))
 
-            self.assertEqual(stage_source_input_name(spec, stage_name="eval"), "checkpoint")
+            self.assertEqual(
+                stage_source_input_name(spec, stage_name="eval"), "checkpoint"
+            )
