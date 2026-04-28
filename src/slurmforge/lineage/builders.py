@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from ..io import SchemaVersion
-from ..plans import TrainEvalPipelinePlan, StageBatchPlan, StageInstancePlan
+from ..plans.stage import StageBatchPlan, StageInstancePlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..contracts import InputBinding
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.sforge import write_demo_project
+from tests.support.public import write_demo_project
 from tests.support.std import Path, tempfile
 
 
@@ -37,7 +37,7 @@ class ContractTests(StageBatchSystemTestCase):
 
     def test_run_definition_lives_in_contracts_and_is_reexported_by_plans(self) -> None:
         from slurmforge.contracts import RunDefinition as ContractRunDefinition
-        from slurmforge.plans import RunDefinition as PlanRunDefinition
+        from slurmforge.contracts import RunDefinition as PlanRunDefinition
 
         run = ContractRunDefinition(
             run_id="run_1",

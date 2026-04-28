@@ -6,7 +6,7 @@ from tests.support.case import StageBatchSystemTestCase
 class SourcePlanTests(StageBatchSystemTestCase):
     def test_prior_batch_source_plan_uses_source_schema(self) -> None:
         from slurmforge.io import SchemaVersion
-        from slurmforge.plans import PriorBatchLineage, StageBatchSource
+        from slurmforge.plans.sources import PriorBatchLineage, StageBatchSource
         from slurmforge.plans.sources import prior_batch_lineage_to_dict
 
         source = StageBatchSource(kind="prior_batch", source_root="/tmp/root", stage="eval", query="state=failed")

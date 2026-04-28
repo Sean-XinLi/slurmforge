@@ -58,6 +58,56 @@ class ModuleShapeTests(StageBatchSystemTestCase):
                 violations.append(str(path))
         self.assertEqual(violations, [])
 
+    def test_plans_package_is_not_a_wide_public_model_facade(self) -> None:
+        plans_init = Path("src/slurmforge/plans/__init__.py").read_text(encoding="utf-8")
+        self.assertNotIn("from .", plans_init)
+        self.assertIn("__all__", plans_init)
+
+    def test_planner_payloads_are_split_by_payload_kind(self) -> None:
+        payload_root = Path("src/slurmforge/planner/payloads")
+        self.assertFalse(Path("src/slurmforge/planner/payloads.py").exists())
+        self.assertTrue(payload_root.is_dir())
+        for name in (
+            "__init__.py",
+            "bindings.py",
+            "entry.py",
+            "launcher.py",
+            "notifications.py",
+            "resources.py",
+            "runtime.py",
+        ):
+            self.assertTrue((payload_root / name).exists())
+
+    def test_spec_stage_parsing_is_split_by_section(self) -> None:
+        stage_parse_root = Path("src/slurmforge/spec/stage_parse")
+        self.assertFalse(Path("src/slurmforge/spec/parse_stages.py").exists())
+        self.assertTrue(Path("src/slurmforge/spec/parse_artifact_store.py").exists())
+        self.assertTrue(stage_parse_root.is_dir())
+        for name in (
+            "__init__.py",
+            "before.py",
+            "entry.py",
+            "gpu_sizing.py",
+            "inputs.py",
+            "launcher.py",
+            "stage.py",
+        ):
+            self.assertTrue((stage_parse_root / name).exists())
+
+    def test_stage_sbatch_rendering_is_split_by_render_surface(self) -> None:
+        stage_render_root = Path("src/slurmforge/emit/stage_render")
+        self.assertFalse(Path("src/slurmforge/emit/stage_render.py").exists())
+        self.assertTrue(stage_render_root.is_dir())
+        for name in ("__init__.py", "group.py", "headers.py", "notification.py"):
+            self.assertTrue((stage_render_root / name).exists())
+
+    def test_input_verification_records_are_split_by_responsibility(self) -> None:
+        verification_root = Path("src/slurmforge/inputs/verification")
+        self.assertFalse(Path("src/slurmforge/inputs/verification_records.py").exists())
+        self.assertTrue(verification_root.is_dir())
+        for name in ("__init__.py", "digests.py", "path_checks.py", "records.py"):
+            self.assertTrue((verification_root / name).exists())
+
     def test_executor_attempt_transaction_is_split(self) -> None:
         self.assertTrue(Path("src/slurmforge/executor/attempt.py").exists())
         self.assertTrue(Path("src/slurmforge/executor/runner.py").exists())
@@ -95,6 +145,11 @@ class ModuleShapeTests(StageBatchSystemTestCase):
             "tests/starter/test_cli_contract.py",
         ):
             self.assertTrue(Path(path).exists())
+
+    def test_test_support_is_split_between_public_workflows_and_internal_records(self) -> None:
+        self.assertFalse(Path("tests/support/sforge.py").exists())
+        self.assertTrue(Path("tests/support/public.py").exists())
+        self.assertTrue(Path("tests/support/internal_records.py").exists())
 
     def test_root_path_inference_has_single_source(self) -> None:
         self.assertTrue(Path("src/slurmforge/root_paths.py").exists())
@@ -156,6 +211,12 @@ class ModuleShapeTests(StageBatchSystemTestCase):
                 if flag in text:
                     violations.append(f"{path} contains {flag}")
         self.assertEqual(violations, [])
+
+    def test_run_record_contract_is_split_into_topic_docs(self) -> None:
+        record_index = Path("docs/record-contract.md").read_text(encoding="utf-8")
+        self.assertLess(len(record_index.splitlines()), 20)
+        for name in ("artifacts.md", "planning.md", "runtime.md", "status.md", "submission.md"):
+            self.assertTrue(Path("docs/records", name).exists())
 
     def test_import_linter_config_was_removed(self) -> None:
         self.assertFalse(Path(".importlinter").exists())

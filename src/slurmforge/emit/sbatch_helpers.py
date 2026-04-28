@@ -3,7 +3,7 @@ from __future__ import annotations
 import shlex
 import re
 
-from ..plans import EnvironmentPlan
+from ..plans.runtime import EnvironmentPlan
 
 
 def _q(value: str) -> str:

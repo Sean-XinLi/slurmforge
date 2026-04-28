@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.sforge import (
+from tests.support.public import (
     compile_stage_batch_for_kind,
     load_experiment_spec,
     write_demo_project,

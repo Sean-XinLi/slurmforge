@@ -8,7 +8,7 @@ import yaml
 
 from ..io import SchemaVersion, write_json
 from ..lineage import build_stage_batch_lineage, write_lineage_index
-from ..plans import StageBatchPlan
+from ..plans.stage import StageBatchPlan
 from ..root_paths import parent_pipeline_root_for_stage_batch
 from .materialization import write_materialization_status
 from .status_seed import seed_planned_stage_statuses

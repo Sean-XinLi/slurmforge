@@ -5,7 +5,7 @@ from pathlib import Path
 from ..errors import ConfigContractError
 from ..inputs import input_verification_path
 from ..io import read_json
-from ..plans import StageBatchPlan
+from ..plans.stage import StageBatchPlan
 from ..storage.loader import load_execution_stage_batch_plan
 from ..storage.materialization import read_materialization_status
 from .ledger import read_submission_ledger

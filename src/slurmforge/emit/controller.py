@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..plans import TrainEvalPipelinePlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 from .sbatch_helpers import _environment_lines, _job_name, _q
 
 

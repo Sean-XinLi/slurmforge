@@ -3,7 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from ...io import write_json
-from ...plans import StageInstancePlan, StageOutputsRecord
+from ...plans.outputs import StageOutputsRecord
+from ...plans.stage import StageInstancePlan
 from ..models import ArtifactManifestRecord, ArtifactRef
 from .context import OutputDiscoveryContext
 from .models import StageOutputDiscoveryResult

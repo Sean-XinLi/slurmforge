@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Iterable
 
 from ..overrides import deep_set, parse_override
-from ..plans import PriorBatchLineage, RunDefinition, SelectedStageRun, SourcedStageBatchPlan, StageBatchSource
+from ..contracts import RunDefinition
+from ..plans.sources import PriorBatchLineage, SelectedStageRun, SourcedStageBatchPlan, StageBatchSource
 from ..root_model import iter_stage_run_dirs
 from ..spec import load_spec_snapshot, parse_experiment_spec, validate_experiment_spec
 from ..status import read_stage_status, state_matches

@@ -6,7 +6,7 @@ from ..emit import load_stage_submit_manifest, write_stage_submit_files
 from ..errors import ConfigContractError, InputContractError
 from ..inputs import StageInputVerificationReport, verification_failure_reasons, verify_stage_batch_inputs
 from ..io import SchemaVersion
-from ..plans import StageBatchPlan
+from ..plans.stage import StageBatchPlan
 from ..status import StageStatusRecord, commit_stage_status
 from ..storage.materialization import write_materialization_status
 from .ledger import initialize_submission_ledger, ledger_path

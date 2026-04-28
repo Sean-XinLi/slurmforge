@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from ..io import SchemaVersion, write_json
-from ..plans import StageBatchPlan, StageInstancePlan
+from ..plans.stage import StageBatchPlan, StageInstancePlan
 from ..status import StageStatusRecord, commit_stage_status, write_root_ref
 from .paths import input_bindings_path, stage_plan_path
 

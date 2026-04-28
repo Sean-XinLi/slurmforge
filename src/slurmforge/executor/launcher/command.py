@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shlex
 
-from ...plans import LauncherPlan
+from ...plans.launcher import LauncherPlan
 from .mpirun import mpirun_list_command, mpirun_shell_command
 from .srun import srun_list_command, srun_shell_command
 from .torchrun import torchrun_python_script_command

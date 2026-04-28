@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from ..io import SchemaVersion, read_json, require_schema, to_jsonable, utc_now, write_json
-from ..plans import SourcedStageBatchPlan
+from ..plans.sources import SourcedStageBatchPlan
 from ..plans.sources import prior_batch_lineage_to_dict
 
 

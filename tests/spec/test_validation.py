@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.sforge import (
+from tests.support.public import (
     compile_stage_batch_for_kind,
     load_experiment_spec,
     write_demo_project,
@@ -345,7 +345,7 @@ class SpecValidationTests(StageBatchSystemTestCase):
             with self.assertRaisesRegex(Exception, "at least one run"):
                 compile_stage_batch_for_kind(spec, kind="train", runs=())
             run = compile_stage_batch_for_kind(spec, kind="train").stage_instances[0]
-            from slurmforge.plans import RunDefinition
+            from slurmforge.contracts import RunDefinition
 
             selected_run = RunDefinition(
                 run_id=run.run_id,

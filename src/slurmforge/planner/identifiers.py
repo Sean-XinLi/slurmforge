@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..io import content_digest
-from ..plans import RunDefinition
+from ..contracts import RunDefinition
 from ..spec import ExperimentSpec
 
 

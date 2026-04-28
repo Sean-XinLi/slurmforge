@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..io import SchemaVersion, read_json, write_json
-from ..plans import TRAIN_EVAL_PIPELINE_KIND, TrainEvalPipelinePlan
+from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalPipelinePlan
 
 
 def _controller_state_path(pipeline_root: Path) -> Path:

@@ -4,13 +4,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ..contracts import RunDefinition
 from ..io import read_json
-from ..plans import (
-    TrainEvalPipelinePlan,
-    RunDefinition,
-    StageBatchPlan,
-    StageInstancePlan,
-)
+from ..plans.stage import StageBatchPlan, StageInstancePlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..plans.serde import (
     train_eval_pipeline_plan_from_dict,
     stage_batch_plan_from_dict,

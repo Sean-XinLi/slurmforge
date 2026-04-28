@@ -10,13 +10,14 @@ from ..errors import ConfigContractError
 from ..io import content_digest
 from ..overrides import deep_set, parse_override
 from .models import ExperimentSpec, StorageSpec
+from .parse_artifact_store import parse_artifact_store
 from .parse_common import require_mapping
 from .parse_dispatch import parse_dispatch
 from .parse_notifications import parse_notifications
 from .parse_resources import parse_hardware, parse_sizing
 from .parse_runs import parse_runs
 from .parse_runtime import parse_environments, parse_orchestration, parse_runtime
-from .parse_stages import parse_artifact_store, parse_stage
+from .stage_parse import parse_stage
 
 
 _ALLOWED_TOP_LEVEL_KEYS = {

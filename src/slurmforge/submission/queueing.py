@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..io import SchemaVersion
-from ..plans import StageBatchPlan
+from ..plans.stage import StageBatchPlan
 from ..status import StageStatusRecord, commit_stage_status, read_stage_status
 
 

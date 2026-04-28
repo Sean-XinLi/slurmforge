@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..io import SchemaVersion, write_json
-from ..plans import TrainEvalPipelinePlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 
 
 def write_initial_controller_state(root: Path, plan: TrainEvalPipelinePlan) -> None:

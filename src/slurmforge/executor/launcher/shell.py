@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shlex
 
-from ...plans import StageInstancePlan
+from ...plans.stage import StageInstancePlan
 from ...contracts import InputBinding
 from ..bindings import binding_injected_value
 from .args import args_to_argv, flag

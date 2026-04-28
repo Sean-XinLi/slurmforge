@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..io import read_json
-from ..plans import StageInstancePlan
+from ..plans.stage import StageInstancePlan
 from ..plans.serde import stage_instance_plan_from_dict
 from ..storage.loader import load_execution_stage_batch_plan
 

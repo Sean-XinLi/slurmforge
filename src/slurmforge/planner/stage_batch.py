@@ -5,8 +5,8 @@ from pathlib import Path
 
 from ..errors import ConfigContractError
 from ..overrides import deep_set
-from ..plans import RunDefinition, StageBatchPlan, StageInstancePlan
-from ..contracts import InputBinding, binding_is_ready_for_injection
+from ..contracts import InputBinding, RunDefinition, binding_is_ready_for_injection
+from ..plans.stage import StageBatchPlan, StageInstancePlan
 from ..spec import (
     ExperimentSpec,
     parse_experiment_spec,

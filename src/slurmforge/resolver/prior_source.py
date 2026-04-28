@@ -10,7 +10,7 @@ from ..contracts import (
     resolved_input_from_dict,
 )
 from ..errors import ConfigContractError
-from ..plans import RunDefinition
+from ..contracts import RunDefinition
 from ..spec import ExperimentSpec
 from .binding_builders import inject_payload, source_payload, unresolved_resolved
 from .upstream import find_upstream_output

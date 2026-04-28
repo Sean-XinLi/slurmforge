@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ...plans import ArtifactStorePlan, StageInstancePlan
+from ...plans.outputs import ArtifactStorePlan
+from ...plans.stage import StageInstancePlan
 
 
 @dataclass(frozen=True)

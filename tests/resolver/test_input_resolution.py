@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.sforge import (
+from tests.support.public import (
     compile_train_eval_pipeline_plan,
     execute_stage_task,
     load_experiment_spec,
     resolve_stage_inputs_for_train_eval_pipeline,
     write_demo_project,
-    write_train_eval_pipeline_layout,
 )
+from tests.support.internal_records import write_train_eval_pipeline_layout
 from tests.support.std import Path, tempfile, yaml
 
 

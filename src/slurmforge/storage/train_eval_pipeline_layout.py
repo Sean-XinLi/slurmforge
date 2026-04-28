@@ -8,7 +8,7 @@ import yaml
 
 from ..io import SchemaVersion, write_json
 from ..lineage import build_train_eval_pipeline_lineage, write_lineage_index
-from ..plans import TRAIN_EVAL_PIPELINE_KIND, TrainEvalPipelinePlan
+from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalPipelinePlan
 from .batch_layout import write_stage_batch_layout
 from .controller_seed import write_initial_controller_state
 

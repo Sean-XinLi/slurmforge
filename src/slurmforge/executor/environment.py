@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from ..plans import StageInstancePlan
+from ..plans.stage import StageInstancePlan
 from ..contracts import InputBinding
 from .bindings import binding_injected_value
 

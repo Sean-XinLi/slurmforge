@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..io import SchemaVersion, utc_now
-from ..plans import StageBatchPlan
+from ..plans.stage import StageBatchPlan
 from ..slurm import SlurmClient, failure_class_for_slurm_state, stage_state_for_slurm_state
 from .machine import commit_stage_status
 from .models import StageStatusRecord, TERMINAL_STATES

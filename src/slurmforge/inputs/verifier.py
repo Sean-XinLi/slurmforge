@@ -5,9 +5,9 @@ from pathlib import Path
 from ..errors import InputContractError
 from ..io import SchemaVersion, utc_now, write_json
 from ..contracts import InputBinding
-from ..plans import StageBatchPlan, StageInstancePlan
+from ..plans.stage import StageBatchPlan, StageInstancePlan
 from .models import StageInputVerificationReport
-from .verification_records import record_for_binding
+from .verification import record_for_binding
 
 
 def input_verification_path(run_dir: Path) -> Path:

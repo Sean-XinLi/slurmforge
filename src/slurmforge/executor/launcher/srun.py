@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shlex
 
-from ...plans import LauncherPlan
+from ...plans.launcher import LauncherPlan
 
 
 def srun_list_command(base: list[str], launcher: LauncherPlan) -> tuple[list[str], bool]:

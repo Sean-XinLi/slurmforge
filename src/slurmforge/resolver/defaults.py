@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..contracts import InputBinding, ResolvedInput
-from ..plans import RunDefinition
+from ..contracts import RunDefinition
 from ..spec import ExperimentSpec, StageSpec
 from .binding_builders import inject_payload, source_payload, unresolved_resolved
 

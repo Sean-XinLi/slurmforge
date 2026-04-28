@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...plans import OutputRef, StageOutputsRecord
+from ...plans.outputs import OutputRef, StageOutputsRecord
 from ..models import ArtifactManifestRecord, ArtifactRef
 
 

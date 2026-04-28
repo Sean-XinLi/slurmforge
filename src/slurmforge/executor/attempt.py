@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..io import SchemaVersion, content_digest, read_json, utc_now, write_json
-from ..plans import StageInstancePlan
+from ..plans.stage import StageInstancePlan
 from ..status import StageAttemptRecord, StageStatusRecord, commit_attempt, commit_stage_status
 
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ...contracts import InputBinding, InputSource
 from ...errors import ConfigContractError
-from ...plans import RunDefinition
+from ...contracts import RunDefinition
 from ...spec import ExperimentSpec
 from ...spec.queries import stage_name_for_kind, stage_source_input_name
 from ...status import read_stage_status

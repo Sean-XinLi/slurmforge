@@ -5,16 +5,15 @@ from dataclasses import replace
 
 from ..errors import ConfigContractError
 from ..io import content_digest
-from ..plans import (
+from ..plans.budget import (
     BudgetDependencyPlan,
     BudgetGroupPlan,
     BudgetPlan,
     BudgetWaveGroupPlan,
     BudgetWavePlan,
-    GroupPlan,
-    ResourcePlan,
-    StageInstancePlan,
 )
+from ..plans.resources import ResourcePlan
+from ..plans.stage import GroupPlan, StageInstancePlan
 
 
 def _group_key(instance: StageInstancePlan) -> str:

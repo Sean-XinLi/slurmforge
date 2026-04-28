@@ -7,7 +7,8 @@ from ..contracts import binding_is_ready_for_injection
 from ..runtime import check_runtime_contract
 from ..inputs import verify_stage_instance_inputs
 from ..io import SchemaVersion, stable_json, to_jsonable
-from ..plans import TrainEvalPipelinePlan, StageBatchPlan
+from ..plans.stage import StageBatchPlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..spec import ExperimentSpec
 from .resource_estimate import build_resource_estimate
 

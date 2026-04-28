@@ -8,7 +8,7 @@ from typing import Any
 
 from ..errors import ConfigContractError
 from ..io import file_digest
-from ..plans import ArtifactStorePlan
+from ..plans.outputs import ArtifactStorePlan
 from .models import ArtifactRef
 
 

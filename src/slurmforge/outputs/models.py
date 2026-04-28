@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..io import SchemaVersion, require_schema
-from ..plans import OutputRef
+from ..plans.outputs import OutputRef
 
 
 def _require_output_schema(payload: dict[str, Any], *, name: str) -> None:

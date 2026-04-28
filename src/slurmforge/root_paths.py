@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .io import read_json
-from .plans import TRAIN_EVAL_PIPELINE_KIND
+from .plans.train_eval import TRAIN_EVAL_PIPELINE_KIND
 
 
 def parent_pipeline_root_for_stage_batch(stage_batch_root: Path) -> Path | None:

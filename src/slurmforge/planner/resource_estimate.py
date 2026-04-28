@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from ..io import to_jsonable
-from ..plans import StageBatchPlan, TrainEvalPipelinePlan
+from ..plans.stage import StageBatchPlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..sizing import ExperimentResourceEstimate, ResourceGroupEstimate, StageResourceEstimate
 
 

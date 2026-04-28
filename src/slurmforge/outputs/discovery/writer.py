@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ...io import SchemaVersion, file_digest, write_json
-from ...plans import OutputRef, StageOutputsRecord
+from ...plans.outputs import OutputRef, StageOutputsRecord
 from ..artifact_store import artifact_payload
 from ..models import ArtifactRef
 from .context import OutputDiscoveryContext

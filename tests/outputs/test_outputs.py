@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.sforge import (
+from tests.support.public import (
     compile_stage_batch_for_kind,
     execute_stage_task,
     load_experiment_spec,
     write_demo_project,
-    write_stage_batch_layout,
 )
+from tests.support.internal_records import write_stage_batch_layout
 from tests.support.std import Path, json, patch, tempfile, yaml
 
 
@@ -15,7 +15,7 @@ class OutputTests(StageBatchSystemTestCase):
     def test_invalid_artifact_strategy_is_config_contract_error(self) -> None:
         from slurmforge.errors import ConfigContractError
         from slurmforge.outputs.artifact_store import manage_file
-        from slurmforge.plans import ArtifactStorePlan
+        from slurmforge.plans.outputs import ArtifactStorePlan
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

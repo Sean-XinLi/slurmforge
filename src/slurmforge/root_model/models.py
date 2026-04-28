@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from ..io import SchemaVersion
-from ..plans import TRAIN_EVAL_PIPELINE_KIND
+from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND
 from ..status.models import RunStatusRecord, StageStatusRecord, TrainEvalPipelineStatusRecord
 from ..contracts import NotificationSummaryInput
 

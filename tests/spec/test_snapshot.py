@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.sforge import load_experiment_spec, write_demo_project
+from tests.support.public import (
+    load_experiment_spec,
+    write_demo_project,
+)
 from tests.support.std import Path, tempfile
 
 

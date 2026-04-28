@@ -8,7 +8,7 @@ from ..io import utc_now
 from ..notifications.models import NotificationDeliveryRecord
 from ..notifications.policy import email_notification_enabled
 from ..notifications.records import append_notification_event, write_notification_record
-from ..plans import StageBatchPlan
+from ..plans.stage import StageBatchPlan
 from ..slurm import SlurmClient
 
 
@@ -125,4 +125,3 @@ def submit_stage_batch_finalizer(
         dependency_job_ids=dependency_job_ids,
     )
     return record
-

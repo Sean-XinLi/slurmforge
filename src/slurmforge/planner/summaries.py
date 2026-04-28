@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..io import to_jsonable
-from ..plans import TrainEvalPipelinePlan, StageBatchPlan
+from ..plans.stage import StageBatchPlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 
 
 def summarize_stage_batch(batch: StageBatchPlan) -> list[str]:

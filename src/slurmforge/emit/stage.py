@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from ..io import SchemaVersion, content_digest, read_json, write_json
-from ..plans import StageBatchPlan
+from ..plans.stage import StageBatchPlan
 from .sbatch_helpers import _q
 from .stage_render import (
     render_stage_group_sbatch,

@@ -9,7 +9,7 @@ from ..planner import (
     compile_stage_batch_for_kind,
     summarize_stage_batch as _summarize_stage_batch,
 )
-from ..plans import SourcedStageBatchPlan
+from ..plans.sources import SourcedStageBatchPlan
 from ..resolver import explicit_input_bindings, upstream_bindings_from_run, upstream_bindings_from_stage_batch
 from ..spec import ExperimentSpec
 from ..spec.queries import stage_source_input_name

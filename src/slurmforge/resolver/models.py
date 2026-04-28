@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 from ..contracts import InputBinding
 from ..io import SchemaVersion
-from ..plans import RunDefinition
+from ..contracts import RunDefinition
 
 
 @dataclass(frozen=True)

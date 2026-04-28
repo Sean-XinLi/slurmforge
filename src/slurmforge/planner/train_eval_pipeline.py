@@ -3,7 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..errors import ConfigContractError
-from ..plans import TRAIN_EVAL_PIPELINE_KIND, RuntimePlan, TrainEvalControllerPlan, TrainEvalPipelinePlan, StageBatchPlan
+from ..plans.runtime import RuntimePlan
+from ..plans.stage import StageBatchPlan
+from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalControllerPlan, TrainEvalPipelinePlan
 from ..spec import ExperimentSpec
 from ..spec.queries import expand_run_definitions
 from .identifiers import train_eval_pipeline_id

@@ -6,7 +6,7 @@ from typing import Any
 from ...artifact_store import manage_file
 from ...selection import json_path_value, resolve_file
 from ....errors import ConfigContractError
-from ....plans import OutputRef
+from ....plans.outputs import OutputRef
 from ..context import OutputDiscoveryContext
 from ..models import OutputDiscoveryItem
 

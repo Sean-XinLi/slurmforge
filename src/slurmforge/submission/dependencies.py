@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..errors import ConfigContractError
-from ..plans import StageBatchPlan
+from ..plans.stage import StageBatchPlan
 
 
 def dependency_for(group_id: str, batch: StageBatchPlan, group_job_ids: dict[str, str]) -> str | None:

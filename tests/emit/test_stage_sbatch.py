@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.support.sforge import (
+from tests.support.public import (
     build_shell_script,
     compile_stage_batch_for_kind,
     load_experiment_spec,
     load_stage_submit_manifest,
     write_demo_project,
-    write_stage_batch_layout,
     write_stage_submit_files,
 )
+from tests.support.internal_records import write_stage_batch_layout
 from tests.support.std import Path, tempfile, yaml
 
 

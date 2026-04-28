@@ -7,7 +7,7 @@ from slurmforge.contracts import (
 )
 from slurmforge.notifications import deliver_notification
 from slurmforge.notifications.records import read_notification_record
-from slurmforge.plans import EmailNotificationPlan, NotificationPlan
+from slurmforge.plans.notifications import EmailNotificationPlan, NotificationPlan
 from tests.support.case import StageBatchSystemTestCase
 from tests.support.std import Path, patch, tempfile
 
