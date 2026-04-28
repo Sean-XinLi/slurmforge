@@ -7,15 +7,42 @@ from typing import Any
 import yaml
 
 from ..io import SchemaVersion, write_json
-from ..lineage import build_stage_batch_lineage, write_lineage_index
+from ..lineage.builders import build_stage_batch_lineage
+from ..lineage.paths import write_lineage_index
 from ..plans.stage import StageBatchPlan
-from ..root_paths import parent_pipeline_root_for_stage_batch
 from .materialization import write_materialization_status
-from .status_seed import seed_planned_stage_statuses
+from .paths import input_bindings_path, stage_plan_path
 
 
 def _root(batch: StageBatchPlan) -> Path:
     return Path(batch.submission_root)
+
+
+def _bindings_payload(instance) -> dict[str, Any]:
+    return {
+        "schema_version": SchemaVersion.INPUT_BINDINGS,
+        "stage_instance_id": instance.stage_instance_id,
+        "bindings": {
+            binding.input_name: {
+                "schema_version": binding.schema_version,
+                "input_name": binding.input_name,
+                "source": binding.source,
+                "expects": binding.expects,
+                "resolved": binding.resolved,
+                "inject": binding.inject,
+                "resolution": binding.resolution,
+            }
+            for binding in instance.input_bindings
+        },
+    }
+
+
+def _write_stage_run_layout(batch: StageBatchPlan, batch_root: Path) -> None:
+    for instance in batch.stage_instances:
+        run_dir = batch_root / instance.run_dir_rel
+        run_dir.mkdir(parents=True, exist_ok=True)
+        write_json(stage_plan_path(run_dir), instance)
+        write_json(input_bindings_path(run_dir), _bindings_payload(instance))
 
 
 def write_stage_batch_layout(
@@ -54,11 +81,7 @@ def write_stage_batch_layout(
         {"schema_version": SchemaVersion.GROUPS, "groups": batch.group_plans},
     )
     write_json(batch_root / "groups" / "gpu_budget_plan.json", batch.budget_plan)
-    seed_planned_stage_statuses(
-        batch,
-        batch_root,
-        pipeline_root=pipeline_root or parent_pipeline_root_for_stage_batch(batch_root),
-    )
+    _write_stage_run_layout(batch, batch_root)
     write_lineage_index(batch_root, build_stage_batch_lineage(batch))
     return batch_root
 
@@ -88,10 +111,6 @@ def write_selected_stage_batch_layout(
             "run_ids": sorted(blocked_run_ids or []),
         },
     )
-    seed_planned_stage_statuses(
-        batch,
-        batch_root,
-        pipeline_root=parent_pipeline_root_for_stage_batch(batch_root),
-    )
+    _write_stage_run_layout(batch, batch_root)
     write_lineage_index(batch_root, build_stage_batch_lineage(batch))
     return batch_root

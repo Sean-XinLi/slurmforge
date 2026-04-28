@@ -4,10 +4,10 @@ import sys
 from pathlib import Path
 
 from ..io import write_exception_diagnostic
-from ..slurm import SlurmClient
+from ..slurm import SlurmClient, SlurmClientProtocol
 from ..spec import load_experiment_spec_from_snapshot
 from ..storage.controller import write_controller_status
-from ..storage.loader import load_stage_batch_plan, load_train_eval_pipeline_plan
+from ..storage.plan_reader import load_stage_batch_plan, load_train_eval_pipeline_plan
 from .materialization import ensure_stage_materialized, project_root_from_pipeline
 from .state import load_controller_state, record_controller_event, save_controller_state
 from .stage_runtime import (
@@ -22,7 +22,7 @@ from .terminal import complete_pipeline
 def run_controller(
     pipeline_root: Path,
     *,
-    client: SlurmClient | None = None,
+    client: SlurmClientProtocol | None = None,
     poll_seconds: int = 30,
     missing_output_grace_seconds: int = 300,
 ) -> int:

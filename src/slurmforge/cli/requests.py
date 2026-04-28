@@ -24,7 +24,9 @@ def eval_source_from_args(args) -> EvalInputSourceRequest | None:
         raise ConfigContractError("eval accepts exactly one input source")
     if not selected:
         if getattr(args, "input_name", None):
-            raise ConfigContractError("--input-name is only valid with an eval input source")
+            raise ConfigContractError(
+                "--input-name is only valid with an eval input source"
+            )
         return None
     kind, value = selected[0]
     return EvalInputSourceRequest(

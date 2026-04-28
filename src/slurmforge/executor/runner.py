@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..errors import RuntimeContractError
-from ..inputs import verify_and_write_stage_instance_inputs
+from ..inputs.verifier import verify_and_write_stage_instance_inputs
 from ..io import write_json
-from ..runtime import require_runtime_contract
+from ..runtime.probe import require_runtime_contract
 from .attempt import ExecutionAttempt
 from .bindings import bindings_from_file
 from .environment import build_execution_env

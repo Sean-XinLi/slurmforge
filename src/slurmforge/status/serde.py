@@ -14,11 +14,15 @@ def stage_status_from_dict(payload: dict[str, Any]) -> StageStatusRecord:
         run_id=str(payload["run_id"]),
         stage_name=str(payload["stage_name"]),
         state=str(payload.get("state") or "planned"),
-        latest_attempt_id=None if payload.get("latest_attempt_id") in (None, "") else str(payload.get("latest_attempt_id")),
+        latest_attempt_id=None
+        if payload.get("latest_attempt_id") in (None, "")
+        else str(payload.get("latest_attempt_id")),
         latest_output_digest=None
         if payload.get("latest_output_digest") in (None, "")
         else str(payload.get("latest_output_digest")),
-        failure_class=None if payload.get("failure_class") in (None, "") else str(payload.get("failure_class")),
+        failure_class=None
+        if payload.get("failure_class") in (None, "")
+        else str(payload.get("failure_class")),
         reason=str(payload.get("reason") or ""),
     )
 
@@ -41,8 +45,12 @@ def attempt_from_dict(payload: dict[str, Any]) -> StageAttemptRecord:
         executor_finished_at=str(payload.get("executor_finished_at") or ""),
         started_at=str(payload.get("started_at") or ""),
         finished_at=str(payload.get("finished_at") or ""),
-        exit_code=None if payload.get("exit_code") is None else int(payload.get("exit_code")),
-        failure_class=None if payload.get("failure_class") in (None, "") else str(payload.get("failure_class")),
+        exit_code=None
+        if payload.get("exit_code") is None
+        else int(payload.get("exit_code")),
+        failure_class=None
+        if payload.get("failure_class") in (None, "")
+        else str(payload.get("failure_class")),
         reason=str(payload.get("reason") or ""),
         log_paths=tuple(str(item) for item in payload.get("log_paths", ())),
         artifact_paths=tuple(str(item) for item in payload.get("artifact_paths", ())),

@@ -206,7 +206,7 @@ class SubmissionTests(StageBatchSystemTestCase):
         import slurmforge.emit as emit
         import slurmforge.submission as submission
 
-        # submission/__init__ is the canonical entry for public submission behavior.
+        self.assertEqual(submission.__all__, [])
         self.assertFalse(hasattr(submission, "create_submit_generation"))
         self.assertFalse(hasattr(submission, "read_submission_ledger"))
         self.assertFalse(hasattr(submission, "write_submission_ledger"))
@@ -214,20 +214,20 @@ class SubmissionTests(StageBatchSystemTestCase):
         self.assertFalse(hasattr(submission, "initialize_submission_ledger"))
         self.assertFalse(hasattr(submission, "append_submission_event"))
         self.assertFalse(hasattr(submission, "submit_stage_batch_with_ledger"))
-        self.assertTrue(hasattr(submission, "prepare_stage_submission"))
-        self.assertTrue(hasattr(submission, "submit_prepared_stage_batch"))
-        self.assertTrue(hasattr(submission, "read_submission_state"))
-        # emit publicly exposes the sbatch-render API consumed by submission/.
-        self.assertTrue(hasattr(emit, "write_stage_submit_files"))
-        self.assertTrue(hasattr(emit, "load_stage_submit_manifest"))
+        self.assertFalse(hasattr(submission, "prepare_stage_submission"))
+        self.assertFalse(hasattr(submission, "submit_prepared_stage_batch"))
+        self.assertFalse(hasattr(submission, "read_submission_state"))
+        self.assertEqual(emit.__all__, [])
+        self.assertFalse(hasattr(emit, "write_stage_submit_files"))
+        self.assertFalse(hasattr(emit, "load_stage_submit_manifest"))
         self.assertFalse(hasattr(emit, "render_stage_group_sbatch"))
         self.assertFalse(hasattr(emit, "submit_sbatch_files"))
         self.assertFalse(hasattr(emit, "submit_controller"))
-        self.assertTrue(hasattr(emit, "write_controller_submit_file"))
+        self.assertFalse(hasattr(emit, "write_controller_submit_file"))
         generation_source = Path("src/slurmforge/submission/generation.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("from ..emit import", generation_source)
+        self.assertIn("from ..emit.stage import", generation_source)
         self.assertNotIn("emit._stage", generation_source)
         resubmit_source = Path("src/slurmforge/cli/resubmit.py").read_text(
             encoding="utf-8"
@@ -291,8 +291,8 @@ class SubmissionTests(StageBatchSystemTestCase):
 
     def test_standalone_submission_writes_ledger_and_reconcile_uses_it(self) -> None:
         from tests.support.slurm import FakeSlurmClient
-        from slurmforge.status import read_stage_status
-        from slurmforge.submission import reconcile_batch_submission
+        from slurmforge.status.reader import read_stage_status
+        from slurmforge.submission.reconcile import reconcile_batch_submission
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

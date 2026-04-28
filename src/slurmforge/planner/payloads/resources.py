@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from ...plans.outputs import ArtifactStorePlan
 from ...plans.resources import ControlResourcesPlan, ResourcePlan
-from ...sizing import GpuSizingResolution, resolve_stage_gpu_sizing
+from ...sizing.gpu import resolve_stage_gpu_sizing
+from ...sizing.models import GpuSizingResolution
 from ...spec import ExperimentSpec, StageSpec
 from ...spec.sizing import stage_gpu_sizing_inputs
 

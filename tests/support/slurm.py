@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from slurmforge.slurm import SlurmClient, SlurmJobState, normalize_slurm_state
+from slurmforge.slurm import SlurmJobState, normalize_slurm_state
 
 
-class FakeSlurmClient(SlurmClient):
+class FakeSlurmClient:
     def __init__(self) -> None:
         self._next_job_id = 1000
         self.submissions: list[tuple[Path, str | None, str]] = []
@@ -69,6 +69,14 @@ class FakeSlurmClient(SlurmClient):
 
     def query_observed_jobs(self, job_ids: list[str]) -> dict[str, SlurmJobState]:
         return self.query_jobs(job_ids)
+
+    def query_array_tasks(self, array_job_id: str) -> dict[int, SlurmJobState]:
+        states = self.query_jobs([array_job_id])
+        return {
+            state.array_task_id: state
+            for state in states.values()
+            if state.array_task_id is not None
+        }
 
 
 def _fake_array_job_id(job_id: str) -> str | None:

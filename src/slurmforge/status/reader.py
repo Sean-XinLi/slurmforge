@@ -30,4 +30,7 @@ def list_attempts(run_dir: Path) -> list[StageAttemptRecord]:
     root = attempts_dir(run_dir)
     if not root.exists():
         return []
-    return [attempt_from_dict(read_json(path)) for path in sorted(root.glob("*/attempt.json"))]
+    return [
+        attempt_from_dict(read_json(path))
+        for path in sorted(root.glob("*/attempt.json"))
+    ]

@@ -3,16 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from .controller import reconcile_controller_job
-from ..root_model import (
-    collect_stage_statuses,
-    detect_root,
-    is_stage_batch_root,
-    refresh_root_status,
-)
-from ..submission import reconcile_root_submissions
-from ..status import state_matches
+from ..root_model.detection import detect_root, is_stage_batch_root
+from ..root_model.runs import collect_stage_statuses
+from ..root_model.snapshots import refresh_root_status
+from ..status.query import state_matches
 from ..storage.controller import read_controller_status
 from ..storage.materialization import read_materialization_status
+from ..submission.reconcile import reconcile_root_submissions
 
 
 def _trim(value: str, limit: int = 120) -> str:
@@ -56,7 +53,9 @@ def render_status_lines(
             controller_state = str(controller_status.get("state") or "unknown")
             job_id = str(controller_status.get("scheduler_job_id") or "-")
             reason = _trim(str(controller_status.get("reason") or ""))
-            lines.append(f"[STATUS] controller state={controller_state} job={job_id} reason={reason}")
+            lines.append(
+                f"[STATUS] controller state={controller_state} job={job_id} reason={reason}"
+            )
         for stage_root in sorted((root / "stage_batches").glob("*")):
             if not is_stage_batch_root(stage_root):
                 continue
@@ -81,11 +80,19 @@ def render_status_lines(
         counts[status.state] = counts.get(status.state, 0) + 1
         by_stage = stage_counts.setdefault(status.stage_name, {})
         by_stage[status.state] = by_stage.get(status.state, 0) + 1
-    lines.append(f"[STATUS] root={root} total_stages={len(statuses)} matched={len(matched)} query={status_query}")
+    lines.append(
+        f"[STATUS] root={root} total_stages={len(statuses)} matched={len(matched)} query={status_query}"
+    )
     if counts:
-        lines.append("[STATUS] counts: " + ", ".join(f"{key}={counts[key]}" for key in sorted(counts)))
+        lines.append(
+            "[STATUS] counts: "
+            + ", ".join(f"{key}={counts[key]}" for key in sorted(counts))
+        )
     for stage_name in sorted(stage_counts):
-        summary = ", ".join(f"{key}={stage_counts[stage_name][key]}" for key in sorted(stage_counts[stage_name]))
+        summary = ", ".join(
+            f"{key}={stage_counts[stage_name][key]}"
+            for key in sorted(stage_counts[stage_name])
+        )
         lines.append(f"[STATUS] stage={stage_name}: {summary}")
     for status in matched:
         failure_class = status.failure_class or "-"

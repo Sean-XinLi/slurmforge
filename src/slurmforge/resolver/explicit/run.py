@@ -7,7 +7,8 @@ from ...errors import ConfigContractError
 from ...contracts import RunDefinition
 from ...spec import ExperimentSpec
 from ...spec.queries import stage_name_for_kind, stage_source_input_name
-from ...storage.loader import load_stage_outputs, plan_for_run_dir
+from ...outputs.records import load_stage_outputs
+from ...storage.plan_reader import plan_for_run_dir
 from ..binding_builders import input_inject, path_binding_for_input
 from ..output_refs import (
     output_ref,

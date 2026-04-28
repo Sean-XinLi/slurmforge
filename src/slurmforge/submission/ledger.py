@@ -5,7 +5,14 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..io import SchemaVersion, read_json, require_schema, to_jsonable, utc_now, write_json
+from ..io import (
+    SchemaVersion,
+    read_json,
+    require_schema,
+    to_jsonable,
+    utc_now,
+    write_json,
+)
 from .models import GroupSubmissionRecord, SubmissionLedger, SubmitGeneration
 
 
@@ -33,18 +40,24 @@ def _group_from_dict(payload: dict[str, Any]) -> GroupSubmissionRecord:
     return GroupSubmissionRecord(
         group_id=str(payload["group_id"]),
         sbatch_path=str(payload["sbatch_path"]),
-        dependency=None if payload.get("dependency") in (None, "") else str(payload.get("dependency")),
+        dependency=None
+        if payload.get("dependency") in (None, "")
+        else str(payload.get("dependency")),
         scheduler_job_id=None
         if payload.get("scheduler_job_id") in (None, "")
         else str(payload.get("scheduler_job_id")),
         state=str(payload.get("state") or "planned"),
-        submitted_at=None if payload.get("submitted_at") in (None, "") else str(payload.get("submitted_at")),
+        submitted_at=None
+        if payload.get("submitted_at") in (None, "")
+        else str(payload.get("submitted_at")),
         reason=str(payload.get("reason") or ""),
     )
 
 
 def _ledger_from_dict(payload: dict[str, Any]) -> SubmissionLedger:
-    version = require_schema(payload, name="submission_ledger", version=SchemaVersion.SUBMISSION_LEDGER)
+    version = require_schema(
+        payload, name="submission_ledger", version=SchemaVersion.SUBMISSION_LEDGER
+    )
     groups_raw = dict(payload.get("groups") or {})
     return SubmissionLedger(
         schema_version=version,
@@ -52,7 +65,10 @@ def _ledger_from_dict(payload: dict[str, Any]) -> SubmissionLedger:
         stage_name=str(payload["stage_name"]),
         generation_id=str(payload["generation_id"]),
         state=str(payload.get("state") or "planned"),
-        groups={str(group_id): _group_from_dict(dict(group)) for group_id, group in groups_raw.items()},
+        groups={
+            str(group_id): _group_from_dict(dict(group))
+            for group_id, group in groups_raw.items()
+        },
     )
 
 
@@ -67,10 +83,15 @@ def write_submission_ledger(batch_root: Path, ledger: SubmissionLedger) -> None:
     write_json(ledger_path(batch_root), ledger)
 
 
-def initialize_submission_ledger(batch_root: Path, generation: SubmitGeneration) -> SubmissionLedger:
+def initialize_submission_ledger(
+    batch_root: Path, generation: SubmitGeneration
+) -> SubmissionLedger:
     existing = read_submission_ledger(batch_root)
     if existing is not None:
-        if existing.batch_id != generation.batch_id or existing.stage_name != generation.stage_name:
+        if (
+            existing.batch_id != generation.batch_id
+            or existing.stage_name != generation.stage_name
+        ):
             raise ConfigContractError(
                 f"Submission ledger under {batch_root} belongs to "
                 f"{existing.stage_name}/{existing.batch_id}, not {generation.stage_name}/{generation.batch_id}"
@@ -106,7 +127,9 @@ def initialize_submission_ledger(batch_root: Path, generation: SubmitGeneration)
         },
     )
     write_submission_ledger(batch_root, ledger)
-    append_submission_event(batch_root, "ledger_initialized", generation_id=generation.generation_id)
+    append_submission_event(
+        batch_root, "ledger_initialized", generation_id=generation.generation_id
+    )
     return ledger
 
 

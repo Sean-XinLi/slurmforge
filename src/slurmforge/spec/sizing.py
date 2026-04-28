@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from ..sizing import GpuHardwareProfile, GpuResourceSizingRequest, GpuSizingDefaults, StageGpuSizingPolicy
+from ..sizing.models import (
+    GpuHardwareProfile,
+    GpuResourceSizingRequest,
+    GpuSizingDefaults,
+    StageGpuSizingPolicy,
+)
 from .models import ExperimentSpec, StageSpec
 
 

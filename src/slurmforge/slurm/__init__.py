@@ -9,10 +9,12 @@ from .models import (
     stage_state_for_slurm_state,
 )
 from .parsers import parse_sacct_rows, parse_sbatch_job_id, parse_squeue_rows
+from .protocol import SlurmClientProtocol
 
 __all__ = [
     "SLURM_TERMINAL_STATES",
     "SlurmClient",
+    "SlurmClientProtocol",
     "SlurmJobState",
     "failure_class_for_slurm_state",
     "normalize_slurm_state",

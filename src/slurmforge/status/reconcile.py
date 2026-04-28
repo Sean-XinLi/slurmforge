@@ -4,28 +4,31 @@ from pathlib import Path
 
 from ..io import SchemaVersion, utc_now
 from ..plans.stage import StageBatchPlan
-from ..slurm import SlurmClient, failure_class_for_slurm_state, stage_state_for_slurm_state
+from ..outputs.records import stage_outputs_path
+from ..slurm import (
+    SlurmClientProtocol,
+    failure_class_for_slurm_state,
+    stage_state_for_slurm_state,
+)
 from .machine import commit_stage_status
 from .models import StageStatusRecord, TERMINAL_STATES
 from .reader import read_stage_status
-from .reconcile_state import (
-    append_scheduler_observation,
-    master_fallback,
-    missing_output_expired,
-    scheduler_attempt,
-    stage_outputs_path,
-)
+from .reconcile_attempts import scheduler_attempt
+from .reconcile_observations import append_scheduler_observation, missing_output_expired
+from .reconcile_rules import master_fallback
 
 
 def reconcile_stage_batch_with_slurm(
     batch: StageBatchPlan,
     *,
     group_job_ids: dict[str, str],
-    client: SlurmClient,
+    client: SlurmClientProtocol,
     missing_output_grace_seconds: int = 300,
 ) -> None:
     batch_root = Path(batch.submission_root)
-    instances_by_id = {instance.stage_instance_id: instance for instance in batch.stage_instances}
+    instances_by_id = {
+        instance.stage_instance_id: instance for instance in batch.stage_instances
+    }
     for group in batch.group_plans:
         job_id = group_job_ids.get(group.group_id)
         if not job_id:
@@ -36,9 +39,13 @@ def reconcile_stage_batch_with_slurm(
         for observed_job_id, observed_state in job_states.items():
             if observed_state.array_task_id is None:
                 continue
-            if observed_state.array_job_id == job_id or observed_job_id.startswith(prefix):
+            if observed_state.array_job_id == job_id or observed_job_id.startswith(
+                prefix
+            ):
                 task_states[observed_state.array_task_id] = observed_state
-        fallback_state = master_fallback(job_states, job_id, group_size=group.array_size)
+        fallback_state = master_fallback(
+            job_states, job_id, group_size=group.array_size
+        )
         for task_index, stage_instance_id in enumerate(group.stage_instance_ids):
             instance = instances_by_id[stage_instance_id]
             run_dir = batch_root / instance.run_dir_rel

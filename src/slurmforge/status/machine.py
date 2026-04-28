@@ -8,6 +8,7 @@ underscored helpers from outside this file.
 Parent-status aggregation lives outside this module. The state machine writes
 only per-stage records so it stays a leaf component.
 """
+
 from __future__ import annotations
 
 import json
@@ -94,7 +95,11 @@ def _transition_stage_status(
             and status.latest_attempt_id is not None
             and status.latest_attempt_id != current.latest_attempt_id
         )
-        if not is_new_attempt and current.state == "success" and status.state != "success":
+        if (
+            not is_new_attempt
+            and current.state == "success"
+            and status.state != "success"
+        ):
             return current
     if _state_rank(status.state) < _state_rank(current.state):
         return current
@@ -105,7 +110,8 @@ def _transition_stage_status(
         stage_name=status.stage_name,
         state=status.state,
         latest_attempt_id=status.latest_attempt_id or current.latest_attempt_id,
-        latest_output_digest=status.latest_output_digest or current.latest_output_digest,
+        latest_output_digest=status.latest_output_digest
+        or current.latest_output_digest,
         failure_class=status.failure_class,
         reason=status.reason or current.reason,
     )
@@ -149,4 +155,3 @@ def commit_stage_status(
 
 def commit_attempt(run_dir: Path, attempt: StageAttemptRecord) -> Path:
     return _write_attempt(run_dir, attempt)
-

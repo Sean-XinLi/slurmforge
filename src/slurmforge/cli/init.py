@@ -1,4 +1,5 @@
 """``sforge init`` -- scaffold starter experiment files."""
+
 from __future__ import annotations
 
 import argparse
@@ -54,7 +55,9 @@ def _confirm_overwrite(paths: tuple[Path, ...]) -> bool:
 def _request_from_args(args: argparse.Namespace) -> InitRequest | None:
     if args.template is None:
         if not _is_interactive():
-            raise UsageError("sforge init requires --template when stdin is not interactive")
+            raise UsageError(
+                "sforge init requires --template when stdin is not interactive"
+            )
         template = _prompt_template()
         output = _prompt_output()
     else:
@@ -65,7 +68,9 @@ def _request_from_args(args: argparse.Namespace) -> InitRequest | None:
     if existing and not request.force:
         if not _is_interactive():
             joined = ", ".join(str(path) for path in existing)
-            raise StarterWriteError(f"Refusing to overwrite existing files: {joined}. Use --force to replace them.")
+            raise StarterWriteError(
+                f"Refusing to overwrite existing files: {joined}. Use --force to replace them."
+            )
         if not _confirm_overwrite(existing):
             return None
         request = replace(request, force=True)
@@ -87,10 +92,27 @@ def handle_init(args: argparse.Namespace) -> None:
         print(f"[INIT] wrote {file.role}: {file.path}")
 
 
-def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    parser = subparsers.add_parser("init", help="Create a starter experiment config and scripts")
-    parser.add_argument("--list-templates", action="store_true", help="List available starter templates")
-    parser.add_argument("--template", choices=template_choices(), default=None, help="Starter template to generate")
-    parser.add_argument("--output", default=None, help=f"Config path to write (default: {DEFAULT_OUTPUT})")
-    parser.add_argument("--force", action="store_true", help="Overwrite existing generated files")
+def add_subparser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    parser = subparsers.add_parser(
+        "init", help="Create a starter experiment config and scripts"
+    )
+    parser.add_argument(
+        "--list-templates", action="store_true", help="List available starter templates"
+    )
+    parser.add_argument(
+        "--template",
+        choices=template_choices(),
+        default=None,
+        help="Starter template to generate",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help=f"Config path to write (default: {DEFAULT_OUTPUT})",
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="Overwrite existing generated files"
+    )
     parser.set_defaults(handler=handle_init)

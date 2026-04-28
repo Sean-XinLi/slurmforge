@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import UsageError
-from ..orchestration import (
+from ..orchestration.pipeline_build import build_train_eval_pipeline_plan
+from ..orchestration.stage_build import (
     build_eval_stage_batch,
-    build_train_eval_pipeline_plan,
     build_train_stage_batch,
     resolve_eval_inputs,
 )
@@ -46,7 +46,9 @@ def build_eval_batch_from_args(args: argparse.Namespace):
     spec = load_spec_from_args(args)
     source = eval_source_from_args(args)
     if source is None:
-        raise UsageError("eval requires one of --from-train-batch, --from-run, or --checkpoint")
+        raise UsageError(
+            "eval requires one of --from-train-batch, --from-run, or --checkpoint"
+        )
     batch = build_eval_stage_batch(
         spec,
         from_train_batch=source.value if source.kind == "from_train_batch" else None,

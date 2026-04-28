@@ -2,8 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..emit import write_controller_submit_file
-from ..slurm import SlurmClient, failure_class_for_slurm_state, stage_state_for_slurm_state
+from ..emit.controller import write_controller_submit_file
+from ..slurm import (
+    SlurmClient,
+    SlurmClientProtocol,
+    failure_class_for_slurm_state,
+    stage_state_for_slurm_state,
+)
 from ..io import SchemaVersion, diagnostic_path, utc_now, write_exception_diagnostic
 from ..storage.controller import (
     ControllerJobRecord,
@@ -17,12 +22,14 @@ from ..storage.controller import (
 def submit_controller_job(
     plan,
     *,
-    client: SlurmClient | None = None,
+    client: SlurmClientProtocol | None = None,
 ) -> ControllerJobRecord:
     pipeline_root = Path(plan.root_dir)
     existing = read_controller_job(pipeline_root)
     if existing is not None:
-        raise RuntimeError(f"controller job record already exists for train/eval pipeline root: {pipeline_root}")
+        raise RuntimeError(
+            f"controller job record already exists for train/eval pipeline root: {pipeline_root}"
+        )
     sbatch_path = write_controller_submit_file(plan).resolve()
     submitted_at = utc_now()
     slurm = client or SlurmClient()
@@ -30,7 +37,9 @@ def submit_controller_job(
         job_id = slurm.submit(sbatch_path)
     except Exception as exc:
         diagnostic = write_exception_diagnostic(
-            diagnostic_path(pipeline_root, "controller", "controller_submit_traceback.log"),
+            diagnostic_path(
+                pipeline_root, "controller", "controller_submit_traceback.log"
+            ),
             exc,
         )
         write_controller_status(
@@ -74,7 +83,7 @@ def submit_controller_job(
 def reconcile_controller_job(
     pipeline_root: Path,
     *,
-    client: SlurmClient | None = None,
+    client: SlurmClientProtocol | None = None,
 ) -> ControllerJobRecord | None:
     record = read_controller_job(pipeline_root)
     if record is None or not record.scheduler_job_id:
@@ -91,7 +100,10 @@ def reconcile_controller_job(
         )
         return record
     status_state = stage_state_for_slurm_state(slurm_state.state) or "queued"
-    reason = slurm_state.reason or f"Slurm job {slurm_state.job_id} state={slurm_state.state}"
+    reason = (
+        slurm_state.reason
+        or f"Slurm job {slurm_state.job_id} state={slurm_state.state}"
+    )
     write_controller_status(
         pipeline_root,
         status_state,

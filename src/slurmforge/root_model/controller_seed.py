@@ -7,6 +7,7 @@ from ..plans.train_eval import TrainEvalPipelinePlan
 
 
 def write_initial_controller_state(root: Path, plan: TrainEvalPipelinePlan) -> None:
+    root = Path(root)
     write_json(root / "controller" / "controller_plan.json", plan.controller_plan)
     write_json(
         root / "controller" / "controller_state.json",

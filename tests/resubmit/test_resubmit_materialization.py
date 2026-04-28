@@ -85,7 +85,8 @@ class ResubmitTests(StageBatchSystemTestCase):
 
     def test_resubmit_dry_run_does_not_verify_missing_lineage_checkpoint(self) -> None:
         from slurmforge.cli.resubmit import handle_resubmit
-        from slurmforge.status import StageStatusRecord, commit_stage_status
+        from slurmforge.status.machine import commit_stage_status
+        from slurmforge.status.models import StageStatusRecord
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

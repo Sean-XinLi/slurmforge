@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from ..io import to_jsonable
-from ..orchestration import build_dry_run_audit
+from ..orchestration.audit import build_dry_run_audit
 from ..spec import ExperimentSpec
 from .args import dry_run_mode_from_args
 

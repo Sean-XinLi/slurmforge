@@ -4,7 +4,10 @@ import sys
 from pathlib import Path
 
 from ..io import write_exception_diagnostic
-from ..root_model import refresh_stage_batch_status, refresh_train_eval_pipeline_status
+from ..root_model.snapshots import (
+    refresh_stage_batch_status,
+    refresh_train_eval_pipeline_status,
+)
 from .attempt import begin_attempt, complete_attempt
 from .finalize import failure_class_for_exception, finalize_successful_stage_outputs
 from .instances import find_stage_instance, load_stage_instance_from_run_dir

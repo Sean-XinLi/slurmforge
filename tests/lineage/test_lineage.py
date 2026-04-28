@@ -19,7 +19,10 @@ from pathlib import Path
 
 class LineageTests(StageBatchSystemTestCase):
     def test_stage_batch_lineage_records_bound_inputs_and_source_roots(self) -> None:
-        from slurmforge.lineage import find_bound_input, iter_lineage_source_roots
+        from slurmforge.lineage.query import (
+            find_bound_input,
+            iter_lineage_source_roots,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -56,7 +59,7 @@ class LineageTests(StageBatchSystemTestCase):
             )
 
     def test_pipeline_lineage_lists_stage_batch_roots(self) -> None:
-        from slurmforge.lineage import iter_lineage_source_roots
+        from slurmforge.lineage.query import iter_lineage_source_roots
 
         with tempfile.TemporaryDirectory() as tmp:
             spec = load_experiment_spec(write_demo_project(Path(tmp)))

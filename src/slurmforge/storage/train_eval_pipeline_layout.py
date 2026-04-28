@@ -7,10 +7,10 @@ from typing import Any
 import yaml
 
 from ..io import SchemaVersion, write_json
-from ..lineage import build_train_eval_pipeline_lineage, write_lineage_index
+from ..lineage.builders import build_train_eval_pipeline_lineage
+from ..lineage.paths import write_lineage_index
 from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalPipelinePlan
 from .batch_layout import write_stage_batch_layout
-from .controller_seed import write_initial_controller_state
 
 
 def write_train_eval_pipeline_layout(plan: TrainEvalPipelinePlan, *, spec_snapshot: dict[str, Any]) -> Path:
@@ -32,7 +32,6 @@ def write_train_eval_pipeline_layout(plan: TrainEvalPipelinePlan, *, spec_snapsh
         encoding="utf-8",
     )
     write_json(root / "train_eval_pipeline_plan.json", plan)
-    write_initial_controller_state(root, plan)
     for batch in plan.stage_batches.values():
         write_stage_batch_layout(batch, spec_snapshot=spec_snapshot, pipeline_root=root)
     write_lineage_index(root, build_train_eval_pipeline_lineage(plan))

@@ -5,7 +5,7 @@ from typing import Literal
 
 from ..errors import ConfigContractError
 from ..io import diagnostic_path, utc_now, write_exception_diagnostic
-from ..slurm import SlurmClient
+from ..slurm import SlurmClient, SlurmClientProtocol
 from .dependencies import dependency_for
 from .ledger import (
     append_submission_event,
@@ -20,7 +20,7 @@ from .ready import load_ready_prepared_submission
 def submit_prepared_stage_batch(
     prepared: PreparedSubmission,
     *,
-    client: SlurmClient | None = None,
+    client: SlurmClientProtocol | None = None,
     mark_queued: bool = True,
     policy: Literal["new_only", "recover_partial"] = "new_only",
 ) -> dict[str, str]:
@@ -43,7 +43,9 @@ def submit_prepared_stage_batch(
             continue
         if record.state == "submitting" and not record.scheduler_job_id:
             ledger.state = "uncertain"
-            record.reason = "group may have reached sbatch without a recorded scheduler job id"
+            record.reason = (
+                "group may have reached sbatch without a recorded scheduler job id"
+            )
             write_submission_ledger(batch_root, ledger)
             raise ConfigContractError(
                 f"Submission ledger for `{batch.stage_name}` is uncertain at group `{group.group_id}`; "
@@ -67,7 +69,12 @@ def submit_prepared_stage_batch(
             job_id = slurm.submit(Path(record.sbatch_path), dependency=dependency)
         except Exception as exc:
             diagnostic = write_exception_diagnostic(
-                diagnostic_path(batch_root, "submissions", "diagnostics", f"{group.group_id}_submit_traceback.log"),
+                diagnostic_path(
+                    batch_root,
+                    "submissions",
+                    "diagnostics",
+                    f"{group.group_id}_submit_traceback.log",
+                ),
                 exc,
             )
             record.state = "failed"

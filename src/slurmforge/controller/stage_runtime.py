@@ -5,15 +5,13 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..root_model import collect_stage_statuses
-from ..slurm import SlurmClient
-from ..status import reconcile_stage_batch_with_slurm
+from ..root_model.runs import collect_stage_statuses
+from ..slurm import SlurmClientProtocol
 from ..status.models import TERMINAL_STATES
-from ..submission import (
-    prepare_stage_submission,
-    read_submission_state,
-    submit_prepared_stage_batch,
-)
+from ..status.reconcile import reconcile_stage_batch_with_slurm
+from ..submission.generation import prepare_stage_submission
+from ..submission.state import read_submission_state
+from ..submission.submitter import submit_prepared_stage_batch
 from .state import record_controller_event, save_controller_state
 
 
@@ -25,7 +23,7 @@ def batch_terminal(batch_root: Path) -> bool:
 
 
 def submit_stage_once(
-    pipeline_root: Path, state: dict[str, Any], batch, *, client: SlurmClient
+    pipeline_root: Path, state: dict[str, Any], batch, *, client: SlurmClientProtocol
 ) -> dict[str, str]:
     prepared = prepare_stage_submission(batch)
     group_job_ids = submit_prepared_stage_batch(
@@ -46,7 +44,7 @@ def submit_stage_once(
 def wait_terminal(
     batch,
     *,
-    client: SlurmClient,
+    client: SlurmClientProtocol,
     poll_seconds: int,
     missing_output_grace_seconds: int,
 ) -> None:

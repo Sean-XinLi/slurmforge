@@ -6,12 +6,15 @@ This document captures the internal contracts that keep planning, submission, ex
 
 - `spec.parse_sections` loads and assembles the top-level experiment spec; section parsers live under `spec.parse_*`.
 - `spec.validation` orchestrates validation; resources, runtime, runs, launcher, inputs, outputs, notifications, and topology have separate validators.
-- `planner.core` is a facade; payload construction, stage-batch compilation, train/eval pipeline compilation, identifiers, and summaries live in dedicated modules.
+- `planner` has no package facade; callers import role modules such as `planner.stage_batch`, `planner.train_eval_pipeline`, `planner.sources`, `planner.audit`, `planner.resource_estimate`, and `planner.summaries` directly.
 - `executor.stage` is the stage execution entrypoint. `executor.attempt` owns attempt/status transaction writes, `executor.runner` owns runtime checks, input verification, environment construction, and user command execution, and `executor.finalize` owns output discovery and final stage output records.
 - `resolver.explicit` is split by source shape: external paths, producer stage batches, and producer run directories.
 - `root_paths` is the single source for inferring a parent train/eval pipeline root from a stage batch root.
 - `io.diagnostics` is the single traceback diagnostic writer used by executor, controller submission, stage submission, and notification delivery.
-- `storage` has no aggregate package facade; callers import role modules such as `storage.batch_layout`, `storage.train_eval_pipeline_layout`, `storage.status_seed`, `storage.controller_seed`, `storage.loader`, `storage.controller`, and `storage.materialization`.
+- Public package facades are limited to `spec`, `starter`, `contracts`, `slurm`, and `io`. Internal packages keep empty facades and callers import role modules directly.
+- `storage` owns persisted layout, storage paths, materialization records, controller files, and plan readers. It does not seed status records or own root read models.
+- `status` owns per-stage status/attempt records and scheduler reconciliation. Reconcile internals are split between workflow, attempt reconstruction, scheduler observations, and reconciliation rules.
+- `root_model` owns root detection, root refs, run/pipeline aggregation, root snapshots, notification snapshots, and planned status/controller seeding after storage layout is written.
 
 Persisted file shapes are specified in [Record Contract](record-contract.md).
 

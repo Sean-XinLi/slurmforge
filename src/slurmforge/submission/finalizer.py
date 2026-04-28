@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..emit import write_stage_notification_barrier_file, write_stage_notification_submit_file
+from ..emit.stage import (
+    write_stage_notification_barrier_file,
+    write_stage_notification_submit_file,
+)
 from ..errors import ConfigContractError
 from ..io import utc_now
 from ..notifications.models import NotificationDeliveryRecord
 from ..notifications.policy import email_notification_enabled
 from ..notifications.records import append_notification_event, write_notification_record
 from ..plans.stage import StageBatchPlan
-from ..slurm import SlurmClient
+from ..slurm import SlurmClient, SlurmClientProtocol
 
 
 MAX_DEPENDENCY_LENGTH = 3500
@@ -28,7 +31,9 @@ def _dependency(job_ids: tuple[str, ...]) -> str:
     return f"afterany:{':'.join(job_ids)}"
 
 
-def _dependency_chunks(job_ids: tuple[str, ...], *, max_length: int) -> tuple[tuple[str, ...], ...]:
+def _dependency_chunks(
+    job_ids: tuple[str, ...], *, max_length: int
+) -> tuple[tuple[str, ...], ...]:
     chunks: list[tuple[str, ...]] = []
     current: list[str] = []
     for job_id in job_ids:
@@ -38,7 +43,9 @@ def _dependency_chunks(job_ids: tuple[str, ...], *, max_length: int) -> tuple[tu
             current = [job_id]
             continue
         if len(_dependency((job_id,))) > max_length:
-            raise ConfigContractError(f"Scheduler job id is too long for a dependency expression: {job_id}")
+            raise ConfigContractError(
+                f"Scheduler job id is too long for a dependency expression: {job_id}"
+            )
         current.append(job_id)
     if current:
         chunks.append(tuple(current))
@@ -51,7 +58,7 @@ def _submit_with_dependency_tree(
     event: str,
     finalizer_path: Path,
     dependency_job_ids: tuple[str, ...],
-    client: SlurmClient,
+    client: SlurmClientProtocol,
     max_dependency_length: int,
 ) -> tuple[str, tuple[str, ...]]:
     current = dependency_job_ids
@@ -78,19 +85,23 @@ def submit_stage_batch_finalizer(
     batch: StageBatchPlan,
     group_job_ids: dict[str, str],
     *,
-    client: SlurmClient | None = None,
+    client: SlurmClientProtocol | None = None,
     event: str = "batch_finished",
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,
 ) -> NotificationDeliveryRecord | None:
     if not email_notification_enabled(batch.notification_plan, event):
         return None
     dependency_group_ids = finalizer_dependency_group_ids(batch)
-    missing = [group_id for group_id in dependency_group_ids if group_id not in group_job_ids]
+    missing = [
+        group_id for group_id in dependency_group_ids if group_id not in group_job_ids
+    ]
     if missing:
         raise ConfigContractError(
             f"Cannot submit notification finalizer before groups have scheduler ids: {', '.join(missing)}"
         )
-    dependency_job_ids = tuple(group_job_ids[group_id] for group_id in dependency_group_ids)
+    dependency_job_ids = tuple(
+        group_job_ids[group_id] for group_id in dependency_group_ids
+    )
     finalizer_path = write_stage_notification_submit_file(batch, event)
     slurm = client or SlurmClient()
     finalizer_job_id, barrier_job_ids = _submit_with_dependency_tree(

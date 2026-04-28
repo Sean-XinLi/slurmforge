@@ -1,20 +1,19 @@
-"""Read-only helpers for stage_batch / train-eval pipeline roots."""
+"""Read-only plan helpers for stage_batch and train/eval pipeline roots."""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from ..contracts import RunDefinition
 from ..io import read_json
+from ..plans.serde import (
+    stage_batch_plan_from_dict,
+    stage_instance_plan_from_dict,
+    train_eval_pipeline_plan_from_dict,
+)
 from ..plans.stage import StageBatchPlan, StageInstancePlan
 from ..plans.train_eval import TrainEvalPipelinePlan
-from ..plans.serde import (
-    train_eval_pipeline_plan_from_dict,
-    stage_batch_plan_from_dict,
-    stage_outputs_record_from_dict,
-    stage_instance_plan_from_dict,
-)
-from .paths import stage_outputs_path, stage_plan_path
+from .paths import stage_plan_path
 
 
 def load_stage_batch_plan(batch_root: Path) -> StageBatchPlan:
@@ -29,26 +28,14 @@ def load_execution_stage_batch_plan(batch_root: Path) -> StageBatchPlan:
 
 
 def load_train_eval_pipeline_plan(pipeline_root: Path) -> TrainEvalPipelinePlan:
-    return train_eval_pipeline_plan_from_dict(read_json(pipeline_root / "train_eval_pipeline_plan.json"))
+    return train_eval_pipeline_plan_from_dict(
+        read_json(pipeline_root / "train_eval_pipeline_plan.json")
+    )
 
 
-def load_stage_outputs(run_dir: Path) -> dict[str, Any] | None:
-    """Read raw outputs payload from disk, validating its schema.
-
-    Returns the raw dict so callers can keep using key-based access. The
-    schema check is enforced via ``stage_outputs_record_from_dict``; if the
-    payload is malformed this raises rather than returning a half-validated
-    dict.
-    """
-    path = stage_outputs_path(run_dir)
-    if not path.exists():
-        return None
-    payload = read_json(path)
-    stage_outputs_record_from_dict(payload)  # validate schema; raises on mismatch
-    return payload
-
-
-def run_definitions_from_stage_batch(batch: StageBatchPlan) -> tuple[RunDefinition, ...]:
+def run_definitions_from_stage_batch(
+    batch: StageBatchPlan,
+) -> tuple[RunDefinition, ...]:
     runs: list[RunDefinition] = []
     seen: set[str] = set()
     for instance in sorted(batch.stage_instances, key=lambda item: item.run_index):

@@ -14,10 +14,8 @@ from pathlib import Path
 
 class ReconcileTests(StageBatchSystemTestCase):
     def test_reconcile_grace_waits_before_missing_output_failure(self) -> None:
-        from slurmforge.status import (
-            read_stage_status,
-            reconcile_stage_batch_with_slurm,
-        )
+        from slurmforge.status.reader import read_stage_status
+        from slurmforge.status.reconcile import reconcile_stage_batch_with_slurm
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -48,12 +46,10 @@ class ReconcileTests(StageBatchSystemTestCase):
             self.assertEqual(attempt["scheduler_state"], "COMPLETED")
 
     def test_reconcile_completes_executor_skeleton_attempt(self) -> None:
-        from slurmforge.status import (
-            StageAttemptRecord,
-            commit_attempt,
-            read_stage_status,
-        )
-        from slurmforge.status import reconcile_stage_batch_with_slurm
+        from slurmforge.status.machine import commit_attempt
+        from slurmforge.status.models import StageAttemptRecord
+        from slurmforge.status.reader import read_stage_status
+        from slurmforge.status.reconcile import reconcile_stage_batch_with_slurm
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -100,10 +96,8 @@ class ReconcileTests(StageBatchSystemTestCase):
     def test_reconcile_missing_output_expiry_creates_scheduler_attempt_failure(
         self,
     ) -> None:
-        from slurmforge.status import (
-            read_stage_status,
-            reconcile_stage_batch_with_slurm,
-        )
+        from slurmforge.status.reader import read_stage_status
+        from slurmforge.status.reconcile import reconcile_stage_batch_with_slurm
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -157,10 +151,8 @@ class ReconcileTests(StageBatchSystemTestCase):
         self.assertEqual(states["123_1"].state, "FAILED")
 
     def test_reconcile_does_not_apply_array_master_state_to_every_task(self) -> None:
-        from slurmforge.status import (
-            read_stage_status,
-            reconcile_stage_batch_with_slurm,
-        )
+        from slurmforge.status.reader import read_stage_status
+        from slurmforge.status.reconcile import reconcile_stage_batch_with_slurm
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -196,10 +188,8 @@ class ReconcileTests(StageBatchSystemTestCase):
                 self.assertEqual(status.state, "planned")
 
     def test_reconcile_applies_failed_array_master_to_each_task(self) -> None:
-        from slurmforge.status import (
-            read_stage_status,
-            reconcile_stage_batch_with_slurm,
-        )
+        from slurmforge.status.reader import read_stage_status
+        from slurmforge.status.reconcile import reconcile_stage_batch_with_slurm
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -243,10 +233,8 @@ class ReconcileTests(StageBatchSystemTestCase):
         self,
     ) -> None:
         from slurmforge.slurm import SlurmClient, SlurmJobState, parse_squeue_rows
-        from slurmforge.status import (
-            read_stage_status,
-            reconcile_stage_batch_with_slurm,
-        )
+        from slurmforge.status.reader import read_stage_status
+        from slurmforge.status.reconcile import reconcile_stage_batch_with_slurm
 
         class SqueueOnlyClient(SlurmClient):
             def query_jobs(self, job_ids):

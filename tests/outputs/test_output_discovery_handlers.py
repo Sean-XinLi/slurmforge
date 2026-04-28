@@ -122,7 +122,7 @@ class OutputDiscoveryHandlerTests(StageBatchSystemTestCase):
             handler_for_kind("unknown")
 
     def _discover(self, root: Path, workdir: Path, output_contract: object) -> object:
-        from slurmforge.outputs import discover_stage_outputs
+        from slurmforge.outputs.discovery.service import discover_stage_outputs
 
         spec = load_experiment_spec(write_demo_project(root / "project"))
         instance = compile_stage_batch_for_kind(spec, kind="train").stage_instances[0]

@@ -22,8 +22,10 @@ class RemovedEntrypointTests(StageBatchSystemTestCase):
         self.assertFalse(Path("src/slurmforge/spec/output_contract.py").exists())
         self.assertFalse(Path("src/slurmforge/schema").exists())
 
-    def test_storage_loader_no_longer_owns_root_read_model(self) -> None:
-        import slurmforge.storage.loader as loader
+    def test_storage_loader_was_replaced_by_plan_reader(self) -> None:
+        with self.assertRaises(ModuleNotFoundError):
+            __import__(".".join(("slurmforge", "storage", "loader")))
+        import slurmforge.storage.plan_reader as plan_reader
 
         for name in (
             "collect_stage_statuses",
@@ -31,4 +33,4 @@ class RemovedEntrypointTests(StageBatchSystemTestCase):
             "is_train_eval_pipeline_root",
             "iter_stage_run_dirs",
         ):
-            self.assertFalse(hasattr(loader, name), name)
+            self.assertFalse(hasattr(plan_reader, name), name)

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..io import SchemaVersion, write_json
-from ..storage.loader import load_train_eval_pipeline_plan
+from ..storage.plan_reader import load_train_eval_pipeline_plan
 from .aggregation import aggregate_run_statuses, aggregate_train_eval_pipeline_status
 from .detection import detect_root
 from .models import RootStatusSnapshot

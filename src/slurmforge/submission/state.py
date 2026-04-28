@@ -31,7 +31,9 @@ def read_submission_state(batch_root: Path) -> SubmissionState:
         stage_name="" if ledger is None else ledger.stage_name,
         generation_id="" if ledger is None else ledger.generation_id,
         ledger_state="missing" if ledger is None else ledger.state,
-        materialization_state="missing" if materialization is None else materialization.state,
+        materialization_state="missing"
+        if materialization is None
+        else materialization.state,
         submitted_group_job_ids=submitted_group_job_ids(root),
         groups=groups,
     )

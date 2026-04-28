@@ -20,23 +20,16 @@ class OrchestrationTests(StageBatchSystemTestCase):
     def test_orchestration_facade_exposes_only_high_level_verbs(self) -> None:
         import slurmforge.orchestration as orchestration
 
-        self.assertTrue(hasattr(orchestration, "build_prior_source_stage_batch"))
-        self.assertTrue(hasattr(orchestration, "emit_sourced_stage_batch"))
-        self.assertTrue(hasattr(orchestration, "render_status_lines"))
-        self.assertFalse(
-            hasattr(orchestration, "compile_stage_batch_from_prior_source")
-        )
-        self.assertFalse(hasattr(orchestration, "materialize_sourced_stage_batch_plan"))
-        self.assertFalse(hasattr(orchestration, "prepare_stage_submission"))
-        self.assertFalse(hasattr(orchestration, "read_controller_status"))
+        self.assertEqual(orchestration.__all__, [])
+        self.assertFalse(hasattr(orchestration, "build_prior_source_stage_batch"))
+        self.assertFalse(hasattr(orchestration, "emit_sourced_stage_batch"))
+        self.assertFalse(hasattr(orchestration, "render_status_lines"))
 
     def test_emit_sourced_stage_batch_materializes_and_prepares_submit_files(
         self,
     ) -> None:
-        from slurmforge.orchestration import (
-            build_prior_source_stage_batch,
-            emit_sourced_stage_batch,
-        )
+        from slurmforge.orchestration.launch import emit_sourced_stage_batch
+        from slurmforge.orchestration.stage_build import build_prior_source_stage_batch
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -68,7 +61,7 @@ class OrchestrationTests(StageBatchSystemTestCase):
             )
 
     def test_render_status_reports_stage_counts(self) -> None:
-        from slurmforge.orchestration import render_status_lines
+        from slurmforge.orchestration.status_view import render_status_lines
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -21,7 +21,8 @@ from pathlib import Path
 class ResubmitTests(StageBatchSystemTestCase):
     def test_resubmit_blocks_emit_when_lineage_checkpoint_is_missing(self) -> None:
         from slurmforge.cli.resubmit import handle_resubmit
-        from slurmforge.status import StageStatusRecord, commit_stage_status
+        from slurmforge.status.machine import commit_stage_status
+        from slurmforge.status.models import StageStatusRecord
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -102,7 +103,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             self.assertEqual(status["state"], "blocked")
             self.assertEqual(status["failure_class"], "input_contract_error")
 
-            from slurmforge.orchestration import render_status_lines
+            from slurmforge.orchestration.status_view import render_status_lines
 
             rendered = io.StringIO()
             with redirect_stdout(rendered):

@@ -17,7 +17,7 @@ class InputVerifierTests(StageBatchSystemTestCase):
         return batch.stage_instances[0]
 
     def test_required_unresolved_input_fails(self) -> None:
-        from slurmforge.inputs import verify_stage_instance_inputs
+        from slurmforge.inputs.verifier import verify_stage_instance_inputs
         from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -39,7 +39,7 @@ class InputVerifierTests(StageBatchSystemTestCase):
             self.assertIn("required input did not resolve", report.records[0].reason)
 
     def test_digest_mismatch_fails(self) -> None:
-        from slurmforge.inputs import verify_stage_instance_inputs
+        from slurmforge.inputs.verifier import verify_stage_instance_inputs
         from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -65,7 +65,7 @@ class InputVerifierTests(StageBatchSystemTestCase):
             self.assertTrue(report.records[0].digest)
 
     def test_resolved_kind_must_match_expectation(self) -> None:
-        from slurmforge.inputs import verify_stage_instance_inputs
+        from slurmforge.inputs.verifier import verify_stage_instance_inputs
         from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
 
         with tempfile.TemporaryDirectory() as tmp:

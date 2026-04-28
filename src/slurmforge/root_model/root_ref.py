@@ -1,4 +1,5 @@
-"""Stage run -> stage_batch / train-eval pipeline root indirection."""
+"""Stage run to stage_batch / train-eval pipeline root indirection."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -39,7 +40,9 @@ def write_root_ref(
 ) -> StageRootRef:
     ref = StageRootRef(
         stage_batch_root=str(Path(stage_batch_root).resolve()),
-        pipeline_root=None if pipeline_root is None else str(Path(pipeline_root).resolve()),
+        pipeline_root=None
+        if pipeline_root is None
+        else str(Path(pipeline_root).resolve()),
     )
     write_json(_root_ref_path(run_dir), ref)
     return ref
@@ -53,6 +56,8 @@ def read_root_ref(run_dir: Path) -> StageRootRef | None:
     version = require_schema(payload, name="root_ref", version=SchemaVersion.ROOT_REF)
     return StageRootRef(
         stage_batch_root=str(payload["stage_batch_root"]),
-        pipeline_root=None if payload.get("pipeline_root") in (None, "") else str(payload["pipeline_root"]),
+        pipeline_root=None
+        if payload.get("pipeline_root") in (None, "")
+        else str(payload["pipeline_root"]),
         schema_version=version,
     )

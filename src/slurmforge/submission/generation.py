@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..emit import load_stage_submit_manifest, write_stage_submit_files
+from ..emit.stage import load_stage_submit_manifest, write_stage_submit_files
 from ..errors import ConfigContractError, InputContractError
-from ..inputs import StageInputVerificationReport, verification_failure_reasons, verify_stage_batch_inputs
+from ..inputs.models import StageInputVerificationReport
+from ..inputs.verifier import verification_failure_reasons, verify_stage_batch_inputs
 from ..io import SchemaVersion
 from ..plans.stage import StageBatchPlan
-from ..status import StageStatusRecord, commit_stage_status
+from ..status.machine import commit_stage_status
+from ..status.models import StageStatusRecord
 from ..storage.materialization import write_materialization_status
 from .ledger import initialize_submission_ledger, ledger_path
 from .models import SubmitGeneration
@@ -19,9 +21,13 @@ def _report_failure_reason(report: StageInputVerificationReport) -> str:
     return "; ".join(f"{record.input_name}: {record.reason}" for record in failures)
 
 
-def _mark_blocked_stage_inputs(batch: StageBatchPlan, reports: tuple[StageInputVerificationReport, ...]) -> None:
+def _mark_blocked_stage_inputs(
+    batch: StageBatchPlan, reports: tuple[StageInputVerificationReport, ...]
+) -> None:
     batch_root = Path(batch.submission_root)
-    instances_by_id = {instance.stage_instance_id: instance for instance in batch.stage_instances}
+    instances_by_id = {
+        instance.stage_instance_id: instance for instance in batch.stage_instances
+    }
     for report in reports:
         if report.state != "failed":
             continue
@@ -81,7 +87,9 @@ def prepare_stage_submission(batch: StageBatchPlan) -> PreparedSubmission:
             failure_class="input_contract_error",
             reason=reason,
         )
-        raise InputContractError(f"stage batch input verification failed for `{batch.batch_id}`: {reason}")
+        raise InputContractError(
+            f"stage batch input verification failed for `{batch.batch_id}`: {reason}"
+        )
     generation = create_submit_generation(batch)
     try:
         initialize_submission_ledger(batch_root, generation)

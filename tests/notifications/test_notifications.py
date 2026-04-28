@@ -5,7 +5,7 @@ from slurmforge.contracts import (
     NotificationStageStatusInput,
     NotificationSummaryInput,
 )
-from slurmforge.notifications import deliver_notification
+from slurmforge.notifications.delivery import deliver_notification
 from slurmforge.notifications.records import read_notification_record
 from slurmforge.plans.notifications import EmailNotificationPlan, NotificationPlan
 from tests.support.case import StageBatchSystemTestCase

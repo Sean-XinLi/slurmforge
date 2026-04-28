@@ -3,7 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
-from ..status import StageStatusRecord, read_stage_status
+from ..status.models import StageStatusRecord
+from ..status.reader import read_stage_status
 from .detection import detect_root, is_stage_batch_root
 
 

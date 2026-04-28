@@ -28,7 +28,9 @@ def default_controller_state(plan: TrainEvalPipelinePlan) -> dict[str, Any]:
     }
 
 
-def load_controller_state(pipeline_root: Path, plan: TrainEvalPipelinePlan) -> dict[str, Any]:
+def load_controller_state(
+    pipeline_root: Path, plan: TrainEvalPipelinePlan
+) -> dict[str, Any]:
     path = _controller_state_path(pipeline_root)
     if path.exists():
         return read_json(path)

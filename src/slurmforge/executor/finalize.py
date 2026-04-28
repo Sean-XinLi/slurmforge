@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..errors import InputContractError, RuntimeContractError
-from ..outputs import ArtifactIntegrityError, discover_stage_outputs, write_stage_outputs_record
+from ..outputs.artifact_store import ArtifactIntegrityError
+from ..outputs.discovery.service import discover_stage_outputs
+from ..outputs.discovery.writer import write_stage_outputs_record
 from .attempt import ExecutionAttempt
 
 

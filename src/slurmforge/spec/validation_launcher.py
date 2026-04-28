@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..errors import ConfigContractError
-from ..sizing import GpuSizingResolution
+from ..sizing.models import GpuSizingResolution
 from .models import StageSpec
 from .validation_common import explicit_int, require_port
 

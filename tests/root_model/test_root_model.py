@@ -18,7 +18,8 @@ from pathlib import Path
 
 class RootModelTests(StageBatchSystemTestCase):
     def test_detects_stage_batch_and_pipeline_roots(self) -> None:
-        from slurmforge.root_model import detect_root, iter_stage_run_dirs
+        from slurmforge.root_model.detection import detect_root
+        from slurmforge.root_model.runs import iter_stage_run_dirs
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -40,7 +41,7 @@ class RootModelTests(StageBatchSystemTestCase):
 
     def test_invalid_root_is_user_facing_config_error(self) -> None:
         from slurmforge.errors import ConfigContractError
-        from slurmforge.root_model import detect_root
+        from slurmforge.root_model.detection import detect_root
 
         with (
             tempfile.TemporaryDirectory() as tmp,
@@ -49,7 +50,7 @@ class RootModelTests(StageBatchSystemTestCase):
             detect_root(Path(tmp))
 
     def test_refresh_status_snapshots_write_root_read_models(self) -> None:
-        from slurmforge.root_model import (
+        from slurmforge.root_model.snapshots import (
             refresh_stage_batch_status,
             refresh_train_eval_pipeline_status,
         )
@@ -77,11 +78,11 @@ class RootModelTests(StageBatchSystemTestCase):
             )
 
     def test_status_aggregation_has_one_canonical_state_order(self) -> None:
-        from slurmforge.root_model import (
+        from slurmforge.root_model.aggregation import (
             aggregate_run_status,
             aggregate_train_eval_pipeline_status,
         )
-        from slurmforge.status import StageStatusRecord
+        from slurmforge.status.models import StageStatusRecord
 
         statuses = [
             StageStatusRecord(
@@ -107,11 +108,10 @@ class RootModelTests(StageBatchSystemTestCase):
         self.assertEqual(pipeline_status.stage_counts["eval"]["failed"], 1)
 
     def test_notification_summary_uses_root_status_snapshot(self) -> None:
-        from slurmforge.root_model import (
-            iter_stage_run_dirs,
-            load_root_notification_snapshot,
-        )
-        from slurmforge.status import StageStatusRecord, commit_stage_status
+        from slurmforge.root_model.notifications import load_root_notification_snapshot
+        from slurmforge.root_model.runs import iter_stage_run_dirs
+        from slurmforge.status.machine import commit_stage_status
+        from slurmforge.status.models import StageStatusRecord
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

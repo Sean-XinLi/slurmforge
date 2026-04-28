@@ -5,7 +5,7 @@ from typing import Any
 
 from ..io import SchemaVersion
 from ..contracts import InputBinding
-from ..sizing import GpuSizingResolution
+from ..sizing.models import GpuSizingResolution
 from ..contracts.outputs import StageOutputContract
 from .budget import BudgetPlan
 from .launcher import BeforeStepPlan, LauncherPlan

@@ -141,7 +141,7 @@ class InputResolutionTests(StageBatchSystemTestCase):
                 stage_source_input_name(spec, stage_name="eval")
 
     def test_checkpoint_cli_source_is_external_path_with_checkpoint_role(self) -> None:
-        from slurmforge.orchestration import resolve_eval_inputs
+        from slurmforge.orchestration.stage_build import resolve_eval_inputs
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -164,7 +164,7 @@ class InputResolutionTests(StageBatchSystemTestCase):
             self.assertEqual(binding.resolved.path, str(checkpoint.resolve()))
 
     def test_checkpoint_cli_relative_path_resolves_from_config_root(self) -> None:
-        from slurmforge.orchestration import resolve_eval_inputs
+        from slurmforge.orchestration.stage_build import resolve_eval_inputs
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

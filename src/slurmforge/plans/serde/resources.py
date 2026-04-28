@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...sizing import GpuSizingResolution
+from ...sizing.models import GpuSizingResolution
 from ..resources import ControlResourcesPlan, ResourcePlan
 
 

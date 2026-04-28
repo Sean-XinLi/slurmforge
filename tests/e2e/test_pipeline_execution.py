@@ -138,7 +138,7 @@ class TrainEvalPipelineFlowTests(StageBatchSystemTestCase):
     def test_pipeline_controller_is_orchestration_only_and_uses_controller_resources(
         self,
     ) -> None:
-        from slurmforge.orchestration import emit_train_eval_pipeline
+        from slurmforge.orchestration.launch import emit_train_eval_pipeline
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

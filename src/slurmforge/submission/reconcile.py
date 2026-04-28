@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..root_model import is_stage_batch_root, is_train_eval_pipeline_root
-from ..slurm import SlurmClient
-from ..status import reconcile_stage_batch_with_slurm
-from ..storage.loader import load_execution_stage_batch_plan
+from ..root_model.detection import is_stage_batch_root, is_train_eval_pipeline_root
+from ..slurm import SlurmClient, SlurmClientProtocol
+from ..status.reconcile import reconcile_stage_batch_with_slurm
+from ..storage.plan_reader import load_execution_stage_batch_plan
 from .ledger import submitted_group_job_ids
 
 
 def reconcile_batch_submission(
     batch_root: Path,
     *,
-    client: SlurmClient | None = None,
+    client: SlurmClientProtocol | None = None,
     missing_output_grace_seconds: int = 300,
 ) -> dict[str, str]:
     group_job_ids = submitted_group_job_ids(batch_root)
@@ -32,7 +32,7 @@ def reconcile_root_submissions(
     root: Path,
     *,
     stage: str | None = None,
-    client: SlurmClient | None = None,
+    client: SlurmClientProtocol | None = None,
     missing_output_grace_seconds: int = 300,
 ) -> None:
     if is_stage_batch_root(root):

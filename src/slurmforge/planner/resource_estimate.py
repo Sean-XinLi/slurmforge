@@ -3,7 +3,11 @@ from __future__ import annotations
 from ..io import to_jsonable
 from ..plans.stage import StageBatchPlan
 from ..plans.train_eval import TrainEvalPipelinePlan
-from ..sizing import ExperimentResourceEstimate, ResourceGroupEstimate, StageResourceEstimate
+from ..sizing.models import (
+    ExperimentResourceEstimate,
+    ResourceGroupEstimate,
+    StageResourceEstimate,
+)
 
 
 def build_stage_batch_resource_estimate(batch: StageBatchPlan) -> StageResourceEstimate:

@@ -106,8 +106,8 @@ class ContractTests(StageBatchSystemTestCase):
             NotificationRunStatusInput,
             NotificationSummaryInput,
         )
-        from slurmforge.notifications import (
-            NotificationSummaryInput as NotificationFacadeSummaryInput,
+        from slurmforge.notifications.models import (
+            NotificationSummaryInput as NotificationModelSummaryInput,
         )
 
         payload = NotificationSummaryInput(
@@ -121,7 +121,7 @@ class ContractTests(StageBatchSystemTestCase):
             run_statuses=(NotificationRunStatusInput(run_id="run_1", state="success"),),
         )
 
-        self.assertIs(NotificationSummaryInput, NotificationFacadeSummaryInput)
+        self.assertIs(NotificationSummaryInput, NotificationModelSummaryInput)
         self.assertEqual(payload.run_statuses[0].state, "success")
 
     def test_source_input_name_prefers_single_required_input(self) -> None:

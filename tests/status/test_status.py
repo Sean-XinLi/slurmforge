@@ -21,27 +21,23 @@ from unittest.mock import patch
 
 
 class StatusTests(StageBatchSystemTestCase):
-    def test_status_package_is_canonical_entry_for_commit_api(self) -> None:
+    def test_status_package_facade_stays_empty(self) -> None:
         import slurmforge.status as status
 
-        # status is the unique public entry for stage status writes.
-        self.assertTrue(hasattr(status, "commit_stage_status"))
-        self.assertTrue(hasattr(status, "commit_attempt"))
-        self.assertTrue(hasattr(status, "read_stage_status"))
-        # status must not re-export low-level io primitives.
+        self.assertEqual(status.__all__, [])
+        self.assertFalse(hasattr(status, "commit_stage_status"))
+        self.assertFalse(hasattr(status, "commit_attempt"))
+        self.assertFalse(hasattr(status, "read_stage_status"))
         self.assertFalse(hasattr(status, "read_json"))
         self.assertFalse(hasattr(status, "write_json"))
         self.assertFalse(hasattr(status, "utc_now"))
-        # the old contracts.status facade has been removed.
         with self.assertRaises(ModuleNotFoundError):
             __import__("slurmforge.contracts.status")
 
     def test_status_transition_does_not_regress_success_to_queued(self) -> None:
-        from slurmforge.status import (
-            StageStatusRecord,
-            commit_stage_status,
-            read_stage_status,
-        )
+        from slurmforge.status.machine import commit_stage_status
+        from slurmforge.status.models import StageStatusRecord
+        from slurmforge.status.reader import read_stage_status
 
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = Path(tmp) / "run"
@@ -72,9 +68,9 @@ class StatusTests(StageBatchSystemTestCase):
             self.assertEqual(status.state, "success")
 
     def test_status_is_read_only_unless_reconcile_is_requested(self) -> None:
-        from slurmforge.orchestration import render_status_lines
+        from slurmforge.orchestration.status_view import render_status_lines
         from tests.support.slurm import FakeSlurmClient
-        from slurmforge.status import read_stage_status
+        from slurmforge.status.reader import read_stage_status
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -111,7 +107,7 @@ class StatusTests(StageBatchSystemTestCase):
                 reconcile.assert_called_once()
 
     def test_pipeline_status_reconcile_checks_controller_job(self) -> None:
-        from slurmforge.orchestration import render_status_lines
+        from slurmforge.orchestration.status_view import render_status_lines
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

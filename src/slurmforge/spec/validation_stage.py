@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..errors import ConfigContractError
-from ..sizing import resolve_stage_gpu_sizing
+from ..sizing.gpu import resolve_stage_gpu_sizing
 from .models import ExperimentSpec, StageSpec
 from .sizing import stage_gpu_sizing_inputs
 from .validation_common import reject_newline, resolve_script, resolve_workdir

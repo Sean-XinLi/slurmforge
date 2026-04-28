@@ -1,4 +1,5 @@
 """``sforge estimate`` -- preview declared resource sizing and GPU budget."""
+
 from __future__ import annotations
 
 import argparse
@@ -6,13 +7,12 @@ import json
 from pathlib import Path
 
 from ..io import to_jsonable
-from ..orchestration import (
-    build_eval_stage_batch,
-    build_train_eval_pipeline_plan,
+from ..orchestration.estimate import (
     build_resource_estimate_for_plan,
-    build_train_stage_batch,
     render_resource_estimate_for_plan,
 )
+from ..orchestration.pipeline_build import build_train_eval_pipeline_plan
+from ..orchestration.stage_build import build_eval_stage_batch, build_train_stage_batch
 from .args import add_config_args
 from .builders import load_spec_from_args
 from .render import print_lines
@@ -40,9 +40,19 @@ def handle_estimate(args: argparse.Namespace) -> None:
     print_lines(render_resource_estimate_for_plan(plan))
 
 
-def add_subparser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    parser = subparsers.add_parser("estimate", help="Preview runs, GPU sizing, and dispatch waves")
+def add_subparser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
+    parser = subparsers.add_parser(
+        "estimate", help="Preview runs, GPU sizing, and dispatch waves"
+    )
     add_config_args(parser)
-    parser.add_argument("--json", action="store_true", help="Write machine-readable estimate JSON")
-    parser.add_argument("--output", default=None, help="Write machine-readable estimate JSON to this path")
+    parser.add_argument(
+        "--json", action="store_true", help="Write machine-readable estimate JSON"
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Write machine-readable estimate JSON to this path",
+    )
     parser.set_defaults(handler=handle_estimate)

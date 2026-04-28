@@ -106,7 +106,8 @@ class ResubmitTests(StageBatchSystemTestCase):
 
     def test_eval_batch_root_resubmit_uses_lineage_index(self) -> None:
         from slurmforge.cli.resubmit import handle_resubmit
-        from slurmforge.status import StageStatusRecord, commit_stage_status
+        from slurmforge.status.machine import commit_stage_status
+        from slurmforge.status.models import StageStatusRecord
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

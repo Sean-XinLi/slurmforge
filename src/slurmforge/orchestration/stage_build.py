@@ -8,11 +8,9 @@ from ..planner.sources import compile_stage_batch_from_prior_source
 from ..planner.stage_batch import compile_stage_batch_for_kind
 from ..planner.summaries import summarize_stage_batch as _summarize_stage_batch
 from ..plans.sources import SourcedStageBatchPlan
-from ..resolver import (
-    explicit_input_bindings,
-    upstream_bindings_from_run,
-    upstream_bindings_from_stage_batch,
-)
+from ..resolver.explicit.external_path import explicit_input_bindings
+from ..resolver.explicit.run import upstream_bindings_from_run
+from ..resolver.explicit.stage_batch import upstream_bindings_from_stage_batch
 from ..spec import ExperimentSpec
 from ..spec.queries import stage_source_input_name
 

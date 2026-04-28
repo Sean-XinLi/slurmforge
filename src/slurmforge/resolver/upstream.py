@@ -10,9 +10,10 @@ from ..contracts import (
     resolved_payload_present,
 )
 from ..errors import ConfigContractError
-from ..lineage import find_bound_input, iter_lineage_source_roots
-from ..root_model import iter_stage_run_dirs
-from ..storage.loader import load_stage_outputs, plan_for_run_dir
+from ..lineage.query import find_bound_input, iter_lineage_source_roots
+from ..root_model.runs import iter_stage_run_dirs
+from ..outputs.records import load_stage_outputs
+from ..storage.plan_reader import plan_for_run_dir
 from .output_refs import output_ref, producer_root_from_run_dir, resolved_output, upstream_resolution
 
 
