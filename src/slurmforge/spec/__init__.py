@@ -29,11 +29,6 @@ from .models import (
     UserRuntimeSpec,
 )
 from .parser import load_experiment_spec, parse_experiment_spec
-from .queries import (
-    expand_run_definitions,
-    stage_name_for_kind,
-    stage_source_input_name,
-)
 from .snapshot import load_experiment_spec_from_snapshot, load_spec_snapshot, spec_snapshot_path
 from .validation import validate_experiment_spec
 
@@ -64,13 +59,10 @@ __all__ = [
     "StageSpec",
     "StorageSpec",
     "UserRuntimeSpec",
-    "expand_run_definitions",
     "load_experiment_spec",
     "load_experiment_spec_from_snapshot",
     "load_spec_snapshot",
     "parse_experiment_spec",
     "spec_snapshot_path",
-    "stage_name_for_kind",
-    "stage_source_input_name",
     "validate_experiment_spec",
 ]

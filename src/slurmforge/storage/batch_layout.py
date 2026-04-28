@@ -6,29 +6,16 @@ from typing import Any
 
 import yaml
 
-from ..io import SchemaVersion, read_json, write_json
+from ..io import SchemaVersion, write_json
 from ..lineage import build_stage_batch_lineage, write_lineage_index
-from ..plans import TRAIN_EVAL_PIPELINE_KIND, StageBatchPlan
+from ..plans import StageBatchPlan
+from ..root_paths import parent_pipeline_root_for_stage_batch
 from .materialization import write_materialization_status
 from .status_seed import seed_planned_stage_statuses
 
 
 def _root(batch: StageBatchPlan) -> Path:
     return Path(batch.submission_root)
-
-
-def _pipeline_root_for_batch_root(batch_root: Path) -> Path | None:
-    root = Path(batch_root).resolve()
-    if root.parent.name != "stage_batches":
-        return None
-    candidate = root.parent.parent
-    manifest = candidate / "manifest.json"
-    if not manifest.exists():
-        return None
-    try:
-        return candidate.resolve() if read_json(manifest).get("kind") == TRAIN_EVAL_PIPELINE_KIND else None
-    except Exception:
-        return None
 
 
 def write_stage_batch_layout(
@@ -70,7 +57,7 @@ def write_stage_batch_layout(
     seed_planned_stage_statuses(
         batch,
         batch_root,
-        pipeline_root=pipeline_root or _pipeline_root_for_batch_root(batch_root),
+        pipeline_root=pipeline_root or parent_pipeline_root_for_stage_batch(batch_root),
     )
     write_lineage_index(batch_root, build_stage_batch_lineage(batch))
     return batch_root
@@ -104,7 +91,7 @@ def write_selected_stage_batch_layout(
     seed_planned_stage_statuses(
         batch,
         batch_root,
-        pipeline_root=_pipeline_root_for_batch_root(batch_root),
+        pipeline_root=parent_pipeline_root_for_stage_batch(batch_root),
     )
     write_lineage_index(batch_root, build_stage_batch_lineage(batch))
     return batch_root

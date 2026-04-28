@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ..emit import write_controller_submit_file
 from ..slurm import SlurmClient, failure_class_for_slurm_state, stage_state_for_slurm_state
-from ..io import SchemaVersion, utc_now
+from ..io import SchemaVersion, diagnostic_path, utc_now, write_exception_diagnostic
 from ..storage.controller import (
     ControllerJobRecord,
     append_controller_event,
@@ -29,6 +29,10 @@ def submit_controller_job(
     try:
         job_id = slurm.submit(sbatch_path)
     except Exception as exc:
+        diagnostic = write_exception_diagnostic(
+            diagnostic_path(pipeline_root, "controller", "controller_submit_traceback.log"),
+            exc,
+        )
         write_controller_status(
             pipeline_root,
             "failed",
@@ -36,7 +40,12 @@ def submit_controller_job(
             sbatch_path=str(sbatch_path),
             submitted_at=submitted_at,
         )
-        append_controller_event(pipeline_root, "controller_submit_failed", reason=str(exc))
+        append_controller_event(
+            pipeline_root,
+            "controller_submit_failed",
+            reason=str(exc),
+            diagnostic_path=str(diagnostic),
+        )
         raise
     record = ControllerJobRecord(
         schema_version=SchemaVersion.CONTROLLER_JOB,

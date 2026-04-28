@@ -9,11 +9,9 @@ from ..plans import RunDefinition, StageBatchPlan, StageInstancePlan
 from ..contracts import InputBinding, binding_is_ready_for_injection
 from ..spec import (
     ExperimentSpec,
-    expand_run_definitions,
     parse_experiment_spec,
-    stage_name_for_kind,
 )
-from ..spec.queries import normalize_run_path
+from ..spec.queries import expand_run_definitions, normalize_run_path, stage_name_for_kind
 from .budget import apply_budget_plan, group_stage_instances
 from .identifiers import batch_id as make_batch_id
 from .payloads import (

@@ -4,9 +4,10 @@ from typing import Any
 
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
 from ..defaults import TEMPLATE_TRAIN_EVAL
-from .fragments import base_config, eval_stage_from_train, train_stage
+from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import eval_script, train_script
+from .stages import eval_stage_from_train, train_stage
 
 
 def build_config(_request: InitRequest) -> dict[str, Any]:

@@ -4,9 +4,10 @@ from typing import Any
 
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
 from ..defaults import DEFAULT_CHECKPOINT_PATH, TEMPLATE_EVAL_CHECKPOINT
-from .fragments import base_config, eval_stage_external_checkpoint
+from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import checkpoint_file, eval_script
+from .stages import eval_stage_external_checkpoint
 
 
 def build_config(_request: InitRequest) -> dict[str, Any]:

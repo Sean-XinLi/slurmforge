@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..io import utc_now
+from ..io import diagnostic_path, utc_now, write_exception_diagnostic
 from .email import send_email_summary
 from .models import NotificationDeliveryRecord, NotificationSummaryInput
 from .policy import email_notification_enabled
@@ -60,9 +60,19 @@ def deliver_notification(
             sendmail=email.sendmail or "/usr/sbin/sendmail",
         )
     except Exception as exc:
+        diagnostic = write_exception_diagnostic(
+            diagnostic_path(target, "notifications", f"{event}_email_traceback.log"),
+            exc,
+        )
         record = NotificationDeliveryRecord(**base, state="failed", reason=str(exc))
         write_notification_record(target, record)
-        append_notification_event(target, "notification_failed", notification_event=event, reason=str(exc))
+        append_notification_event(
+            target,
+            "notification_failed",
+            notification_event=event,
+            reason=str(exc),
+            diagnostic_path=str(diagnostic),
+        )
         return record
     record = NotificationDeliveryRecord(**base, state="sent", sent_at=utc_now())
     write_notification_record(target, record)

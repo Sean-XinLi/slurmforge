@@ -11,7 +11,8 @@ from ..planner import (
 )
 from ..plans import SourcedStageBatchPlan
 from ..resolver import explicit_input_bindings, upstream_bindings_from_run, upstream_bindings_from_stage_batch
-from ..spec import ExperimentSpec, stage_source_input_name
+from ..spec import ExperimentSpec
+from ..spec.queries import stage_source_input_name
 
 
 def resolve_eval_inputs(

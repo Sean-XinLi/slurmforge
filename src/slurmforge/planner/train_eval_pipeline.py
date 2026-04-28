@@ -4,7 +4,8 @@ from pathlib import Path
 
 from ..errors import ConfigContractError
 from ..plans import TRAIN_EVAL_PIPELINE_KIND, RuntimePlan, TrainEvalControllerPlan, TrainEvalPipelinePlan, StageBatchPlan
-from ..spec import ExperimentSpec, expand_run_definitions
+from ..spec import ExperimentSpec
+from ..spec.queries import expand_run_definitions
 from .identifiers import train_eval_pipeline_id
 from .payloads import control_resources_payload, environment_payload, executor_runtime_payload, notification_payload
 from .stage_batch import compile_stage_batch

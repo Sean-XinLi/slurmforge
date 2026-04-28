@@ -7,15 +7,15 @@ from dataclasses import replace
 from pathlib import Path
 
 from ..errors import UsageError
+from ..starter.defaults import DEFAULT_OUTPUT
 from ..starter import (
-    DEFAULT_OUTPUT,
     InitRequest,
     StarterWriteError,
     create_starter_project,
-    existing_starter_files,
     template_choices,
     template_descriptions,
 )
+from ..starter.writers import existing_starter_files
 
 
 def _is_interactive() -> bool:

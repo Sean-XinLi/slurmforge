@@ -23,7 +23,7 @@ from ..plans import (
     RuntimePlan,
     UserRuntimePlan,
 )
-from ..resolver import default_stage_input_bindings
+from ..resolver.defaults import default_stage_input_bindings
 from ..contracts import InputBinding
 from ..sizing import GpuSizingResolution, resolve_stage_gpu_sizing
 from ..spec import ExperimentSpec, StageSpec

@@ -66,10 +66,11 @@ Use `sforge train` for train-only configs and `sforge eval --checkpoint /path/to
 - [Config Reference](docs/config.md)
 - [Operations](docs/operations.md)
 - [Internals](docs/internals.md)
+- [Record Contract](docs/record-contract.md)
 
 ## Development
 
 ```bash
-PYTHONPATH=src python3.11 -m pytest -q
-PYTHONPATH=src lint-imports --config .importlinter
+ruff check src tests
+env PYTHONPATH=src python3.11 -m pytest
 ```

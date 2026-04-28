@@ -10,7 +10,7 @@ from ..root_model import iter_stage_run_dirs
 from ..spec import load_spec_snapshot, parse_experiment_spec, validate_experiment_spec
 from ..status import read_stage_status, state_matches
 from ..storage.loader import plan_for_run_dir
-from ..resolver import resolve_stage_inputs_from_prior_source
+from ..resolver.prior_source import resolve_stage_inputs_from_prior_source
 from .core import compile_stage_batch
 
 

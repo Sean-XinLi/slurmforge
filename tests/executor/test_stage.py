@@ -88,7 +88,7 @@ class ExecutorTests(StageBatchSystemTestCase):
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
             write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
 
-            with patch("slurmforge.executor.stage.build_shell_script", side_effect=RuntimeError("executor boom")):
+            with patch("slurmforge.executor.runner.build_shell_script", side_effect=RuntimeError("executor boom")):
                 self.assertNotEqual(execute_stage_task(Path(train_batch.submission_root), 1, 0), 0)
 
             train_run_dir = Path(train_batch.submission_root) / train_batch.stage_instances[0].run_dir_rel

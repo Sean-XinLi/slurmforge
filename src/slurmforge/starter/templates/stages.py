@@ -2,81 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..defaults import (
-    DEFAULT_CHECKPOINT_PATH,
-    DEFAULT_EVAL_SCRIPT,
-    DEFAULT_EXPERIMENT,
-    DEFAULT_PARTITION,
-    DEFAULT_PROJECT,
-    DEFAULT_PYTHON_BIN,
-    DEFAULT_STORAGE_ROOT,
-    DEFAULT_TRAIN_SCRIPT,
-)
-
-
-def base_config() -> dict[str, Any]:
-    return {
-        "project": DEFAULT_PROJECT,
-        "experiment": DEFAULT_EXPERIMENT,
-        "storage": {"root": DEFAULT_STORAGE_ROOT},
-        "environments": {
-            "default": {
-                "modules": [],
-                "source": [],
-                "env": {},
-            }
-        },
-        "runtime": {
-            "executor": {
-                "python": {
-                    "bin": DEFAULT_PYTHON_BIN,
-                    "min_version": "3.10",
-                },
-                "module": "slurmforge.executor.stage",
-            },
-            "user": {
-                "default": {
-                    "python": {
-                        "bin": DEFAULT_PYTHON_BIN,
-                        "min_version": "3.10",
-                    },
-                    "env": {},
-                }
-            },
-        },
-        "artifact_store": {
-            "strategy": "copy",
-            "fallback_strategy": None,
-            "verify_digest": True,
-            "fail_on_verify_error": True,
-        },
-        "runs": {"type": "single"},
-        "dispatch": {
-            "max_available_gpus": 1,
-            "overflow_policy": "serialize_groups",
-        },
-        "orchestration": {
-            "controller": {
-                "partition": DEFAULT_PARTITION,
-                "cpus": 1,
-                "mem": "2G",
-                "time_limit": "01:00:00",
-                "environment": "default",
-            }
-        },
-        "stages": {},
-    }
-
-
-def stage_resources(*, cpus: int, mem: str) -> dict[str, Any]:
-    return {
-        "partition": DEFAULT_PARTITION,
-        "nodes": 1,
-        "gpus_per_node": 1,
-        "cpus_per_task": cpus,
-        "mem": mem,
-        "time_limit": "01:00:00",
-    }
+from ..defaults import DEFAULT_CHECKPOINT_PATH, DEFAULT_EVAL_SCRIPT, DEFAULT_TRAIN_SCRIPT
+from .resources import stage_resources
 
 
 def train_stage() -> dict[str, Any]:

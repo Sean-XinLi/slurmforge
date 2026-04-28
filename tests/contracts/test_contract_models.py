@@ -112,7 +112,8 @@ class ContractTests(StageBatchSystemTestCase):
         self.assertEqual(payload.run_statuses[0].state, "success")
 
     def test_source_input_name_prefers_single_required_input(self) -> None:
-        from slurmforge.spec import load_experiment_spec, stage_source_input_name
+        from slurmforge.spec import load_experiment_spec
+        from slurmforge.spec.queries import stage_source_input_name
 
         with tempfile.TemporaryDirectory() as tmp:
             spec = load_experiment_spec(write_demo_project(Path(tmp)))

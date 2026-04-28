@@ -7,8 +7,13 @@ This document captures the internal contracts that keep planning, submission, ex
 - `spec.parse_sections` loads and assembles the top-level experiment spec; section parsers live under `spec.parse_*`.
 - `spec.validation` orchestrates validation; resources, runtime, runs, launcher, inputs, outputs, notifications, and topology have separate validators.
 - `planner.core` is a facade; payload construction, stage-batch compilation, train/eval pipeline compilation, identifiers, and summaries live in dedicated modules.
-- `executor.stage` owns the attempt transaction; command rendering, environment construction, input binding loading, and stage-instance lookup are separate modules.
+- `executor.stage` is the stage execution entrypoint. `executor.attempt` owns attempt/status transaction writes, `executor.runner` owns runtime checks, input verification, environment construction, and user command execution, and `executor.finalize` owns output discovery and final stage output records.
+- `resolver.explicit` is split by source shape: external paths, producer stage batches, and producer run directories.
+- `root_paths` is the single source for inferring a parent train/eval pipeline root from a stage batch root.
+- `io.diagnostics` is the single traceback diagnostic writer used by executor, controller submission, stage submission, and notification delivery.
 - `storage` has no aggregate package facade; callers import role modules such as `storage.batch_layout`, `storage.train_eval_pipeline_layout`, `storage.status_seed`, `storage.controller_seed`, `storage.loader`, `storage.controller`, and `storage.materialization`.
+
+Persisted file shapes are specified in [Record Contract](record-contract.md).
 
 ## Contracts
 

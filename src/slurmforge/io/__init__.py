@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from . import schema as _schema
-from .diagnostics import write_exception_diagnostic
+from .diagnostics import diagnostic_path, write_exception_diagnostic
 from .hash import file_digest
 from .json import content_digest, read_json, stable_json, to_jsonable, write_json
 from .time import utc_now
@@ -12,6 +12,7 @@ require_schema = _schema.require_schema
 __all__ = [
     "SchemaVersion",
     "content_digest",
+    "diagnostic_path",
     "file_digest",
     "read_json",
     "require_schema",

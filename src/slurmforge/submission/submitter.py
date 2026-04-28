@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 from ..errors import ConfigContractError
-from ..io import utc_now
+from ..io import diagnostic_path, utc_now, write_exception_diagnostic
 from ..slurm import SlurmClient
 from .dependencies import dependency_for
 from .ledger import (
@@ -66,6 +66,10 @@ def submit_prepared_stage_batch(
         try:
             job_id = slurm.submit(Path(record.sbatch_path), dependency=dependency)
         except Exception as exc:
+            diagnostic = write_exception_diagnostic(
+                diagnostic_path(batch_root, "submissions", "diagnostics", f"{group.group_id}_submit_traceback.log"),
+                exc,
+            )
             record.state = "failed"
             record.reason = str(exc)
             ledger.state = "failed"
@@ -76,6 +80,7 @@ def submit_prepared_stage_batch(
                 stage=batch.stage_name,
                 group_id=group.group_id,
                 reason=str(exc),
+                diagnostic_path=str(diagnostic),
             )
             raise
         record.scheduler_job_id = job_id

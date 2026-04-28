@@ -4,7 +4,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from ..spec import expand_run_definitions, load_experiment_spec
+from ..spec import load_experiment_spec
+from ..spec.queries import expand_run_definitions
 
 
 def render_validate(

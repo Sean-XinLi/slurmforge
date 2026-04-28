@@ -120,6 +120,11 @@ class ControllerTests(StageBatchSystemTestCase):
                 submit_controller_job(plan, client=FailingSlurm())
 
             self.assertFalse((pipeline_root / "controller" / "controller_job.json").exists())
+            diagnostic = pipeline_root / "controller" / "controller_submit_traceback.log"
+            self.assertTrue(diagnostic.exists())
+            diagnostic_text = diagnostic.read_text(encoding="utf-8")
+            self.assertIn("RuntimeError: sbatch unavailable", diagnostic_text)
+            self.assertIn("Traceback", diagnostic_text)
             status = read_controller_status(pipeline_root)
             assert status is not None
             self.assertEqual(status["state"], "failed")

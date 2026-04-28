@@ -69,7 +69,7 @@ class InputResolutionTests(StageBatchSystemTestCase):
             self.assertTrue(binding.resolved.path.endswith(".pt"))
 
     def test_checkpoint_source_requires_explicit_input_name_when_ambiguous(self) -> None:
-        from slurmforge.spec import stage_source_input_name
+        from slurmforge.spec.queries import stage_source_input_name
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
