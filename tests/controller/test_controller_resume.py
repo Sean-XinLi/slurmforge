@@ -9,7 +9,7 @@ from tests.support.public import (
 )
 from tests.support.internal_records import (
     read_submission_ledger,
-    write_train_eval_pipeline_layout,
+    materialize_train_eval_pipeline_for_test,
     write_submission_ledger,
 )
 import tempfile
@@ -31,7 +31,7 @@ class ControllerResumeTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             client = CompletingFakeSlurm()
 
             self.assertEqual(
@@ -63,7 +63,7 @@ class ControllerResumeTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             train_batch = plan.stage_batches["train"]
             prepare_stage_submission(train_batch)
             ledger = read_submission_ledger(Path(train_batch.submission_root))
@@ -106,7 +106,7 @@ class ControllerResumeTests(StageBatchSystemTestCase):
             )
             spec = load_experiment_spec(cfg_path)
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             train_batch = plan.stage_batches["train"]
             first_group = train_batch.group_plans[0].group_id
             second_group = train_batch.group_plans[1].group_id

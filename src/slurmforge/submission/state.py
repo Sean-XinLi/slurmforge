@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..storage.materialization import read_materialization_status
+from ..storage.batch_materialization_records import read_materialization_status
 from .ledger import read_submission_ledger, submitted_group_job_ids
 from .models import SubmissionGroupState, SubmissionState
 

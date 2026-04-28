@@ -8,7 +8,7 @@ from ..slurm import SlurmClient, SlurmClientProtocol
 from ..spec import load_experiment_spec_from_snapshot
 from ..storage.controller import write_controller_status
 from ..storage.plan_reader import load_stage_batch_plan, load_train_eval_pipeline_plan
-from .materialization import ensure_stage_materialized, project_root_from_pipeline
+from .stage_selection import ensure_stage_materialized, project_root_from_pipeline
 from .state import load_controller_state, record_controller_event, save_controller_state
 from .stage_runtime import (
     batch_terminal,

@@ -10,7 +10,7 @@ from ..io import SchemaVersion
 from ..plans.stage import StageBatchPlan
 from ..status.machine import commit_stage_status
 from ..status.models import StageStatusRecord
-from ..storage.materialization import write_materialization_status
+from ..storage.batch_materialization_records import write_materialization_status
 from .ledger import initialize_submission_ledger, ledger_path
 from .models import SubmitGeneration
 from .models import PreparedSubmission

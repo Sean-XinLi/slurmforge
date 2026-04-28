@@ -7,7 +7,7 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import (
-    write_train_eval_pipeline_layout,
+    materialize_train_eval_pipeline_for_test,
 )
 import json
 import tempfile
@@ -30,7 +30,7 @@ class ControllerSubmissionTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             client = FakeSlurmClient()
 
             record = submit_controller_job(plan, client=client)
@@ -95,7 +95,7 @@ class ControllerSubmissionTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             pipeline_root = Path(plan.root_dir)
 
             with self.assertRaisesRegex(RuntimeError, "sbatch unavailable"):

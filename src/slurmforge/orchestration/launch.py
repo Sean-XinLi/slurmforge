@@ -1,20 +1,11 @@
 from __future__ import annotations
 
 from ..emit.controller import write_controller_submit_file
+from ..materialization.sourced import materialize_sourced_stage_batch
+from ..materialization.stage_batch import materialize_stage_batch
+from ..materialization.train_eval import materialize_train_eval_pipeline
 from ..plans.sources import SourcedStageBatchPlan
-from ..root_model.controller_seed import write_initial_controller_state
-from ..root_model.seed import (
-    seed_planned_stage_statuses,
-    seed_train_eval_pipeline_statuses,
-)
-from ..root_model.snapshots import (
-    refresh_stage_batch_status,
-    refresh_train_eval_pipeline_status,
-)
 from ..spec import ExperimentSpec
-from ..storage.batch_layout import write_stage_batch_layout
-from ..storage.materialization import materialize_sourced_stage_batch_plan
-from ..storage.train_eval_pipeline_layout import write_train_eval_pipeline_layout
 from ..submission.finalizer import submit_stage_batch_finalizer
 from ..submission.generation import prepare_stage_submission
 from ..submission.models import PreparedSubmission
@@ -29,19 +20,14 @@ from .results import (
 
 
 def _materialize_stage_batch(spec: ExperimentSpec, batch) -> PreparedSubmission:
-    write_stage_batch_layout(batch, spec_snapshot=spec.raw)
-    seed_planned_stage_statuses(batch)
-    refresh_stage_batch_status(batch.submission_root)
+    materialize_stage_batch(batch, spec_snapshot=spec.raw)
     return prepare_stage_submission(batch)
 
 
 def _materialize_sourced_stage_batch(
     plan: SourcedStageBatchPlan,
 ) -> SourcedStageBatchPlan:
-    concrete = materialize_sourced_stage_batch_plan(plan)
-    seed_planned_stage_statuses(concrete.batch)
-    refresh_stage_batch_status(concrete.batch.submission_root)
-    return concrete
+    return materialize_sourced_stage_batch(plan)
 
 
 def _submit_materialized_stage_batch(prepared: PreparedSubmission) -> dict[str, str]:
@@ -105,10 +91,7 @@ def execute_stage_batch_plan(
 def emit_train_eval_pipeline(
     spec: ExperimentSpec, plan, *, submit: bool
 ) -> TrainEvalPipelineExecutionResult:
-    write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
-    write_initial_controller_state(plan.root_dir, plan)
-    seed_train_eval_pipeline_statuses(plan)
-    refresh_train_eval_pipeline_status(plan.root_dir)
+    materialize_train_eval_pipeline(plan, spec_snapshot=spec.raw)
     if "train" in plan.stage_batches:
         prepare_stage_submission(plan.stage_batches["train"])
     if not submit:

@@ -9,8 +9,8 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import (
-    write_train_eval_pipeline_layout,
-    write_stage_batch_layout,
+    materialize_train_eval_pipeline_for_test,
+    materialize_stage_batch_for_test,
 )
 import tempfile
 from pathlib import Path
@@ -25,14 +25,14 @@ class RootModelTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
 
             batch_descriptor = detect_root(Path(batch.submission_root))
             self.assertEqual(batch_descriptor.kind, "stage_batch")
             self.assertEqual(len(tuple(iter_stage_run_dirs(batch_descriptor.root))), 1)
 
             pipeline = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(pipeline, spec_snapshot=spec.raw)
             pipeline_descriptor = detect_root(Path(pipeline.root_dir))
             self.assertEqual(pipeline_descriptor.kind, "train_eval_pipeline")
             self.assertEqual(
@@ -59,14 +59,14 @@ class RootModelTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
             batch_snapshot = refresh_stage_batch_status(Path(batch.submission_root))
             self.assertEqual(batch_snapshot.kind, "stage_batch")
             self.assertEqual(batch_snapshot.run_statuses[0].state, "planned")
             self.assertTrue((Path(batch.submission_root) / "run_status.json").exists())
 
             pipeline = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(pipeline, spec_snapshot=spec.raw)
             pipeline_snapshot = refresh_train_eval_pipeline_status(
                 Path(pipeline.root_dir)
             )
@@ -117,7 +117,7 @@ class RootModelTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
             run_dir = next(iter_stage_run_dirs(Path(batch.submission_root)))
             commit_stage_status(
                 run_dir,

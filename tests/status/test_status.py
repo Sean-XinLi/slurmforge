@@ -12,8 +12,8 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import (
-    write_train_eval_pipeline_layout,
-    write_stage_batch_layout,
+    materialize_train_eval_pipeline_for_test,
+    materialize_stage_batch_for_test,
 )
 import tempfile
 from pathlib import Path
@@ -76,7 +76,7 @@ class StatusTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
             client = FakeSlurmClient()
             prepared = prepare_stage_submission(batch)
             submit_prepared_stage_batch(prepared, client=client)
@@ -113,7 +113,7 @@ class StatusTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             pipeline_root = Path(plan.root_dir)
 
             with (

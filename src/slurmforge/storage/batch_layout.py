@@ -10,7 +10,7 @@ from ..io import SchemaVersion, write_json
 from ..lineage.builders import build_stage_batch_lineage
 from ..lineage.paths import write_lineage_index
 from ..plans.stage import StageBatchPlan
-from .materialization import write_materialization_status
+from .batch_materialization_records import write_materialization_status
 from .paths import input_bindings_path, stage_plan_path
 
 
@@ -45,7 +45,7 @@ def _write_stage_run_layout(batch: StageBatchPlan, batch_root: Path) -> None:
         write_json(input_bindings_path(run_dir), _bindings_payload(instance))
 
 
-def write_stage_batch_layout(
+def persist_stage_batch_layout(
     batch: StageBatchPlan,
     *,
     spec_snapshot: dict[str, Any],
@@ -86,7 +86,7 @@ def write_stage_batch_layout(
     return batch_root
 
 
-def write_selected_stage_batch_layout(
+def persist_selected_stage_batch_layout(
     batch: StageBatchPlan,
     *,
     blocked_run_ids: list[str] | None = None,

@@ -11,8 +11,8 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import (
-    write_train_eval_pipeline_layout,
-    write_stage_batch_layout,
+    materialize_train_eval_pipeline_for_test,
+    materialize_stage_batch_for_test,
 )
 import json
 import tempfile
@@ -28,7 +28,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
 
@@ -64,7 +64,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
 
@@ -88,7 +88,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             self.assertNotEqual(resubmit_roots[0].name, resubmit_roots[1].name)
 
     def test_resubmit_root_reservation_is_new_only(self) -> None:
-        from slurmforge.storage.materialization import reserve_derived_stage_batch_root
+        from slurmforge.storage.derived_roots import reserve_derived_stage_batch_root
 
         with tempfile.TemporaryDirectory() as tmp:
             source_root = Path(tmp)
@@ -113,7 +113,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
             self.assertEqual(
                 execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
             )
@@ -127,7 +127,7 @@ class ResubmitTests(StageBatchSystemTestCase):
                 input_bindings_by_run=bindings,
                 source_ref=f"train_batch:{train_batch.submission_root}",
             )
-            write_stage_batch_layout(eval_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(eval_batch, spec_snapshot=spec.raw)
             eval_root = Path(eval_batch.submission_root)
             lineage = json.loads((eval_root / "lineage_index.json").read_text())
             self.assertIn(
@@ -183,7 +183,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             replacement = root / "replacement.pt"

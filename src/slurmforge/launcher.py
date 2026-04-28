@@ -4,8 +4,15 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .cli import estimate, eval as eval_cmd
-from .cli import init, plan, resubmit, run, status, train, validate
+from .cli.estimate import add_subparser as add_estimate_subparser
+from .cli.eval import add_subparser as add_eval_subparser
+from .cli.init import add_subparser as add_init_subparser
+from .cli.plan import add_subparser as add_plan_subparser
+from .cli.resubmit import add_subparser as add_resubmit_subparser
+from .cli.run import add_subparser as add_run_subparser
+from .cli.status import add_subparser as add_status_subparser
+from .cli.train import add_subparser as add_train_subparser
+from .cli.validate import add_subparser as add_validate_subparser
 from .errors import UserFacingError
 from .identity import PACKAGE_NAME, __version__
 
@@ -24,15 +31,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True
-    init.add_subparser(subparsers)
-    validate.add_subparser(subparsers)
-    estimate.add_subparser(subparsers)
-    plan.add_subparser(subparsers)
-    train.add_subparser(subparsers)
-    eval_cmd.add_subparser(subparsers)
-    run.add_subparser(subparsers)
-    status.add_subparser(subparsers)
-    resubmit.add_subparser(subparsers)
+    add_init_subparser(subparsers)
+    add_validate_subparser(subparsers)
+    add_estimate_subparser(subparsers)
+    add_plan_subparser(subparsers)
+    add_train_subparser(subparsers)
+    add_eval_subparser(subparsers)
+    add_run_subparser(subparsers)
+    add_status_subparser(subparsers)
+    add_resubmit_subparser(subparsers)
     return parser
 
 

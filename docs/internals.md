@@ -12,9 +12,12 @@ This document captures the internal contracts that keep planning, submission, ex
 - `root_paths` is the single source for inferring a parent train/eval pipeline root from a stage batch root.
 - `io.diagnostics` is the single traceback diagnostic writer used by executor, controller submission, stage submission, and notification delivery.
 - Public package facades are limited to `spec`, `starter`, `contracts`, `slurm`, and `io`. Internal packages keep empty facades and callers import role modules directly.
-- `storage` owns persisted layout, storage paths, materialization records, controller files, and plan readers. It does not seed status records or own root read models.
+- Nested internal package facades are allowed only as explicit local subsystem entrypoints, for example `plans.serde`, `planner.payloads`, `emit.stage_render`, `outputs.discovery`, and `resolver.explicit`.
+- `materialization` owns workflow-level materialization: persisting a planned root layout, seeding planned status records, refreshing root snapshots, and materializing sourced or selected stage batches.
+- `storage` owns persisted layout, storage paths, batch materialization records, derived root reservation, source contracts, controller files, and plan readers. It does not seed status records, refresh root read models, or own workflow-level materialization.
 - `status` owns per-stage status/attempt records and scheduler reconciliation. Reconcile internals are split between workflow, attempt reconstruction, scheduler observations, and reconciliation rules.
 - `root_model` owns root detection, root refs, run/pipeline aggregation, root snapshots, notification snapshots, and planned status/controller seeding after storage layout is written.
+- `controller.stage_selection` owns controller-time selection of downstream stage runs from upstream outputs. The controller state machine records progression; it does not own storage persistence primitives.
 
 Persisted file shapes are specified in [Record Contract](record-contract.md).
 

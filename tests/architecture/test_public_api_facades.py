@@ -1,76 +1,13 @@
 from __future__ import annotations
 
-import ast
-import importlib
-from pathlib import Path
-
-from tests.architecture.helpers import absolute_import_module
 from tests.support.case import StageBatchSystemTestCase
 
 
-class FacadeTests(StageBatchSystemTestCase):
-    def test_internal_package_facades_stay_empty(self) -> None:
-        internal_packages = (
-            "controller",
-            "emit",
-            "executor",
-            "inputs",
-            "lineage",
-            "notifications",
-            "orchestration",
-            "outputs",
-            "planner",
-            "plans",
-            "resolver",
-            "root_model",
-            "runtime",
-            "sizing",
-            "status",
-            "storage",
-            "submission",
-        )
-        for package in internal_packages:
-            module = importlib.import_module(f"slurmforge.{package}")
-            self.assertEqual(module.__all__, [], package)
-
-    def test_internal_facades_are_not_imported_directly(self) -> None:
-        blocked = {
-            "slurmforge.controller",
-            "slurmforge.emit",
-            "slurmforge.executor",
-            "slurmforge.inputs",
-            "slurmforge.lineage",
-            "slurmforge.notifications",
-            "slurmforge.orchestration",
-            "slurmforge.outputs",
-            "slurmforge.planner",
-            "slurmforge.plans",
-            "slurmforge.resolver",
-            "slurmforge.root_model",
-            "slurmforge.runtime",
-            "slurmforge.sizing",
-            "slurmforge.status",
-            "slurmforge.storage",
-            "slurmforge.submission",
-        }
-        violations: list[str] = []
-        checked = [*Path("src/slurmforge").rglob("*.py"), *Path("tests").rglob("*.py")]
-        for path in sorted(checked):
-            if path == Path("tests/architecture/test_facades.py"):
-                continue
-            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-            for node in ast.walk(tree):
-                if not isinstance(node, ast.ImportFrom):
-                    continue
-                module = absolute_import_module(path, node)
-                if module in blocked:
-                    violations.append(f"{path}:{node.lineno} imports {module}")
-        self.assertEqual(violations, [])
-
+class PublicApiFacadeTests(StageBatchSystemTestCase):
     def test_public_facades_do_not_export_internal_helpers(self) -> None:
         import slurmforge.notifications as notifications
-        import slurmforge.plans as plans
         import slurmforge.planner as planner
+        import slurmforge.plans as plans
         import slurmforge.resolver as resolver
         import slurmforge.spec as spec
         import slurmforge.starter as starter

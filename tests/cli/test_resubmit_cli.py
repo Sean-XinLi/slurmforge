@@ -9,7 +9,7 @@ from tests.support.public import (
     upstream_bindings_from_train_batch,
     write_demo_project,
 )
-from tests.support.internal_records import write_stage_batch_layout
+from tests.support.internal_records import materialize_stage_batch_for_test
 import io
 import json
 import tempfile
@@ -28,7 +28,7 @@ class ResubmitCliTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
             self.assertEqual(
                 execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
             )
@@ -42,7 +42,7 @@ class ResubmitCliTests(StageBatchSystemTestCase):
                 input_bindings_by_run=bindings,
                 source_ref=f"train_batch:{train_batch.submission_root}",
             )
-            write_stage_batch_layout(eval_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(eval_batch, spec_snapshot=spec.raw)
             eval_root = Path(eval_batch.submission_root)
             eval_instance = eval_batch.stage_instances[0]
             commit_stage_status(
@@ -84,7 +84,7 @@ class ResubmitCliTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
             train_root = Path(train_batch.submission_root)
 
             stdout = io.StringIO()
@@ -116,7 +116,7 @@ class ResubmitCliTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
             train_root = Path(train_batch.submission_root)
             (train_root / "spec_snapshot.yaml").unlink()
 

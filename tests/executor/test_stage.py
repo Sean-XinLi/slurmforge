@@ -9,7 +9,7 @@ from tests.support.public import (
     upstream_bindings_from_train_batch,
     write_demo_project,
 )
-from tests.support.internal_records import write_stage_batch_layout
+from tests.support.internal_records import materialize_stage_batch_for_test
 import json
 import tempfile
 import yaml
@@ -44,7 +44,7 @@ class ExecutorTests(StageBatchSystemTestCase):
             )
             spec = load_experiment_spec(cfg_path)
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
 
             self.assertEqual(
                 execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
@@ -80,7 +80,7 @@ class ExecutorTests(StageBatchSystemTestCase):
             )
             spec = load_experiment_spec(cfg_path)
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
 
             self.assertNotEqual(
                 execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
@@ -107,7 +107,7 @@ class ExecutorTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
 
             with patch(
                 "slurmforge.executor.runner.build_shell_script",
@@ -134,7 +134,7 @@ class ExecutorTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
             self.assertEqual(
                 execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
             )
@@ -149,7 +149,7 @@ class ExecutorTests(StageBatchSystemTestCase):
                 input_bindings_by_run=bindings,
                 source_ref=f"train_batch:{train_batch.submission_root}",
             )
-            write_stage_batch_layout(eval_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(eval_batch, spec_snapshot=spec.raw)
             checkpoint_path.unlink()
 
             self.assertNotEqual(
@@ -171,7 +171,7 @@ class ExecutorTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
             self.assertEqual(
                 execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
             )
@@ -187,7 +187,7 @@ class ExecutorTests(StageBatchSystemTestCase):
                 input_bindings_by_run=bindings,
                 source_ref=f"train_batch:{train_batch.submission_root}",
             )
-            write_stage_batch_layout(eval_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(eval_batch, spec_snapshot=spec.raw)
 
             with self.assertRaisesRegex(Exception, "digest mismatch"):
                 prepare_stage_submission(eval_batch)

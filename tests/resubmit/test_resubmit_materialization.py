@@ -12,8 +12,8 @@ from tests.support.public import (
 )
 from tests.support.internal_records import (
     read_submission_ledger,
-    write_train_eval_pipeline_layout,
-    write_stage_batch_layout,
+    materialize_train_eval_pipeline_for_test,
+    materialize_stage_batch_for_test,
 )
 import tempfile
 from argparse import Namespace
@@ -30,7 +30,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             client = FakeSlurmClient()
@@ -66,7 +66,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
 
             with self.assertRaisesRegex(Exception, "launcher.type"):
                 handle_resubmit(
@@ -92,7 +92,7 @@ class ResubmitTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
             self.assertEqual(
                 execute_stage_task(Path(train_batch.submission_root), 1, 0), 0
             )
@@ -107,7 +107,7 @@ class ResubmitTests(StageBatchSystemTestCase):
                 input_bindings_by_run=bindings,
                 source_ref=f"train_batch:{train_batch.submission_root}",
             )
-            write_stage_batch_layout(eval_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(eval_batch, spec_snapshot=spec.raw)
             eval_root = Path(eval_batch.submission_root)
             eval_instance = eval_batch.stage_instances[0]
             commit_stage_status(

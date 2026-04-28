@@ -7,7 +7,7 @@ from tests.support.public import (
     load_experiment_spec,
     write_demo_project,
 )
-from tests.support.internal_records import write_stage_batch_layout
+from tests.support.internal_records import materialize_stage_batch_for_test
 import json
 import tempfile
 import yaml
@@ -62,7 +62,7 @@ class OutputTests(StageBatchSystemTestCase):
             )
             spec = load_experiment_spec(cfg_path)
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
             self.assertEqual(execute_stage_task(Path(batch.submission_root), 1, 0), 0)
             run_dir = Path(batch.submission_root) / batch.stage_instances[0].run_dir_rel
             manifest = json.loads(
@@ -82,7 +82,7 @@ class OutputTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
             with patch(
                 "slurmforge.outputs.artifact_store.file_digest",
                 side_effect=["source", "managed"],
@@ -108,7 +108,7 @@ class OutputTests(StageBatchSystemTestCase):
             cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
             spec = load_experiment_spec(cfg_path)
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
 
             self.assertNotEqual(
                 execute_stage_task(Path(train_batch.submission_root), 1, 0), 0

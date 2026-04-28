@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Any
 
 from ..io import SchemaVersion, write_json
+from ..materialization.stage_batch import materialize_selected_stage_batch
 from ..planner.stage_batch import compile_stage_batch
 from ..resolver.train_eval_pipeline import resolve_stage_inputs_for_train_eval_pipeline
 from ..root_model.runs import iter_stage_run_dirs
-from ..root_model.seed import seed_planned_stage_statuses
 from ..root_model.snapshots import (
     refresh_stage_batch_status,
     refresh_train_eval_pipeline_status,
@@ -16,7 +16,6 @@ from ..root_model.snapshots import (
 from ..status.machine import commit_stage_status
 from ..status.models import StageStatusRecord, TERMINAL_STATES
 from ..status.reader import read_stage_status
-from ..storage.batch_layout import write_selected_stage_batch_layout
 from ..storage.plan_reader import load_execution_stage_batch_plan, plan_for_run_dir
 from .state import record_controller_event, save_controller_state
 
@@ -98,10 +97,11 @@ def ensure_stage_materialized(
         input_bindings_by_run=resolved.input_bindings_by_run,
     )
     batch = replace(batch, batch_id=plan.stage_batches[stage_name].batch_id)
-    write_selected_stage_batch_layout(batch, blocked_run_ids=blocked)
-    seed_planned_stage_statuses(batch, stage_root, pipeline_root=pipeline_root)
-    refresh_stage_batch_status(stage_root)
-    refresh_train_eval_pipeline_status(pipeline_root)
+    materialize_selected_stage_batch(
+        batch,
+        blocked_run_ids=blocked,
+        pipeline_root=pipeline_root,
+    )
     state["materialized_stages"] = sorted(materialized | {stage_name})
     save_controller_state(pipeline_root, state)
     record_controller_event(

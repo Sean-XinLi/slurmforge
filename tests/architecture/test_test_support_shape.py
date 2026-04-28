@@ -31,6 +31,11 @@ class TestSupportShapeTests(StageBatchSystemTestCase):
         self.assertFalse(Path("src/slurmforge/orchestration/render.py").exists())
         self.assertTrue(Path("src/slurmforge/orchestration/status_view.py").exists())
 
+    def test_controller_stage_selection_is_named_for_controller_workflow(self) -> None:
+        controller_root = Path("src/slurmforge/controller")
+        self.assertFalse((controller_root / "materialization.py").exists())
+        self.assertTrue((controller_root / "stage_selection.py").exists())
+
     def test_starter_template_shared_builders_are_split_by_concern(self) -> None:
         template_root = Path("src/slurmforge/starter/templates")
         self.assertFalse((template_root / "fragments.py").exists())
@@ -39,11 +44,23 @@ class TestSupportShapeTests(StageBatchSystemTestCase):
 
     def test_large_workflow_tests_are_split_by_topic(self) -> None:
         self.assertFalse(Path("tests/e2e/test_pipeline_flow.py").exists())
+        self.assertFalse(Path("tests/e2e/test_pipeline_execution.py").exists())
+        self.assertFalse(Path("tests/e2e/test_pipeline_records.py").exists())
+        self.assertFalse(Path("tests/emit/test_stage_sbatch.py").exists())
         self.assertFalse(Path("tests/resubmit/test_resubmit.py").exists())
         self.assertFalse(Path("tests/starter/test_starter.py").exists())
+        self.assertFalse(Path("tests/status/test_reconcile.py").exists())
+        self.assertFalse(Path("tests/submission/test_submission.py").exists())
         for path in (
-            "tests/e2e/test_pipeline_execution.py",
-            "tests/e2e/test_pipeline_records.py",
+            "tests/e2e/test_file_outputs_flow.py",
+            "tests/e2e/test_metric_outputs_flow.py",
+            "tests/e2e/test_pipeline_controller_flow.py",
+            "tests/e2e/test_pipeline_dry_run.py",
+            "tests/e2e/test_plan_record_contracts.py",
+            "tests/e2e/test_stage_execution_flow.py",
+            "tests/emit/test_stage_sbatch_environment.py",
+            "tests/emit/test_stage_sbatch_notifications.py",
+            "tests/emit/test_stage_sbatch_torchrun.py",
             "tests/resubmit/test_resubmit_selection.py",
             "tests/resubmit/test_resubmit_materialization.py",
             "tests/resubmit/test_resubmit_status.py",
@@ -51,6 +68,15 @@ class TestSupportShapeTests(StageBatchSystemTestCase):
             "tests/starter/test_templates.py",
             "tests/starter/test_overwrite.py",
             "tests/starter/test_cli_contract.py",
+            "tests/status/test_reconcile_array_jobs.py",
+            "tests/status/test_reconcile_attempts.py",
+            "tests/status/test_reconcile_missing_outputs.py",
+            "tests/status/test_reconcile_squeue.py",
+            "tests/submission/test_budget_waves.py",
+            "tests/submission/test_submit_failures.py",
+            "tests/submission/test_submit_finalizer.py",
+            "tests/submission/test_submit_generation.py",
+            "tests/submission/test_submit_reconcile.py",
         ):
             self.assertTrue(Path(path).exists())
 

@@ -8,7 +8,7 @@ from ..root_model.runs import collect_stage_statuses
 from ..root_model.snapshots import refresh_root_status
 from ..status.query import state_matches
 from ..storage.controller import read_controller_status
-from ..storage.materialization import read_materialization_status
+from ..storage.batch_materialization_records import read_materialization_status
 from ..submission.reconcile import reconcile_root_submissions
 
 

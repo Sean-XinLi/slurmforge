@@ -10,10 +10,12 @@ from ..io import SchemaVersion, write_json
 from ..lineage.builders import build_train_eval_pipeline_lineage
 from ..lineage.paths import write_lineage_index
 from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalPipelinePlan
-from .batch_layout import write_stage_batch_layout
+from .batch_layout import persist_stage_batch_layout
 
 
-def write_train_eval_pipeline_layout(plan: TrainEvalPipelinePlan, *, spec_snapshot: dict[str, Any]) -> Path:
+def persist_train_eval_pipeline_layout(
+    plan: TrainEvalPipelinePlan, *, spec_snapshot: dict[str, Any]
+) -> Path:
     root = Path(plan.root_dir)
     root.mkdir(parents=True, exist_ok=True)
     write_json(
@@ -33,6 +35,8 @@ def write_train_eval_pipeline_layout(plan: TrainEvalPipelinePlan, *, spec_snapsh
     )
     write_json(root / "train_eval_pipeline_plan.json", plan)
     for batch in plan.stage_batches.values():
-        write_stage_batch_layout(batch, spec_snapshot=spec_snapshot, pipeline_root=root)
+        persist_stage_batch_layout(
+            batch, spec_snapshot=spec_snapshot, pipeline_root=root
+        )
     write_lineage_index(root, build_train_eval_pipeline_lineage(plan))
     return root

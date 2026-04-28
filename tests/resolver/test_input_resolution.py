@@ -8,7 +8,7 @@ from tests.support.public import (
     resolve_stage_inputs_for_train_eval_pipeline,
     write_demo_project,
 )
-from tests.support.internal_records import write_train_eval_pipeline_layout
+from tests.support.internal_records import materialize_train_eval_pipeline_for_test
 import tempfile
 import yaml
 from pathlib import Path
@@ -35,7 +35,7 @@ class InputResolutionTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             self.assertEqual(
                 execute_stage_task(
                     Path(plan.stage_batches["train"].submission_root), 1, 0
@@ -80,7 +80,7 @@ class InputResolutionTests(StageBatchSystemTestCase):
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
             spec = load_experiment_spec(cfg_path)
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             self.assertEqual(
                 execute_stage_task(
                     Path(plan.stage_batches["train"].submission_root), 1, 0

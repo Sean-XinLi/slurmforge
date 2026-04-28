@@ -7,7 +7,7 @@ from ..inputs.verifier import input_verification_path
 from ..io import read_json
 from ..plans.stage import StageBatchPlan
 from ..storage.plan_reader import load_execution_stage_batch_plan
-from ..storage.materialization import read_materialization_status
+from ..storage.batch_materialization_records import read_materialization_status
 from .ledger import read_submission_ledger
 from .models import PreparedSubmission, SubmissionLedger
 

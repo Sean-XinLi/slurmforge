@@ -9,15 +9,15 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import (
-    write_train_eval_pipeline_layout,
-    write_stage_batch_layout,
+    materialize_train_eval_pipeline_for_test,
+    materialize_stage_batch_for_test,
 )
 import tempfile
 from pathlib import Path
 
 
 class OrchestrationTests(StageBatchSystemTestCase):
-    def test_orchestration_facade_exposes_only_high_level_verbs(self) -> None:
+    def test_orchestration_facade_stays_empty(self) -> None:
         import slurmforge.orchestration as orchestration
 
         self.assertEqual(orchestration.__all__, [])
@@ -35,7 +35,7 @@ class OrchestrationTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             pipeline = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(pipeline, spec_snapshot=spec.raw)
             self.assertEqual(
                 execute_stage_task(
                     Path(pipeline.stage_batches["train"].submission_root), 1, 0
@@ -67,7 +67,7 @@ class OrchestrationTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
 
             output = "\n".join(render_status_lines(root=Path(batch.submission_root)))
             self.assertIn("total_stages=1", output)

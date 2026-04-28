@@ -9,7 +9,7 @@ from tests.support.public import (
     write_demo_project,
 )
 from tests.support.internal_records import (
-    write_train_eval_pipeline_layout,
+    materialize_train_eval_pipeline_for_test,
 )
 import json
 import tempfile
@@ -25,7 +25,7 @@ class ControllerRuntimeTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             pipeline_root = Path(plan.root_dir)
 
             with patch(
@@ -53,7 +53,7 @@ class ControllerRuntimeTests(StageBatchSystemTestCase):
             (root / "train.py").write_text("raise SystemExit(1)\n", encoding="utf-8")
             spec = load_experiment_spec(cfg_path)
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             controller_record = submit_controller_job(plan, client=FakeSlurmClient())
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertNotEqual(execute_stage_task(train_root, 1, 0), 0)
@@ -113,7 +113,7 @@ class ControllerRuntimeTests(StageBatchSystemTestCase):
             )
             spec = load_experiment_spec(cfg_path)
             plan = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             pipeline_root = Path(plan.root_dir)
             for batch in plan.stage_batches.values():
                 batch_root = Path(batch.submission_root)

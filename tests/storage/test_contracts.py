@@ -9,8 +9,8 @@ from tests.support.public import (
 )
 from tests.support.internal_records import (
     load_stage_batch_plan,
-    write_train_eval_pipeline_layout,
-    write_stage_batch_layout,
+    materialize_train_eval_pipeline_for_test,
+    materialize_stage_batch_for_test,
 )
 import json
 import tempfile
@@ -23,7 +23,7 @@ class StorageContractTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
 
             batch_plan_path = Path(train_batch.submission_root) / "batch_plan.json"
             batch_payload = json.loads(batch_plan_path.read_text())
@@ -52,7 +52,7 @@ class StorageContractTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             train_batch = compile_stage_batch_for_kind(spec, kind="train")
-            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
 
             batch_plan_path = Path(train_batch.submission_root) / "batch_plan.json"
             batch_payload = json.loads(batch_plan_path.read_text())
@@ -70,7 +70,7 @@ class StorageContractTests(StageBatchSystemTestCase):
                     root = Path(tmp)
                     spec = load_experiment_spec(write_demo_project(root))
                     train_batch = compile_stage_batch_for_kind(spec, kind="train")
-                    write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+                    materialize_stage_batch_for_test(train_batch, spec_snapshot=spec.raw)
 
                     batch_plan_path = (
                         Path(train_batch.submission_root) / "batch_plan.json"
@@ -89,7 +89,7 @@ class StorageContractTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             pipeline = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(pipeline, spec_snapshot=spec.raw)
 
             pipeline_plan_path = (
                 Path(pipeline.root_dir) / "train_eval_pipeline_plan.json"
@@ -108,7 +108,7 @@ class StorageContractTests(StageBatchSystemTestCase):
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
             pipeline = compile_train_eval_pipeline_plan(spec)
-            write_train_eval_pipeline_layout(pipeline, spec_snapshot=spec.raw)
+            materialize_train_eval_pipeline_for_test(pipeline, spec_snapshot=spec.raw)
 
             pipeline_plan_path = (
                 Path(pipeline.root_dir) / "train_eval_pipeline_plan.json"
