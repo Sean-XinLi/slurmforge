@@ -7,7 +7,8 @@ name = "slurmforge"
 dynamic = ["version"]
 description = "Experiment orchestration toolkit for Slurm-based training and evaluation workflows."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [
   {name = "Xin Li", email = "seanxinlee@gmail.com"},
@@ -19,9 +20,8 @@ dependencies = [
   "PyYAML>=6.0",
 ]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -39,7 +39,6 @@ Changelog = "https://github.com/Sean-XinLi/slurmforge/releases"
 
 [project.optional-dependencies]
 dev = [
-  "import-linter>=2.0",
   "packaging>=24.0",
   "pytest>=9.0",
   "ruff"

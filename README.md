@@ -25,7 +25,7 @@ sforge resubmit --from /path/to/root --stage eval --query state=failed
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .[dev]
+python -m pip install -e '.[dev]'
 ```
 
 ## Start
@@ -78,5 +78,5 @@ Use `sforge train` for train-only configs and `sforge eval --checkpoint /path/to
 
 ```bash
 ruff check src tests
-env PYTHONPATH=src python3.11 -m pytest
+pytest -q
 ```

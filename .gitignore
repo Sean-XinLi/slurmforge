@@ -7,6 +7,8 @@ venv*/
 .mypy_cache/
 __pycache__/
 *.pyc
+*.swp
+*.swo
 *.egg-info/
 build/
 dist/
@@ -16,6 +18,7 @@ htmlcov/
 .DS_Store
 .claude
 .ruff_cache
+.import_linter_cache/
 
 # Local secrets and machine-specific config
 .env

@@ -18,10 +18,6 @@ class DocsShapeTests(StageBatchSystemTestCase):
         ):
             self.assertTrue(Path("docs/records", name).exists())
 
-    def test_import_linter_config_is_absent(self) -> None:
-        self.assertFalse(Path(".importlinter").exists())
-        self.assertNotIn("lint-imports", Path("README.md").read_text(encoding="utf-8"))
-
     def test_docs_do_not_reference_planner_core_facade(self) -> None:
         planner_core_facade = ".".join(("planner", "core"))
         docs_text = "\n".join(

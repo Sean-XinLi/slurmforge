@@ -9,10 +9,11 @@ Stage batch root:
   manifest.json
   lineage_index.json
   materialization_status.json
+  run_status.json
   spec_snapshot.yaml
   batch_plan.json                  # full logical stage plan
   selected_batch_plan.json         # optional execution subset
-  blocked_runs.json
+  blocked_runs.json                # optional selected-run block list
   submit/
     submit_manifest.json
     submit.sh
@@ -35,8 +36,10 @@ Stage batch root:
     events.jsonl
   scheduler_observations.jsonl
   groups/
+    groups.json
+    selected_groups.json           # optional execution subset
     gpu_budget_plan.json
-    selected_gpu_budget_plan.json
+    selected_gpu_budget_plan.json  # optional execution subset
   runs/
     <run_id>/
       root_ref.json
@@ -68,6 +71,7 @@ Train/eval pipeline root:
   manifest.json
   lineage_index.json
   spec_snapshot.yaml
+  run_status.json
   train_eval_pipeline_plan.json
   train_eval_pipeline_status.json
   controller/
@@ -115,7 +119,7 @@ Train/eval pipeline root:
 - Submission records each group job id immediately, can continue after partial submission, and fails safe only for the uncertain window where a group may have reached `sbatch` without a recorded job id.
 - Batch notifications are Slurm finalizer jobs submitted by `submission.submit_stage_batch_finalizer` after terminal array groups with `afterany` dependencies. Large dependency sets are reduced through generated barrier jobs before the single notification job is submitted.
 - Train/eval pipeline notifications are controller-owned terminal actions. They send at most one `train_eval_pipeline_finished` summary per train/eval pipeline root and do not create separate train/eval batch notifications for controller-submitted stage batches.
-- Notification delivery state is persisted under `notifications/records/<event>.email.json`; summary content is rendered from `NotificationSummaryInput`. Storage-backed status reads and reconciliation live in `read_models.notifications`, while `notifications.summary` only counts, formats, and renders the neutral summary input.
+- Notification delivery state is persisted under `notifications/records/<event>.email.json`; summary content is rendered from `NotificationSummaryInput`. Root snapshots and notification inputs are assembled by `root_model.notifications` and exposed through `notifications.read_model`, while `notifications.summary` only counts, formats, and renders the neutral summary input.
 - `sforge status` is read-only by default; only `sforge status --reconcile` mutates status records from Slurm state.
 - `status --reconcile` refreshes aggregate read models from stage records, including `run_status.json` and train/eval pipeline `train_eval_pipeline_status.json`.
 - Stage status and attempt commits are per-stage writes; aggregate stage-batch and train/eval pipeline read models are refreshed by executor completion, controller progression, notification finalizers, and `status --reconcile`.

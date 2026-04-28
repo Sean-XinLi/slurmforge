@@ -33,21 +33,37 @@ A stage batch root contains:
   manifest.json
   lineage_index.json
   materialization_status.json
+  run_status.json
   spec_snapshot.yaml
   batch_plan.json
-  selected_batch_plan.json
-  blocked_runs.json
+  selected_batch_plan.json         # optional execution subset
+  blocked_runs.json                # optional selected-run block list
   submit/
     submit_manifest.json
     submit.sh
     generations/
+      gen_<digest>/
+        group_001.sbatch
+        notify_batch_finished.sbatch
+        submit.sh
+    notifications/
+      gen_<digest>/
+        barrier_batch_finished_001.sbatch
+    logs/
+      gen_<digest>/
   submissions/
     ledger.json
+    events.jsonl
+  notifications/
+    records/
+      batch_finished.email.json
     events.jsonl
   scheduler_observations.jsonl
   groups/
     groups.json
+    selected_groups.json           # optional execution subset
     gpu_budget_plan.json
+    selected_gpu_budget_plan.json  # optional execution subset
   runs/
     <run_id>/
       root_ref.json
@@ -56,7 +72,16 @@ A stage batch root contains:
       input_verification.json
       stage_outputs.json
       status.json
+      status_events.jsonl
       attempts/
+        0001/
+          attempt.json
+          runtime_probe.json
+          artifacts/
+            artifact_manifest.json
+            files/
+          outputs/
+            stage_outputs.json
 ```
 
 A train/eval pipeline root contains:
@@ -66,6 +91,7 @@ A train/eval pipeline root contains:
   manifest.json
   lineage_index.json
   spec_snapshot.yaml
+  run_status.json
   train_eval_pipeline_plan.json
   train_eval_pipeline_status.json
   controller/
@@ -75,6 +101,10 @@ A train/eval pipeline root contains:
     controller_status.json
     events.jsonl
     controller.sbatch
+  notifications/
+    records/
+      train_eval_pipeline_finished.email.json
+    events.jsonl
   stage_batches/
     train/
     eval/
