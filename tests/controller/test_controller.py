@@ -78,6 +78,28 @@ class ControllerTests(StageBatchSystemTestCase):
             self.assertEqual(status["state"], "success")
             self.assertEqual(status["scheduler_job_id"], record.scheduler_job_id)
 
+    def test_controller_unknown_error_writes_traceback_log(self) -> None:
+        from slurmforge.controller.train_eval_pipeline import run_controller
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(write_demo_project(root))
+            plan = compile_train_eval_pipeline_plan(spec)
+            write_train_eval_pipeline_layout(plan, spec_snapshot=spec.raw)
+            pipeline_root = Path(plan.root_dir)
+
+            with patch(
+                "slurmforge.controller.train_eval_pipeline.load_experiment_spec_from_snapshot",
+                side_effect=RuntimeError("controller boom"),
+            ):
+                self.assertEqual(run_controller(pipeline_root), 1)
+
+            diagnostic = pipeline_root / "controller_traceback.log"
+            self.assertTrue(diagnostic.exists())
+            text = diagnostic.read_text(encoding="utf-8")
+            self.assertIn("RuntimeError: controller boom", text)
+            self.assertIn("Traceback", text)
+
     def test_failed_pipeline_controller_submit_does_not_create_submission_fact(self) -> None:
         from slurmforge.orchestration import submit_controller_job
         from slurmforge.slurm import FakeSlurmClient

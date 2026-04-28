@@ -7,13 +7,15 @@ from ..contracts import InputBinding, InputSource, binding_is_ready_for_injectio
 from ..spec import ExperimentSpec, StageInputSpec
 from ..status import read_stage_status
 from ..storage.loader import load_stage_outputs, plan_for_run_dir, run_definitions_from_stage_batch
-from .core import (
-    ResolvedStageInputs,
+from .binding_builders import (
     inject_payload,
-    output_ref,
     path_binding_for_spec,
-    resolved_output,
     unresolved_binding,
+)
+from .models import ResolvedStageInputs
+from .output_refs import (
+    output_ref,
+    resolved_output,
     upstream_resolution,
 )
 

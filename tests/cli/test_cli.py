@@ -269,9 +269,41 @@ class CliTests(StageBatchSystemTestCase):
 
             payload = json.loads(stdout.getvalue())
             self.assertEqual(payload["command"], "resubmit")
+            self.assertEqual(payload["schema_version"], SchemaVersion.DRY_RUN_AUDIT)
             self.assertEqual(payload["plan_kind"], "empty_source_selection")
             self.assertEqual(payload["validation"]["selected_runs"], 0)
             self.assertFalse(stdout.getvalue().startswith("[RESUBMIT]"))
+
+    def test_bad_snapshot_cli_error_has_no_traceback(self) -> None:
+        from slurmforge.launcher import main
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(write_demo_project(root))
+            train_batch = compile_stage_batch_for_kind(spec, kind="train")
+            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+            train_root = Path(train_batch.submission_root)
+            (train_root / "spec_snapshot.yaml").unlink()
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = main(
+                    [
+                        "resubmit",
+                        "--from",
+                        str(train_root),
+                        "--stage",
+                        "train",
+                        "--query",
+                        "all",
+                        "--dry-run=json",
+                    ]
+                )
+
+            self.assertEqual(code, 2)
+            self.assertIn("[ERROR] spec_snapshot.yaml not found", stderr.getvalue())
+            self.assertNotIn("Traceback", stdout.getvalue() + stderr.getvalue())
 
     def test_root_cli_exposes_expected_commands(self) -> None:
         from slurmforge.launcher import build_parser

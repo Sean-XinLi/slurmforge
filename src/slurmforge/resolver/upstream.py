@@ -2,30 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..errors import ConfigContractError
-from ..lineage import find_bound_input, iter_lineage_source_roots
-from ..plans import RunDefinition
-from ..root_model import iter_stage_run_dirs
 from ..contracts import (
     InputBinding,
     InputSource,
-    ResolvedInput,
-    binding_is_ready_for_injection,
     input_source_from_dict,
     resolved_input_from_dict,
     resolved_payload_present,
 )
-from ..spec import ExperimentSpec
+from ..errors import ConfigContractError
+from ..lineage import find_bound_input, iter_lineage_source_roots
+from ..root_model import iter_stage_run_dirs
 from ..storage.loader import load_stage_outputs, plan_for_run_dir
-from .core import (
-    inject_payload,
-    output_ref,
-    producer_root_from_run_dir,
-    resolved_output,
-    source_payload,
-    unresolved_resolved,
-    upstream_resolution,
-)
+from .output_refs import output_ref, producer_root_from_run_dir, resolved_output, upstream_resolution
 
 
 def _output_resolution(
@@ -132,7 +120,7 @@ def _find_bound_input_resolution(
     return None
 
 
-def _find_upstream_output(root: Path, lineage_ref: str, *, run_id: str, input_name: str) -> dict | None:
+def find_upstream_output(root: Path, lineage_ref: str, *, run_id: str, input_name: str) -> dict | None:
     direct = _find_upstream_output_direct(root, lineage_ref)
     if direct is not None:
         return direct
@@ -144,62 +132,3 @@ def _find_upstream_output(root: Path, lineage_ref: str, *, run_id: str, input_na
         if direct is not None:
             return direct
     return None
-
-
-def resolve_stage_inputs_from_prior_source(
-    *,
-    spec: ExperimentSpec,
-    source_root: Path,
-    stage_name: str,
-    run: RunDefinition,
-) -> tuple[InputBinding, ...]:
-    stage = spec.enabled_stages[stage_name]
-    bindings: list[InputBinding] = []
-    for input_name in sorted(stage.inputs):
-        input_spec = stage.inputs[input_name]
-        source = source_payload(input_spec)
-        resolved_payload = unresolved_resolved()
-        resolution = {"kind": source.kind, "state": "unresolved"}
-        if source.kind == "upstream_output":
-            upstream_stage, output_name = source.stage, source.output
-            lineage_ref = f"{run.run_id}.{upstream_stage}:{output_name}"
-            resolved = _find_upstream_output(
-                source_root,
-                lineage_ref,
-                run_id=run.run_id,
-                input_name=input_name,
-            )
-            if resolved is not None:
-                source = input_source_from_dict(resolved["source"])
-                resolved_payload = resolved_input_from_dict(resolved.get("resolved"))
-                resolution = dict(resolved["resolution"])
-        elif source.kind == "external_path":
-            source_path = Path(source.path).expanduser()
-            source_path = source_path if source_path.is_absolute() else spec.project_root / source_path
-            source_path = source_path.resolve()
-            resolved_payload = (
-                ResolvedInput(kind=input_spec.expects, path=str(source_path))
-                if source_path.exists()
-                else unresolved_resolved(path=str(source_path))
-            )
-            resolution = {
-                "kind": source.kind,
-                "resolved": {"kind": resolved_payload.kind, "path": resolved_payload.path},
-                "source_exists": source_path.exists(),
-            }
-        inject = inject_payload(input_spec)
-        binding = InputBinding(
-            input_name=input_spec.name,
-            source=source,
-            expects=input_spec.expects,
-            resolved=resolved_payload,
-            inject=inject,
-            resolution=resolution,
-        )
-        if input_spec.required and not binding_is_ready_for_injection(binding):
-            raise ConfigContractError(
-                f"Cannot bind `{input_name}` for run `{run.run_id}` from prior source: "
-                "source did not resolve for injection"
-            )
-        bindings.append(binding)
-    return tuple(bindings)

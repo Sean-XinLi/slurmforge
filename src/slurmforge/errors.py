@@ -20,3 +20,7 @@ class InputContractError(UserFacingError):
 
 class RuntimeContractError(UserFacingError):
     """Raised when the declared executor or user runtime cannot be used."""
+
+
+class RecordContractError(UserFacingError):
+    """Raised when persisted slurmforge records are missing or schema-invalid."""

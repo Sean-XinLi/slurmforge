@@ -23,6 +23,28 @@ class DryRunAudit:
     schema_version: int = SchemaVersion.DRY_RUN_AUDIT
 
 
+def build_empty_source_selection_audit(
+    *,
+    command: str,
+    stage: str,
+    query: str,
+    source_root: str,
+) -> DryRunAudit:
+    validation = {
+        "selected_runs": 0,
+        "stage": stage,
+        "query": query,
+        "source_root": source_root,
+    }
+    return DryRunAudit(
+        command=command,
+        state="valid",
+        plan_kind="empty_source_selection",
+        plan={},
+        validation=validation,
+    )
+
+
 def _stage_batch_unresolved_inputs(batch: StageBatchPlan) -> list[dict[str, Any]]:
     unresolved: list[dict[str, Any]] = []
     for instance in batch.stage_instances:

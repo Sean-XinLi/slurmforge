@@ -13,10 +13,12 @@ from ..storage.loader import (
     plan_for_run_dir,
     run_definitions_from_stage_batch,
 )
-from .core import (
+from .binding_builders import (
     input_inject,
-    output_ref,
     path_binding_for_input,
+)
+from .output_refs import (
+    output_ref,
     producer_output_for_input,
     producer_root_from_run_dir,
     resolved_output,

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..errors import RecordContractError
+
 
 class SchemaVersion:
     """Centralized registry of on-disk schema versions for slurmforge records."""
@@ -36,8 +38,8 @@ class SchemaVersion:
 
 def require_schema(payload: dict[str, Any], *, name: str, version: int) -> int:
     if "schema_version" not in payload:
-        raise ValueError(f"{name}.schema_version is required")
+        raise RecordContractError(f"{name}.schema_version is required")
     actual = int(payload["schema_version"])
     if actual != version:
-        raise ValueError(f"{name}.schema_version is not supported: {actual}")
+        raise RecordContractError(f"{name}.schema_version is not supported: {actual}")
     return actual

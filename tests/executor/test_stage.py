@@ -10,7 +10,7 @@ from tests.support.sforge import (
     write_demo_project,
     write_stage_batch_layout,
 )
-from tests.support.std import Path, json, tempfile, yaml
+from tests.support.std import Path, json, patch, tempfile, yaml
 
 
 class ExecutorTests(StageBatchSystemTestCase):
@@ -80,6 +80,23 @@ class ExecutorTests(StageBatchSystemTestCase):
             self.assertEqual(status["failure_class"], "runtime_contract_error")
             self.assertEqual(probe_states["user"], "failed")
             self.assertFalse((root / "user_script_started.txt").exists())
+
+    def test_executor_unknown_error_writes_traceback_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(write_demo_project(root))
+            train_batch = compile_stage_batch_for_kind(spec, kind="train")
+            write_stage_batch_layout(train_batch, spec_snapshot=spec.raw)
+
+            with patch("slurmforge.executor.stage.build_shell_script", side_effect=RuntimeError("executor boom")):
+                self.assertNotEqual(execute_stage_task(Path(train_batch.submission_root), 1, 0), 0)
+
+            train_run_dir = Path(train_batch.submission_root) / train_batch.stage_instances[0].run_dir_rel
+            diagnostic = train_run_dir / "attempts" / "0001" / "logs" / "executor_traceback.log"
+            self.assertTrue(diagnostic.exists())
+            text = diagnostic.read_text(encoding="utf-8")
+            self.assertIn("RuntimeError: executor boom", text)
+            self.assertIn("Traceback", text)
 
     def test_executor_preflight_missing_input_fails_before_user_script(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -5,13 +5,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from ..errors import ConfigContractError
+from ..io import write_exception_diagnostic
 from ..notifications import deliver_notification
 from ..root_model import collect_stage_statuses, load_notification_summary_input, refresh_train_eval_pipeline_status
 from ..slurm import SlurmClient
-from ..spec import parse_experiment_spec, validate_experiment_spec
+from ..spec import load_experiment_spec_from_snapshot
 from ..submission import prepare_stage_submission, read_submission_state, submit_prepared_stage_batch
 from ..status import reconcile_stage_batch_with_slurm
 from ..status.models import TERMINAL_STATES
@@ -19,14 +18,6 @@ from ..storage.controller import write_controller_status
 from ..storage.loader import load_stage_batch_plan, load_train_eval_pipeline_plan
 from .materialization import ensure_stage_materialized, project_root_from_pipeline
 from .state import load_controller_state, record_controller_event, save_controller_state
-
-
-def _load_snapshot_yaml(root: Path) -> dict[str, Any]:
-    path = root / "spec_snapshot.yaml"
-    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ConfigContractError(f"spec_snapshot.yaml must contain a mapping: {path}")
-    return payload
 
 
 def _batch_terminal(batch_root: Path) -> bool:
@@ -96,13 +87,10 @@ def run_controller(
     state = load_controller_state(pipeline_root, plan)
     write_controller_status(pipeline_root, "running")
     try:
-        raw = _load_snapshot_yaml(pipeline_root)
-        spec = parse_experiment_spec(
-            raw,
-            config_path=(pipeline_root / "spec_snapshot.yaml").resolve(),
+        spec = load_experiment_spec_from_snapshot(
+            pipeline_root,
             project_root=project_root_from_pipeline(pipeline_root),
         )
-        validate_experiment_spec(spec)
         for stage_name in plan.stage_order:
             state["current_stage"] = stage_name
             state["state"] = "checking_stage"
@@ -147,6 +135,7 @@ def run_controller(
             )
         return 0 if final_state == "success" else 1
     except Exception as exc:
+        write_exception_diagnostic(pipeline_root / "controller_traceback.log", exc)
         state["state"] = "failed"
         save_controller_state(pipeline_root, state)
         write_controller_status(pipeline_root, "failed", reason=str(exc))

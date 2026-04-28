@@ -4,27 +4,14 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Iterable
 
-import yaml
-
-from ..errors import ConfigContractError
 from ..overrides import deep_set, parse_override
 from ..plans import PriorBatchLineage, RunDefinition, SelectedStageRun, SourcedStageBatchPlan, StageBatchSource
 from ..root_model import iter_stage_run_dirs
-from ..spec import parse_experiment_spec, validate_experiment_spec
+from ..spec import load_spec_snapshot, parse_experiment_spec, validate_experiment_spec
 from ..status import read_stage_status, state_matches
 from ..storage.loader import plan_for_run_dir
 from ..resolver import resolve_stage_inputs_from_prior_source
 from .core import compile_stage_batch
-
-
-def _load_snapshot_yaml(root: Path) -> dict:
-    path = root / "spec_snapshot.yaml"
-    if not path.exists():
-        raise ConfigContractError(f"spec_snapshot.yaml not found under {root}")
-    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ConfigContractError(f"spec_snapshot.yaml must contain a mapping: {path}")
-    return payload
 
 
 def select_stage_runs(
@@ -83,7 +70,7 @@ def compile_stage_batch_from_prior_source(
     selected = select_stage_runs(root, stage_name=stage_name, query=query, run_ids=run_ids)
     if not selected:
         return None
-    raw = _load_snapshot_yaml(root)
+    raw = load_spec_snapshot(root)
     override_list = list(overrides)
     for override in override_list:
         key, value = parse_override(override)

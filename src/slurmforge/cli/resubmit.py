@@ -2,18 +2,17 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
-from ..io import SchemaVersion, to_jsonable
 from ..orchestration import (
+    build_empty_source_selection_audit,
     build_prior_source_stage_batch,
     emit_sourced_stage_batch,
     summarize_stage_batch,
 )
 from ..spec import ExperimentSpec, parse_experiment_spec, validate_experiment_spec
 from .args import dry_run_mode_from_args
-from .dry_run import emit_machine_dry_run_if_requested
+from .dry_run import emit_machine_dry_run_if_requested, emit_machine_payload
 from .render import print_lines, print_sourced_stage_batch_execution_result
 
 
@@ -42,29 +41,15 @@ def handle_resubmit(args: argparse.Namespace) -> None:
     if plan is None:
         mode = dry_run_mode_from_args(args)
         if mode in {"json", "full"}:
-            payload = json.dumps(
-                to_jsonable(
-                    {
-                        "schema_version": SchemaVersion.SOURCE_PLAN,
-                        "command": "resubmit",
-                        "state": "valid",
-                        "plan_kind": "empty_source_selection",
-                        "plan": {},
-                        "validation": {
-                            "selected_runs": 0,
-                            "stage": args.stage,
-                            "query": args.query,
-                            "source_root": str(source_root),
-                        },
-                    }
+            emit_machine_payload(
+                args,
+                build_empty_source_selection_audit(
+                    command="resubmit",
+                    stage=args.stage,
+                    query=args.query,
+                    source_root=str(source_root),
                 ),
-                indent=2,
-                sort_keys=True,
-            ) + "\n"
-            if args.output:
-                Path(args.output).write_text(payload, encoding="utf-8")
-            else:
-                print(payload, end="")
+            )
             return
         print(f"[RESUBMIT] selected_runs=0 stage={args.stage} query={args.query}")
         return

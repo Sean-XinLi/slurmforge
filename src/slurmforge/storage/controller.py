@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from ..errors import RecordContractError
 from ..io import SchemaVersion, read_json, utc_now, write_json
 from .paths import controller_events_path, controller_job_path, controller_status_path
 
@@ -38,13 +39,13 @@ def append_controller_event(pipeline_root: Path, event: str, **payload: Any) -> 
 def controller_job_record_from_dict(payload: dict[str, Any]) -> ControllerJobRecord:
     unexpected = set(payload) - _JOB_KEYS
     if unexpected:
-        raise ValueError(f"controller_job.json has unexpected mutable fields: {sorted(unexpected)}")
+        raise RecordContractError(f"controller_job.json has unexpected mutable fields: {sorted(unexpected)}")
     missing = _JOB_KEYS - set(payload)
     if missing:
-        raise ValueError(f"controller_job.json is missing required fields: {sorted(missing)}")
+        raise RecordContractError(f"controller_job.json is missing required fields: {sorted(missing)}")
     version = int(payload["schema_version"])
     if version != SchemaVersion.CONTROLLER_JOB:
-        raise ValueError(f"controller_job.schema_version is not supported: {version}")
+        raise RecordContractError(f"controller_job.schema_version is not supported: {version}")
     return ControllerJobRecord(
         schema_version=version,
         pipeline_id=str(payload["pipeline_id"]),

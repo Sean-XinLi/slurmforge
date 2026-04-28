@@ -26,7 +26,9 @@ class StorageContractTests(StageBatchSystemTestCase):
             removed_batch_schema = dict(batch_payload)
             del removed_batch_schema["schema_version"]
             batch_plan_path.write_text(json.dumps(removed_batch_schema), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "stage_batch_plan.schema_version is required"):
+            from slurmforge.errors import RecordContractError
+
+            with self.assertRaisesRegex(RecordContractError, "stage_batch_plan.schema_version is required"):
                 load_stage_batch_plan(Path(train_batch.submission_root))
 
             batch_payload["schema_version"] = 1

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ..errors import InputContractError, RuntimeContractError
 from ..inputs import verify_and_write_stage_instance_inputs
-from ..io import SchemaVersion, content_digest, read_json, utc_now, write_json
+from ..io import SchemaVersion, content_digest, read_json, utc_now, write_exception_diagnostic, write_json
 from ..outputs import ArtifactIntegrityError, discover_stage_outputs, write_stage_outputs_record
 from ..root_model import refresh_stage_batch_status, refresh_train_eval_pipeline_status
 from ..runtime import require_runtime_contract
@@ -118,6 +118,7 @@ def execute_stage_instance(run_dir: Path) -> int:
         else:
             reason = f"stage command exited with code {exit_code}"
     except Exception as exc:
+        write_exception_diagnostic(log_dir / "executor_traceback.log", exc)
         exit_code = 2 if exit_code is None else exit_code
         if isinstance(exc, ArtifactIntegrityError):
             failure_class = "artifact_integrity_error"

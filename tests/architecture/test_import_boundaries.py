@@ -235,6 +235,30 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
         self.assertNotIn("if output_cfg.kind ==", service_text)
         self.assertNotIn("elif output_cfg.kind ==", service_text)
 
+    def test_spec_models_resolver_and_snapshot_boundaries_stay_split(self) -> None:
+        self.assertFalse(Path("src/slurmforge/spec/models.py").exists())
+        self.assertTrue(Path("src/slurmforge/spec/models/experiment.py").exists())
+        self.assertFalse(Path("src/slurmforge/resolver/core.py").exists())
+        self.assertFalse(Path("src/slurmforge/resolver/sources.py").exists())
+        self.assertTrue(Path("src/slurmforge/resolver/binding_builders.py").exists())
+        self.assertTrue(Path("src/slurmforge/resolver/output_refs.py").exists())
+        self.assertTrue(Path("src/slurmforge/resolver/prior_source.py").exists())
+
+        violations: list[str] = []
+        for path in sorted(Path("src/slurmforge").rglob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            if "_load_snapshot_yaml" in text or "load_snapshot_yaml" in text:
+                violations.append(str(path))
+            if path != Path("src/slurmforge/spec/snapshot.py") and "spec_snapshot.yaml" in text and "yaml.safe_load" in text:
+                violations.append(f"{path} reads spec snapshots directly")
+            if "resolver.core" in text or "resolver.sources" in text:
+                violations.append(str(path))
+            if "from .core import" in text and Path("src/slurmforge/resolver") in path.parents:
+                violations.append(str(path))
+            if "from .sources import" in text and Path("src/slurmforge/resolver") in path.parents:
+                violations.append(str(path))
+        self.assertEqual(violations, [])
+
     def test_cli_stage_common_is_split_by_concern(self) -> None:
         self.assertFalse(Path("src/slurmforge/cli/stage_common.py").exists())
         self.assertTrue(Path("src/slurmforge/cli/args.py").exists())
@@ -266,7 +290,7 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
         self.assertNotIn("TrainEvalPipelinePlan", sizing_text)
 
     def test_spec_models_do_not_import_parser(self) -> None:
-        text = Path("src/slurmforge/spec/models.py").read_text(encoding="utf-8")
+        text = "\n".join(path.read_text(encoding="utf-8") for path in Path("src/slurmforge/spec/models").rglob("*.py"))
         self.assertNotIn("parse_experiment_spec", text)
         self.assertNotIn("from .parser import", text)
 
