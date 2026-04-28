@@ -6,7 +6,8 @@ from ...contracts import InputBinding, InputSource, ResolvedInput
 from ...errors import ConfigContractError
 from ...contracts import RunDefinition
 from ...spec import ExperimentSpec
-from ...spec.queries import expand_run_definitions, stage_name_for_kind
+from ...spec.queries import stage_name_for_kind
+from ...spec.run_expansion import expand_run_definitions
 from ..binding_builders import input_inject
 
 

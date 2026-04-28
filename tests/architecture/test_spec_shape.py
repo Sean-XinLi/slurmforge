@@ -42,7 +42,9 @@ class SpecShapeTests(StageBatchSystemTestCase):
 
     def test_spec_stage_parsing_is_split_by_section(self) -> None:
         stage_parse_root = Path("src/slurmforge/spec/stage_parse")
+        self.assertFalse(Path("src/slurmforge/spec/field_options.py").exists())
         self.assertFalse(Path("src/slurmforge/spec/parse_stages.py").exists())
+        self.assertTrue(Path("src/slurmforge/field_options.py").exists())
         self.assertTrue(Path("src/slurmforge/spec/parse_artifact_store.py").exists())
         self.assertTrue(stage_parse_root.is_dir())
         for name in (

@@ -62,9 +62,22 @@ artifact_store:
   fail_on_verify_error: true
 
 runs:
-  type: "grid"
-  axes:
-    train.entry.args.lr: [1e-4, 5e-5]
+  type: "matrix"
+  cases:
+    - name: "small_model"
+      set:
+        train.entry.args.model: "small"
+        train.entry.args.batch_size: 16
+      axes:
+        train.entry.args.lr: [1e-4, 5e-5]
+        train.entry.args.seed: [1, 2]
+    - name: "large_model"
+      set:
+        train.entry.args.model: "large"
+        train.entry.args.batch_size: 8
+      axes:
+        train.entry.args.lr: [5e-5, 1e-5]
+        train.entry.args.seed: [1, 2]
 
 stages:
   train:
@@ -158,9 +171,67 @@ orchestration:
 
 ## Runs
 
-`runs` controls how many run instances are planned. Omit it for one run, use `type: grid` with `axes` for cartesian sweeps, or use `type: cases` with named cases for hand-authored variants.
+`runs` controls how many run instances are planned. Omit it for one run, use `type: cases` for named hand-authored scenarios, `type: grid` for cartesian sweeps, or `type: matrix` for named scenarios that each contain their own grid.
 
-`runs.axes` and `runs.cases[].set` may address stage paths directly, such as `train.entry.args.lr`; this is normalized to `stages.train.entry.args.lr`.
+Use `cases` when each run needs a meaningful name or a custom combination of settings:
+
+```yaml
+runs:
+  type: "cases"
+  cases:
+    - name: "small_lr"
+      set:
+        train.entry.args.lr: 1e-4
+        train.entry.args.epochs: 3
+    - name: "low_lr_longer"
+      set:
+        train.entry.args.lr: 5e-5
+        train.entry.args.epochs: 5
+        eval.entry.args.split: "validation"
+```
+
+Use `grid` when you want every combination of axis values:
+
+```yaml
+runs:
+  type: "grid"
+  axes:
+    train.entry.args.lr: [1e-4, 5e-5]
+    train.entry.args.seed: [1, 2]
+```
+
+Use `matrix` when you need named scenarios and a grid inside each scenario:
+
+```yaml
+runs:
+  type: "matrix"
+  cases:
+    - name: "small_model"
+      set:
+        train.entry.args.model: "small"
+        train.entry.args.batch_size: 16
+      axes:
+        train.entry.args.lr: [1e-4, 5e-5]
+        train.entry.args.seed: [1, 2]
+    - name: "large_model"
+      set:
+        train.entry.args.model: "large"
+        train.entry.args.batch_size: 8
+      axes:
+        train.entry.args.lr: [5e-5, 1e-5]
+        train.entry.args.seed: [1, 2]
+```
+
+For `matrix`, each final run is `base config + case.set + one case.axes grid point`. A path may appear in `case.set` or in `case.axes`, but not both.
+
+`runs.axes`, `runs.cases[].set`, and `runs.cases[].axes` may address stage paths directly, such as `train.entry.args.lr`; this is normalized to `stages.train.entry.args.lr`.
+
+CLI overrides use the same path shorthand. These two commands target the same field:
+
+```bash
+sforge validate --config experiment.yaml --set train.entry.args.lr=0.001
+sforge validate --config experiment.yaml --set stages.train.entry.args.lr=0.001
+```
 
 ## Runtime
 

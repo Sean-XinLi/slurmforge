@@ -5,7 +5,7 @@ from typing import Any
 
 from ..errors import ConfigContractError
 from .models import ExperimentSpec, StageSpec
-from .queries import normalize_run_path
+from .run_paths import normalize_run_override_path
 
 
 def resolve_workdir(spec: ExperimentSpec, stage: StageSpec) -> Path:
@@ -21,7 +21,7 @@ def resolve_script(spec: ExperimentSpec, stage: StageSpec) -> Path:
 
 
 def path_exists_or_allowed_for_args(raw: dict[str, Any], path: str) -> bool:
-    normalized = normalize_run_path(raw, path)
+    normalized = normalize_run_override_path(raw, path)
     parts = normalized.split(".")
     if len(parts) >= 5 and parts[:2] == ["stages", parts[1]] and parts[2:4] == ["entry", "args"]:
         return parts[1] in {"train", "eval"}

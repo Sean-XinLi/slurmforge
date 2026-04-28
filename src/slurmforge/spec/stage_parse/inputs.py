@@ -4,6 +4,7 @@ from typing import Any
 
 from ...contracts import InputInjection, InputSource
 from ...errors import ConfigContractError
+from ...field_options import options_for, options_sentence
 from ..models import StageInputSpec
 from ..parse_common import optional_mapping, require_mapping
 
@@ -17,8 +18,11 @@ def parse_inputs(raw: Any, *, stage_name: str) -> dict[str, StageInputSpec]:
         source_data = require_mapping(input_data.get("source"), f"stages.{stage_name}.inputs.{input_name}.source")
         source = _parse_input_source(source_data, stage_name=stage_name, input_name=str(input_name))
         expects = str(input_data.get("expects") or "path")
-        if expects not in {"path", "value", "manifest"}:
-            raise ConfigContractError(f"`stages.{stage_name}.inputs.{input_name}.expects` must be path, value, or manifest")
+        if expects not in options_for("stages.*.inputs.*.expects"):
+            raise ConfigContractError(
+                f"`stages.{stage_name}.inputs.{input_name}.expects` must be "
+                f"{options_sentence('stages.*.inputs.*.expects')}"
+            )
         parsed[str(input_name)] = StageInputSpec(
             name=str(input_name),
             source=source,
@@ -35,9 +39,10 @@ def parse_inputs(raw: Any, *, stage_name: str) -> dict[str, StageInputSpec]:
 
 def _parse_input_source(source_data: dict[str, Any], *, stage_name: str, input_name: str) -> InputSource:
     kind = str(source_data.get("kind") or "")
-    if kind not in {"upstream_output", "external_path"}:
+    if kind not in options_for("stages.*.inputs.*.source.kind"):
         raise ConfigContractError(
-            f"`stages.{stage_name}.inputs.{input_name}.source.kind` must be upstream_output or external_path"
+            f"`stages.{stage_name}.inputs.{input_name}.source.kind` must be "
+            f"{options_sentence('stages.*.inputs.*.source.kind')}"
         )
     if kind == "upstream_output":
         if source_data.get("stage") in (None, ""):

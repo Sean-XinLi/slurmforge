@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from ..spec import load_experiment_spec
-from ..spec.queries import expand_run_definitions
+from ..spec.run_expansion import expand_run_definitions
 
 
 def render_validate(

@@ -57,7 +57,7 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertIn("eval-checkpoint:", stdout.getvalue())
             self.assertFalse((root / "experiment.yaml").exists())
 
-    def test_removed_init_detail_flags_are_rejected(self) -> None:
+    def test_init_rejects_yaml_detail_flags(self) -> None:
         from slurmforge.launcher import build_parser
 
         parser = build_parser()

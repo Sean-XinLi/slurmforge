@@ -38,7 +38,11 @@ class TestSupportShapeTests(StageBatchSystemTestCase):
 
     def test_starter_template_shared_builders_are_split_by_concern(self) -> None:
         template_root = Path("src/slurmforge/starter/templates")
+        yaml_root = Path("src/slurmforge/starter/config_yaml")
         self.assertFalse((template_root / "fragments.py").exists())
+        self.assertFalse((Path("src/slurmforge/starter") / ("config_yaml" + ".py")).exists())
+        for name in ("__init__.py", "render.py", "scalar.py", "sections.py", "stages.py"):
+            self.assertTrue((yaml_root / name).exists())
         for name in ("base.py", "resources.py", "stages.py", "readme.py", "scripts.py"):
             self.assertTrue((template_root / name).exists())
 
@@ -65,6 +69,8 @@ class TestSupportShapeTests(StageBatchSystemTestCase):
             "tests/resubmit/test_resubmit_materialization.py",
             "tests/resubmit/test_resubmit_status.py",
             "tests/starter/test_generation.py",
+            "tests/starter/test_generated_readme.py",
+            "tests/starter/test_generated_yaml.py",
             "tests/starter/test_templates.py",
             "tests/starter/test_overwrite.py",
             "tests/starter/test_cli_contract.py",
@@ -77,6 +83,8 @@ class TestSupportShapeTests(StageBatchSystemTestCase):
             "tests/submission/test_submit_finalizer.py",
             "tests/submission/test_submit_generation.py",
             "tests/submission/test_submit_reconcile.py",
+            "tests/spec/test_runs_contract.py",
+            "tests/spec/test_top_level_contract.py",
         ):
             self.assertTrue(Path(path).exists())
 

@@ -3,7 +3,9 @@ from __future__ import annotations
 import re
 
 from ..errors import ConfigContractError
+from ..field_options import options_sentence
 from .models import ExperimentSpec
+from .run_paths import normalize_run_override_path
 from .validation_common import path_exists_or_allowed_for_args
 
 
@@ -12,12 +14,16 @@ def validate_runs_contract(spec: ExperimentSpec) -> None:
         return
     if spec.runs.type == "grid":
         if not spec.runs.axes:
-            raise ConfigContractError("`runs.axes` must contain at least one axis for grid runs")
+            raise ConfigContractError(
+                "`runs.axes` must contain at least one axis for grid runs"
+            )
         for path, _values in spec.runs.axes:
             if not path_exists_or_allowed_for_args(spec.raw, path):
-                raise ConfigContractError(f"`runs.axes.{path}` does not target a known config path")
+                raise ConfigContractError(
+                    f"`runs.axes.{path}` does not target a known config path"
+                )
         return
-    if spec.runs.type == "cases":
+    if spec.runs.type in {"cases", "matrix"}:
         if not spec.runs.cases:
             raise ConfigContractError("`runs.cases` must contain at least one case")
         seen: set[str] = set()
@@ -27,10 +33,37 @@ def validate_runs_contract(spec: ExperimentSpec) -> None:
                     "`runs.cases[].name` may only contain letters, numbers, underscores, dots, and dashes"
                 )
             if case.name in seen:
-                raise ConfigContractError(f"`runs.cases[].name` must be unique: {case.name}")
+                raise ConfigContractError(
+                    f"`runs.cases[].name` must be unique: {case.name}"
+                )
             seen.add(case.name)
             for path in case.set:
                 if not path_exists_or_allowed_for_args(spec.raw, path):
-                    raise ConfigContractError(f"`runs.cases.{case.name}.set.{path}` does not target a known config path")
+                    raise ConfigContractError(
+                        f"`runs.cases.{case.name}.set.{path}` does not target a known config path"
+                    )
+            if spec.runs.type == "matrix":
+                if not case.axes:
+                    raise ConfigContractError(
+                        f"`runs.cases.{case.name}.axes` must contain at least one axis for matrix runs"
+                    )
+                set_paths = {
+                    normalize_run_override_path(spec.raw, path) for path in case.set
+                }
+                axis_paths = {
+                    normalize_run_override_path(spec.raw, path)
+                    for path, _values in case.axes
+                }
+                duplicates = sorted(set_paths & axis_paths)
+                if duplicates:
+                    joined = ", ".join(duplicates)
+                    raise ConfigContractError(
+                        f"`runs.cases.{case.name}` cannot set and sweep the same path: {joined}"
+                    )
+                for path, _values in case.axes:
+                    if not path_exists_or_allowed_for_args(spec.raw, path):
+                        raise ConfigContractError(
+                            f"`runs.cases.{case.name}.axes.{path}` does not target a known config path"
+                        )
         return
-    raise ConfigContractError("`runs.type` must be single, grid, or cases")
+    raise ConfigContractError(f"`runs.type` must be {options_sentence('runs.type')}")

@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from ..errors import ConfigContractError
 from ..sizing.models import GpuSizingResolution
+from ..field_options import options_for, options_sentence
 from .models import StageSpec
 from .validation_common import explicit_int, require_port
 
 
 def validate_launcher_contract(stage: StageSpec, *, sizing_resolution: GpuSizingResolution) -> None:
-    if stage.launcher.type not in {"single", "python", "torchrun", "srun", "mpirun", "command"}:
+    if stage.launcher.type not in options_for("stages.*.launcher.type"):
         raise ConfigContractError(
-            f"`stages.{stage.name}.launcher.type` must be single, python, torchrun, srun, mpirun, or command"
+            f"`stages.{stage.name}.launcher.type` must be "
+            f"{options_sentence('stages.*.launcher.type')}"
         )
     if stage.launcher.type == "torchrun":
         _validate_torchrun_launcher(stage, sizing_resolution=sizing_resolution)
@@ -23,8 +25,11 @@ def _validate_torchrun_launcher(stage: StageSpec, *, sizing_resolution: GpuSizin
     if stage.entry.type != "python_script":
         raise ConfigContractError(f"`stages.{stage.name}.launcher.type=torchrun` requires a python_script entry")
     mode = str(stage.launcher.options.get("mode") or ("multi_node" if stage.resources.nodes > 1 else "single_node"))
-    if mode not in {"single_node", "multi_node"}:
-        raise ConfigContractError(f"`stages.{stage.name}.launcher.mode` must be single_node or multi_node")
+    if mode not in options_for("stages.*.launcher.mode"):
+        raise ConfigContractError(
+            f"`stages.{stage.name}.launcher.mode` must be "
+            f"{options_sentence('stages.*.launcher.mode')}"
+        )
     if mode == "single_node" and stage.resources.nodes != 1:
         raise ConfigContractError(f"`stages.{stage.name}.launcher.mode=single_node` requires resources.nodes == 1")
     if mode == "multi_node" and stage.resources.nodes < 2:

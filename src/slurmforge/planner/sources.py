@@ -14,6 +14,7 @@ from ..plans.sources import (
 )
 from ..root_model.runs import iter_stage_run_dirs
 from ..spec import load_spec_snapshot, parse_experiment_spec, validate_experiment_spec
+from ..spec.run_paths import normalize_cli_override_path
 from ..status.query import state_matches
 from ..status.reader import read_stage_status
 from ..storage.plan_reader import plan_for_run_dir
@@ -85,7 +86,7 @@ def compile_stage_batch_from_prior_source(
     override_list = list(overrides)
     for override in override_list:
         key, value = parse_override(override)
-        deep_set(raw, key, value)
+        deep_set(raw, normalize_cli_override_path(raw, key), value)
     spec = parse_experiment_spec(
         raw,
         config_path=(root / "spec_snapshot.yaml").resolve(),

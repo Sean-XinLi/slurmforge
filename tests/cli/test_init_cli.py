@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 class InitCliTests(StageBatchSystemTestCase):
-    def test_init_cli_rejects_removed_yaml_detail_flags(self) -> None:
+    def test_init_cli_rejects_yaml_detail_flags(self) -> None:
         from slurmforge.launcher import build_parser
 
         parser = build_parser()
@@ -37,14 +37,14 @@ class InitCliTests(StageBatchSystemTestCase):
         help_text = stdout.getvalue()
         for option in ("--list-templates", "--template", "--output", "--force"):
             self.assertIn(option, help_text)
-        for removed in (
+        for disallowed in (
             "--project",
             "--experiment",
             "--storage-root",
             "--partition",
             "--python-bin",
         ):
-            self.assertNotIn(removed, help_text)
+            self.assertNotIn(disallowed, help_text)
 
     def test_user_cli_errors_do_not_emit_traceback(self) -> None:
         from slurmforge.launcher import main

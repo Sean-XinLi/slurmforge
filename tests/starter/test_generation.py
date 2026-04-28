@@ -120,63 +120,6 @@ class StarterTests(StageBatchSystemTestCase):
                 self.assertEqual(code, 0, stderr.getvalue())
                 self.assertEqual(json.loads(stdout.getvalue())["state"], "valid")
 
-    def test_eval_checkpoint_generates_sample_input_and_readme_note(self) -> None:
-        from slurmforge.starter import InitRequest, create_starter_project
-
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            cfg_path = root / "experiment.yaml"
-            create_starter_project(
-                InitRequest(template="eval-checkpoint", output=cfg_path)
-            )
-
-            self.assertEqual(
-                (root / "checkpoint.pt").read_text(encoding="utf-8"),
-                "sample checkpoint for sforge init\n",
-            )
-            readme = (root / "README.sforge.md").read_text(encoding="utf-8")
-            self.assertIn("Template: `eval-checkpoint`", readme)
-            self.assertIn("`checkpoint.pt` is a sample input file", readme)
-            self.assertIn(
-                "Relative `--checkpoint` paths are resolved from the config directory.",
-                readme,
-            )
-            self.assertIn("`stages.eval.entry.script`", readme)
-            self.assertNotIn("`stages.train.entry.script`", readme)
-
-    def test_generated_readme_dry_run_command_stays_executable(self) -> None:
-        import os
-        import shlex
-
-        from slurmforge.launcher import main
-        from slurmforge.starter import InitRequest, create_starter_project
-
-        quickstart = Path("docs/quickstart.md").read_text(encoding="utf-8")
-        for template in ("train-eval", "train-only", "eval-checkpoint"):
-            with self.subTest(template=template), tempfile.TemporaryDirectory() as tmp:
-                root = Path(tmp)
-                cfg_path = root / "experiment.yaml"
-                create_starter_project(InitRequest(template=template, output=cfg_path))
-                readme = (root / "README.sforge.md").read_text(encoding="utf-8")
-                command = next(
-                    line for line in readme.splitlines() if "--dry-run=full" in line
-                )
-                self.assertIn(command, quickstart)
-                args = shlex.split(command)
-                self.assertEqual(args[0], "sforge")
-                cwd = Path.cwd()
-                stdout = io.StringIO()
-                stderr = io.StringIO()
-                try:
-                    os.chdir(root)
-                    with redirect_stdout(stdout), redirect_stderr(stderr):
-                        code = main(args[1:])
-                finally:
-                    os.chdir(cwd)
-
-                self.assertEqual(code, 0, stderr.getvalue())
-                self.assertEqual(json.loads(stdout.getvalue())["state"], "valid")
-
 
 def _dry_run_command_for_template(template: str, _root: Path) -> list[str]:
     if template == "train-eval":

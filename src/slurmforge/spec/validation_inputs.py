@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ..errors import ConfigContractError
 from ..contracts import inject_mode_matches_expectation, resolved_kind_for_output_kind
+from ..field_options import options_for, options_sentence
 from .models import ExperimentSpec, StageSpec
 
 
@@ -11,9 +12,10 @@ def validate_stage_inputs_contract(spec: ExperimentSpec, stage: StageSpec, *, ch
     if stage.depends_on and not any(input_spec.required for input_spec in stage.inputs.values()):
         raise ConfigContractError(f"`stages.{stage.name}` depends on upstream stages but declares no required inputs")
     for input_name, input_spec in stage.inputs.items():
-        if input_spec.inject.mode not in {"path", "value", "json"}:
+        if input_spec.inject.mode not in options_for("stages.*.inputs.*.inject.mode"):
             raise ConfigContractError(
-                f"`stages.{stage.name}.inputs.{input_name}.inject.mode` must be path, value, or json"
+                f"`stages.{stage.name}.inputs.{input_name}.inject.mode` must be "
+                f"{options_sentence('stages.*.inputs.*.inject.mode')}"
             )
         if not inject_mode_matches_expectation(input_spec.inject.mode, input_spec.expects):
             raise ConfigContractError(

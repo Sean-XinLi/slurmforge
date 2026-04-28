@@ -6,7 +6,7 @@ from contextlib import redirect_stderr, redirect_stdout
 
 
 class ValidateCliTests(StageBatchSystemTestCase):
-    def test_validate_force_flag_is_removed(self) -> None:
+    def test_validate_rejects_force_flag(self) -> None:
         from slurmforge.launcher import build_parser
 
         parser = build_parser()

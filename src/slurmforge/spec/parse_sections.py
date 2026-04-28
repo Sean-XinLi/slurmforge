@@ -17,6 +17,7 @@ from .parse_notifications import parse_notifications
 from .parse_resources import parse_hardware, parse_sizing
 from .parse_runs import parse_runs
 from .parse_runtime import parse_environments, parse_orchestration, parse_runtime
+from .run_paths import normalize_cli_override_path
 from .stage_parse import parse_stage
 
 
@@ -44,7 +45,7 @@ def load_raw_config(config_path: Path, cli_overrides: tuple[str, ...] = ()) -> d
     raw = copy.deepcopy(raw)
     for override in cli_overrides:
         key, value = parse_override(override)
-        deep_set(raw, key, value)
+        deep_set(raw, normalize_cli_override_path(raw, key), value)
     return raw
 
 
@@ -57,10 +58,6 @@ def parse_experiment_spec(
 ) -> ExperimentSpec:
     if "stages" not in raw:
         raise ConfigContractError("Configs must use top-level `stages`")
-    if "matrix" in raw:
-        raise ConfigContractError("Top-level `matrix` is not supported; use top-level `runs`")
-    if "eval" in raw or "run" in raw or "model" in raw:
-        raise ConfigContractError("Top-level `model`, `run`, and `eval` are legacy fields; use `stages.<name>`")
     unknown_top_level = sorted(set(raw) - _ALLOWED_TOP_LEVEL_KEYS)
     if unknown_top_level:
         joined = ", ".join(str(item) for item in unknown_top_level)

@@ -4,10 +4,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..errors import ConfigContractError
+from ..field_options import options_for, options_sentence
 from ..io import SchemaVersion
 
-OUTPUT_KINDS = {"file", "files", "metric", "manifest"}
-OUTPUT_SELECTORS = {"latest_step", "first", "last"}
+OUTPUT_KINDS = set(options_for("stages.*.outputs.*.kind"))
+OUTPUT_SELECTORS = set(options_for("stages.*.outputs.*.discover.select"))
 
 
 @dataclass(frozen=True)
@@ -70,10 +71,11 @@ def _string_tuple(value: Any, *, name: str) -> tuple[str, ...]:
 
 def _normalize_selector(value: Any) -> str:
     selector = str(value or "latest_step")
-    if selector == "latest":
-        selector = "latest_step"
     if selector not in OUTPUT_SELECTORS:
-        raise ConfigContractError("output discover select must be latest_step, latest, first, or last")
+        raise ConfigContractError(
+            "output discover select must be "
+            f"{options_sentence('stages.*.outputs.*.discover.select')}"
+        )
     return selector
 
 
@@ -96,7 +98,9 @@ def _parse_output_spec(output_name: str, raw: Any, *, stage_name: str) -> StageO
     _require_schema(data, name=name)
     kind = str(data.get("kind") or "")
     if kind not in OUTPUT_KINDS:
-        raise ConfigContractError(f"`{name}.kind` must be file, files, metric, or manifest")
+        raise ConfigContractError(
+            f"`{name}.kind` must be {options_sentence('stages.*.outputs.*.kind')}"
+        )
     discover = _parse_discovery(data.get("discover"), name=f"{name}.discover", allow_select=kind == "file")
     file_value = data.get("file")
     json_path = str(data.get("json_path") or "$")

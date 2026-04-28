@@ -14,3 +14,5 @@ class SpecFacadeTests(StageBatchSystemTestCase):
             self.assertNotIn("InputInjection", exported)
             self.assertNotIn("to_jsonable", exported)
             self.assertNotIn("stable_json", exported)
+        self.assertIn("RunVariantSpec", spec.__all__)
+        self.assertNotIn("Run" + "CaseSpec", spec.__all__)

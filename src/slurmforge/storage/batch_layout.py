@@ -37,7 +37,7 @@ def _bindings_payload(instance) -> dict[str, Any]:
     }
 
 
-def _write_stage_run_layout(batch: StageBatchPlan, batch_root: Path) -> None:
+def _persist_stage_run_layout(batch: StageBatchPlan, batch_root: Path) -> None:
     for instance in batch.stage_instances:
         run_dir = batch_root / instance.run_dir_rel
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -81,7 +81,7 @@ def persist_stage_batch_layout(
         {"schema_version": SchemaVersion.GROUPS, "groups": batch.group_plans},
     )
     write_json(batch_root / "groups" / "gpu_budget_plan.json", batch.budget_plan)
-    _write_stage_run_layout(batch, batch_root)
+    _persist_stage_run_layout(batch, batch_root)
     write_lineage_index(batch_root, build_stage_batch_lineage(batch))
     return batch_root
 
@@ -111,6 +111,6 @@ def persist_selected_stage_batch_layout(
             "run_ids": sorted(blocked_run_ids or []),
         },
     )
-    _write_stage_run_layout(batch, batch_root)
+    _persist_stage_run_layout(batch, batch_root)
     write_lineage_index(batch_root, build_stage_batch_lineage(batch))
     return batch_root

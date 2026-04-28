@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ..defaults import DEFAULT_STORAGE_ROOT
 from ..models import InitRequest, StarterCommandSet, StarterReadmePlan
+from ..config_comments import option_table
 
 
 def starter_readme_plan(
@@ -51,6 +52,10 @@ Template: `{plan.template}`
 ## Common Fields To Edit
 
 {fields}
+
+## Common Field Options
+
+{option_table()}
 
 The starter values are deliberately small. Replace scripts, resources, runtime paths, and output contracts before using this for real work.
 """

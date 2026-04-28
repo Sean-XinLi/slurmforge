@@ -18,14 +18,14 @@ class DocsShapeTests(StageBatchSystemTestCase):
         ):
             self.assertTrue(Path("docs/records", name).exists())
 
-    def test_import_linter_config_was_removed(self) -> None:
+    def test_import_linter_config_is_absent(self) -> None:
         self.assertFalse(Path(".importlinter").exists())
         self.assertNotIn("lint-imports", Path("README.md").read_text(encoding="utf-8"))
 
-    def test_docs_do_not_reference_removed_planner_facade(self) -> None:
-        removed_facade = ".".join(("planner", "core"))
+    def test_docs_do_not_reference_planner_core_facade(self) -> None:
+        planner_core_facade = ".".join(("planner", "core"))
         docs_text = "\n".join(
             path.read_text(encoding="utf-8")
             for path in [Path("README.md"), *Path("docs").rglob("*.md")]
         )
-        self.assertNotIn(removed_facade, docs_text)
+        self.assertNotIn(planner_core_facade, docs_text)

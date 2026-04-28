@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..errors import ConfigContractError
+from ..field_options import options_for, options_sentence
 from .models import ExperimentSpec
 from .validation_notifications import validate_notifications_contract
 from .validation_resources import validate_hardware_contract, validate_sizing_contract
@@ -25,10 +26,13 @@ def validate_experiment_spec(spec: ExperimentSpec, *, check_paths: bool = True) 
 
 
 def _validate_artifact_store_contract(spec: ExperimentSpec) -> None:
-    allowed = {"copy", "hardlink", "symlink", "register_only"}
+    allowed = set(options_for("artifact_store.strategy"))
     if spec.artifact_store.strategy not in allowed:
-        raise ConfigContractError("`artifact_store.strategy` must be copy, hardlink, symlink, or register_only")
+        raise ConfigContractError(
+            f"`artifact_store.strategy` must be {options_sentence('artifact_store.strategy')}"
+        )
     if spec.artifact_store.fallback_strategy is not None and spec.artifact_store.fallback_strategy not in allowed:
         raise ConfigContractError(
-            "`artifact_store.fallback_strategy` must be copy, hardlink, symlink, or register_only"
+            "`artifact_store.fallback_strategy` must be "
+            f"{options_sentence('artifact_store.strategy')}"
         )

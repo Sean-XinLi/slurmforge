@@ -11,7 +11,7 @@ The core planning objects are:
 - `InputBinding`
 - `OutputRef`
 
-`RunDefinition` is the planned run identity produced by `runs`. A single run, each grid point, or each named case has one stable `run_id`.
+`RunDefinition` is the planned run identity produced by `runs`. A single run, each grid point, each named case, or each matrix case grid point has one stable `run_id`.
 
 `StageInstancePlan` is the executable plan for one stage of one run:
 

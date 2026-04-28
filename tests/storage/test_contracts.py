@@ -27,10 +27,10 @@ class StorageContractTests(StageBatchSystemTestCase):
 
             batch_plan_path = Path(train_batch.submission_root) / "batch_plan.json"
             batch_payload = json.loads(batch_plan_path.read_text())
-            removed_batch_schema = dict(batch_payload)
-            del removed_batch_schema["schema_version"]
+            invalid_batch_schema = dict(batch_payload)
+            del invalid_batch_schema["schema_version"]
             batch_plan_path.write_text(
-                json.dumps(removed_batch_schema), encoding="utf-8"
+                json.dumps(invalid_batch_schema), encoding="utf-8"
             )
             from slurmforge.errors import RecordContractError
 

@@ -104,7 +104,7 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                     violations.append(f"{path}:{node.lineno} imports {module}")
         self.assertEqual(violations, [])
 
-    def test_plans_do_not_import_spec_or_removed_schema(self) -> None:
+    def test_plans_do_not_import_spec_or_schema(self) -> None:
         blocked = {".".join(("slurmforge", "spec")), ".".join(("slurmforge", "schema"))}
         violations: list[str] = []
         for path in sorted(Path("src/slurmforge/plans").rglob("*.py")):

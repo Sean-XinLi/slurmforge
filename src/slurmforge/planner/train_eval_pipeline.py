@@ -7,7 +7,7 @@ from ..plans.runtime import RuntimePlan
 from ..plans.stage import StageBatchPlan
 from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalControllerPlan, TrainEvalPipelinePlan
 from ..spec import ExperimentSpec
-from ..spec.queries import expand_run_definitions
+from ..spec.run_expansion import expand_run_definitions
 from .identifiers import train_eval_pipeline_id
 from .payloads import control_resources_payload, environment_payload, executor_runtime_payload, notification_payload
 from .stage_batch import compile_stage_batch

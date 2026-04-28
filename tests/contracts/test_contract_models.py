@@ -62,7 +62,10 @@ class ContractTests(StageBatchSystemTestCase):
                 "checkpoint": {
                     "kind": "file",
                     "required": True,
-                    "discover": {"globs": ["checkpoints/*.pt"], "select": "latest"},
+                    "discover": {
+                        "globs": ["checkpoints/*.pt"],
+                        "select": "latest_step",
+                    },
                 }
             },
             stage_name="train",
@@ -89,6 +92,27 @@ class ContractTests(StageBatchSystemTestCase):
 
         self.assertIsInstance(contract, StageOutputContract)
         self.assertEqual(restored.outputs["checkpoint"].discover.select, "latest_step")
+
+    def test_stage_output_contract_rejects_latest_selector_alias(self) -> None:
+        from slurmforge.contracts.outputs import parse_stage_output_contract
+        from slurmforge.errors import ConfigContractError
+
+        alias = "latest"
+        with self.assertRaisesRegex(
+            ConfigContractError, "latest_step, first, or last"
+        ):
+            parse_stage_output_contract(
+                {
+                    "checkpoint": {
+                        "kind": "file",
+                        "discover": {
+                            "globs": ["checkpoints/*.pt"],
+                            "select": alias,
+                        },
+                    }
+                },
+                stage_name="train",
+            )
 
     def test_invalid_output_kind_is_config_contract_error(self) -> None:
         from slurmforge.contracts.outputs import parse_stage_output_contract

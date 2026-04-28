@@ -11,7 +11,9 @@ from ..spec import (
     ExperimentSpec,
     parse_experiment_spec,
 )
-from ..spec.queries import expand_run_definitions, normalize_run_path, stage_name_for_kind
+from ..spec.queries import stage_name_for_kind
+from ..spec.run_expansion import expand_run_definitions
+from ..spec.run_paths import normalize_run_override_path
 from .budget import apply_budget_plan, group_stage_instances
 from .identifiers import batch_id as make_batch_id
 from .payloads import (
@@ -31,7 +33,7 @@ from .payloads import (
 def materialize_run_spec(spec: ExperimentSpec, run: RunDefinition) -> ExperimentSpec:
     raw = copy.deepcopy(spec.raw)
     for key, value in run.run_overrides.items():
-        deep_set(raw, normalize_run_path(raw, key), copy.deepcopy(value))
+        deep_set(raw, normalize_run_override_path(raw, key), copy.deepcopy(value))
     return parse_experiment_spec(
         raw,
         config_path=spec.config_path,

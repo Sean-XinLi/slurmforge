@@ -168,11 +168,12 @@ def _bad_template(file_builder):
         StarterReadmePlan,
         StarterTemplate,
     )
+    from slurmforge.starter.templates.train_eval import build_config
 
     return StarterTemplate(
         name="bad-template",
         description="bad",
-        config_builder=lambda _request: {"project": "demo"},
+        config_builder=build_config,
         readme_builder=lambda request: StarterReadmePlan(
             template=request.template,
             commands=StarterCommandSet(

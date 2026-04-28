@@ -4,6 +4,7 @@ import copy
 from typing import Any
 
 from ...errors import ConfigContractError
+from ...field_options import options_for, options_sentence
 from ..models import EntrySpec
 from ..parse_common import optional_mapping, require_mapping
 
@@ -11,8 +12,10 @@ from ..parse_common import optional_mapping, require_mapping
 def parse_entry(raw: Any, *, name: str) -> EntrySpec:
     data = require_mapping(raw, f"stages.{name}.entry")
     entry_type = str(data.get("type") or ("command" if "command" in data else "python_script"))
-    if entry_type not in {"python_script", "command"}:
-        raise ConfigContractError(f"`stages.{name}.entry.type` must be `python_script` or `command`")
+    if entry_type not in options_for("stages.*.entry.type"):
+        raise ConfigContractError(
+            f"`stages.{name}.entry.type` must be {options_sentence('stages.*.entry.type')}"
+        )
     script = data.get("script")
     command = data.get("command")
     if entry_type == "python_script" and not script:

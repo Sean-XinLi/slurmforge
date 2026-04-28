@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
-
+from .config_yaml import render_starter_config
 from .errors import StarterTemplateError
 from .models import InitRequest, RenderedFile, StarterTemplate
 from .templates.readme import render_starter_readme
@@ -15,7 +14,10 @@ def render_starter_files(request: InitRequest, template: StarterTemplate) -> tup
     rendered = [
         RenderedFile(
             path=config_path,
-            content=yaml.safe_dump(template.config_builder(request), sort_keys=False),
+            content=render_starter_config(
+                template.name,
+                template.config_builder(request),
+            ),
             role="config",
         ),
         RenderedFile(

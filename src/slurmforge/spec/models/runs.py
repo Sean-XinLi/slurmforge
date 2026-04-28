@@ -7,13 +7,14 @@ from .common import JsonObject
 
 
 @dataclass(frozen=True)
-class RunCaseSpec:
+class RunVariantSpec:
     name: str
     set: JsonObject = field(default_factory=dict)
+    axes: tuple[tuple[str, tuple[Any, ...]], ...] = ()
 
 
 @dataclass(frozen=True)
 class RunsSpec:
     type: str = "single"
     axes: tuple[tuple[str, tuple[Any, ...]], ...] = ()
-    cases: tuple[RunCaseSpec, ...] = ()
+    cases: tuple[RunVariantSpec, ...] = ()
