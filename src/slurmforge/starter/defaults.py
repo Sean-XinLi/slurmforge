@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 
-DEFAULT_OUTPUT = "experiment.yaml"
+DEFAULT_CONFIG_FILENAME = "experiment.yaml"
+DEFAULT_OUTPUT_DIR = "."
 DEFAULT_PROJECT = "demo"
 DEFAULT_EXPERIMENT = "baseline"
 DEFAULT_STORAGE_ROOT = "./runs"

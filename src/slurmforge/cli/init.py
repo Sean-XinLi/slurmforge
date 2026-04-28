@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from ..errors import UsageError
-from ..starter.defaults import DEFAULT_OUTPUT
+from ..starter.defaults import DEFAULT_OUTPUT_DIR
 from ..starter import (
     InitRequest,
     StarterWriteError,
@@ -39,9 +39,9 @@ def _prompt_template() -> str:
         print(f"Invalid template: {value}")
 
 
-def _prompt_output() -> Path:
-    value = input(f"Output config path [{DEFAULT_OUTPUT}]: ").strip()
-    return Path(value or DEFAULT_OUTPUT)
+def _prompt_output_dir() -> Path:
+    value = input(f"Output project directory [{DEFAULT_OUTPUT_DIR}]: ").strip()
+    return Path(value or DEFAULT_OUTPUT_DIR)
 
 
 def _confirm_overwrite(paths: tuple[Path, ...]) -> bool:
@@ -59,11 +59,11 @@ def _request_from_args(args: argparse.Namespace) -> InitRequest | None:
                 "sforge init requires --template when stdin is not interactive"
             )
         template = _prompt_template()
-        output = _prompt_output()
+        output_dir = _prompt_output_dir()
     else:
         template = args.template
-        output = Path(args.output or DEFAULT_OUTPUT)
-    request = InitRequest(template=template, output=output, force=args.force)
+        output_dir = Path(args.output or DEFAULT_OUTPUT_DIR)
+    request = InitRequest(template=template, output_dir=output_dir, force=args.force)
     existing = existing_starter_files(request)
     if existing and not request.force:
         if not _is_interactive():
@@ -87,7 +87,10 @@ def handle_init(args: argparse.Namespace) -> None:
         print("[INIT] cancelled")
         return
     result = create_starter_project(request)
-    print(f"[INIT] template={result.template} config={result.config_path}")
+    print(
+        f"[INIT] template={result.template} output={result.output_dir} "
+        f"config={result.config_path}"
+    )
     for file in result.files:
         print(f"[INIT] wrote {file.role}: {file.path}")
 
@@ -110,7 +113,7 @@ def add_subparser(
     parser.add_argument(
         "--output",
         default=None,
-        help=f"Config path to write (default: {DEFAULT_OUTPUT})",
+        help=f"Project directory to write (default: {DEFAULT_OUTPUT_DIR})",
     )
     parser.add_argument(
         "--force", action="store_true", help="Overwrite existing generated files"

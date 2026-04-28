@@ -51,9 +51,8 @@ class InitCliTests(StageBatchSystemTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            cfg_path = root / "experiment.yaml"
             self.assertEqual(
-                main(["init", "--template", "train-eval", "--output", str(cfg_path)]),
+                main(["init", "--template", "train-eval", "--output", str(root)]),
                 0,
             )
 
@@ -61,7 +60,7 @@ class InitCliTests(StageBatchSystemTestCase):
             stderr = io.StringIO()
             with redirect_stdout(stdout), redirect_stderr(stderr):
                 code = main(
-                    ["init", "--template", "train-eval", "--output", str(cfg_path)]
+                    ["init", "--template", "train-eval", "--output", str(root)]
                 )
 
             combined = stdout.getvalue() + stderr.getvalue()

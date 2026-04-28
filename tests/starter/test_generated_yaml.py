@@ -15,7 +15,7 @@ class GeneratedYamlTests(StageBatchSystemTestCase):
             with self.subTest(template=template), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 cfg_path = root / "experiment.yaml"
-                create_starter_project(InitRequest(template=template, output=cfg_path))
+                create_starter_project(InitRequest(template=template, output_dir=root))
 
                 text = cfg_path.read_text(encoding="utf-8")
                 payload = yaml.safe_load(text)

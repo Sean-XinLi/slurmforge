@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
-from ..defaults import TEMPLATE_TRAIN_ONLY
+from ..defaults import DEFAULT_CONFIG_FILENAME, TEMPLATE_TRAIN_ONLY
 from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import train_script
@@ -17,11 +17,10 @@ def build_config(_request: InitRequest) -> dict[str, Any]:
 
 
 def build_readme(request: InitRequest) -> StarterReadmePlan:
-    config_name = request.output.name
     return starter_readme_plan(
         request,
-        dry_run_command=f"sforge train --config {config_name} --dry-run=full",
-        submit_command=f"sforge train --config {config_name}",
+        dry_run_command=f"sforge train --config {DEFAULT_CONFIG_FILENAME} --dry-run=full",
+        submit_command=f"sforge train --config {DEFAULT_CONFIG_FILENAME}",
         editable_fields=(
             "project",
             "experiment",

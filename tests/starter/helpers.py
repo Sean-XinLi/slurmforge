@@ -14,7 +14,7 @@ def init_args(
     return Namespace(
         template=template,
         list_templates=False,
-        output=str(root / "experiment.yaml"),
+        output=str(root),
         force=force,
     )
 

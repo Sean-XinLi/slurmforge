@@ -6,8 +6,9 @@ It focuses on a small CLI surface:
 
 ```bash
 sforge init
-sforge init --template train-eval --output experiment.yaml --force
 sforge init --list-templates
+sforge init --template train-eval --output ./demo --force
+cd demo
 sforge validate --config experiment.yaml
 sforge estimate --config experiment.yaml
 sforge plan train --config experiment.yaml --dry-run=full --output plan.audit.json
@@ -39,8 +40,11 @@ sforge init
 For scripts or CI, choose a template explicitly:
 
 ```bash
-sforge init --template train-eval --output experiment.yaml --force
+sforge init --template train-eval --output ./demo --force
 ```
+
+This writes `./demo/experiment.yaml`, `./demo/train.py`, `./demo/eval.py`,
+and `./demo/README.sforge.md`.
 
 Available starter templates:
 
