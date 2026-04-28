@@ -7,7 +7,7 @@ from typing import Any
 
 from ..errors import ConfigContractError
 from ..io import content_digest
-from ..schema import RunDefinition
+from ..contracts import RunDefinition
 from .models import ExperimentSpec
 
 

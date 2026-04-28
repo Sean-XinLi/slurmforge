@@ -9,9 +9,10 @@ import yaml
 from ..errors import ConfigContractError
 from ..overrides import deep_set, parse_override
 from ..plans import PriorBatchLineage, RunDefinition, SelectedStageRun, SourcedStageBatchPlan, StageBatchSource
+from ..root_model import iter_stage_run_dirs
 from ..spec import parse_experiment_spec, validate_experiment_spec
 from ..status import read_stage_status, state_matches
-from ..storage.loader import iter_stage_run_dirs, plan_for_run_dir
+from ..storage.loader import plan_for_run_dir
 from ..resolver import resolve_stage_inputs_from_prior_source
 from .core import compile_stage_batch
 
@@ -128,4 +129,10 @@ def compile_stage_batch_from_prior_source(
         selected_stage_instance_ids=tuple(item.stage_instance_id for item in selected),
         overrides=tuple(override_list),
     )
-    return SourcedStageBatchPlan(spec=spec, batch=batch, source=source, lineage=lineage, selected_runs=selected)
+    return SourcedStageBatchPlan(
+        spec_snapshot=dict(spec.raw),
+        batch=batch,
+        source=source,
+        lineage=lineage,
+        selected_runs=selected,
+    )

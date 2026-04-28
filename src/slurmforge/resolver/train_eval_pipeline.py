@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..plans import TrainEvalPipelinePlan, RunDefinition
-from ..schema import InputBinding, InputSource, binding_is_ready_for_injection
+from ..contracts import InputBinding, InputSource, binding_is_ready_for_injection
 from ..spec import ExperimentSpec, StageInputSpec
 from ..status import read_stage_status
 from ..storage.loader import load_stage_outputs, plan_for_run_dir, run_definitions_from_stage_batch

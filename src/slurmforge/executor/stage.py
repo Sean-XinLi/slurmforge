@@ -9,7 +9,7 @@ from ..errors import InputContractError, RuntimeContractError
 from ..inputs import verify_and_write_stage_instance_inputs
 from ..io import SchemaVersion, content_digest, read_json, utc_now, write_json
 from ..outputs import ArtifactIntegrityError, discover_stage_outputs, write_stage_outputs_record
-from ..read_models.status import refresh_stage_batch_status, refresh_train_eval_pipeline_status
+from ..root_model import refresh_stage_batch_status, refresh_train_eval_pipeline_status
 from ..runtime import require_runtime_contract
 from ..status import StageAttemptRecord, StageStatusRecord, commit_attempt, commit_stage_status
 from .bindings import bindings_from_file

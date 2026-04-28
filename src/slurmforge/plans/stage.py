@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..io import SchemaVersion
-from ..schema import InputBinding
+from ..contracts import InputBinding
 from ..sizing import GpuSizingResolution
-from ..spec.output_contract import StageOutputContract
+from ..contracts.outputs import StageOutputContract
 from .budget import BudgetPlan
 from .launcher import BeforeStepPlan, LauncherPlan
 from .notifications import NotificationPlan

@@ -6,12 +6,12 @@ from typing import Any
 
 from ..io import SchemaVersion, write_json
 from ..planner import compile_stage_batch
-from ..read_models.status import refresh_stage_batch_status, refresh_train_eval_pipeline_status
 from ..resolver import resolve_stage_inputs_for_train_eval_pipeline
+from ..root_model import iter_stage_run_dirs, refresh_stage_batch_status, refresh_train_eval_pipeline_status
 from ..status import StageStatusRecord, commit_stage_status, read_stage_status
 from ..status.models import TERMINAL_STATES
 from ..storage.batch_layout import write_selected_stage_batch_layout
-from ..storage.loader import iter_stage_run_dirs, load_execution_stage_batch_plan, plan_for_run_dir
+from ..storage.loader import load_execution_stage_batch_plan, plan_for_run_dir
 from .state import record_controller_event, save_controller_state
 
 

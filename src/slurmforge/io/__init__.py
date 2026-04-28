@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from . import schema as _schema
 from .hash import file_digest
 from .json import content_digest, read_json, stable_json, to_jsonable, write_json
-from .schema import SchemaVersion, require_schema
 from .time import utc_now
+
+SchemaVersion = _schema.SchemaVersion
+require_schema = _schema.require_schema
 
 __all__ = [
     "SchemaVersion",

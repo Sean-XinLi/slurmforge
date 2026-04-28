@@ -1,17 +1,10 @@
-"""Atom-level dataclass types shared by spec/ and plans/.
-
-This module is the project's contract kernel. It must depend only on stdlib
-and ``slurmforge.io``. Adding any other internal import here is a structural
-regression and should be enforced by the import-linter contract
-``schema_kernel_is_leaf``.
-"""
+"""Input contract dataclasses shared by spec, planner, resolver, and executor."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
 
 from ..io import SchemaVersion, require_schema, stable_json
-
 
 JsonObject = dict[str, Any]
 
@@ -52,15 +45,6 @@ class InputBinding:
     inject: JsonObject = field(default_factory=dict)
     resolution: JsonObject = field(default_factory=dict)
     schema_version: int = SchemaVersion.INPUT_CONTRACT
-
-
-@dataclass(frozen=True)
-class RunDefinition:
-    run_id: str
-    run_index: int
-    run_overrides: JsonObject
-    spec_snapshot_digest: str
-    schema_version: int = SchemaVersion.PLAN
 
 
 def input_source_from_dict(payload: JsonObject | InputSource) -> InputSource:
@@ -172,7 +156,11 @@ def resolved_input_from_output_ref(output: Any) -> ResolvedInput:
         output_name = str(getattr(output, "output_name", ""))
         output_kind = str(getattr(output, "kind", "file"))
         path = str(getattr(output, "path", ""))
-        digest = str(getattr(output, "digest", "") or getattr(output, "managed_digest", "") or getattr(output, "source_digest", ""))
+        digest = str(
+            getattr(output, "digest", "")
+            or getattr(output, "managed_digest", "")
+            or getattr(output, "source_digest", "")
+        )
         value = getattr(output, "value", None)
         cardinality = str(getattr(output, "cardinality", "one"))
         producer = str(getattr(output, "producer_stage_instance_id", ""))

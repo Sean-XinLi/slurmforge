@@ -5,7 +5,8 @@ from pathlib import Path
 from ..errors import ConfigContractError
 from ..lineage import find_bound_input, iter_lineage_source_roots
 from ..plans import RunDefinition
-from ..schema import (
+from ..root_model import iter_stage_run_dirs
+from ..contracts import (
     InputBinding,
     InputSource,
     ResolvedInput,
@@ -15,7 +16,7 @@ from ..schema import (
     resolved_payload_present,
 )
 from ..spec import ExperimentSpec
-from ..storage.loader import iter_stage_run_dirs, load_stage_outputs, plan_for_run_dir
+from ..storage.loader import load_stage_outputs, plan_for_run_dir
 from .core import (
     inject_payload,
     output_ref,
@@ -62,7 +63,7 @@ def _find_upstream_output_direct(root: Path, lineage_ref: str) -> dict | None:
     producer, output_name = lineage_ref.split(":", 1)
     try:
         run_dirs = tuple(iter_stage_run_dirs(root))
-    except FileNotFoundError:
+    except ConfigContractError:
         return None
     for run_dir in run_dirs:
         plan = plan_for_run_dir(run_dir)

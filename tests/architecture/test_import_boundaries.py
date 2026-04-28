@@ -68,6 +68,12 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
         self.assertFalse(Path("src/slurmforge/plans/loaders.py").exists())
         self.assertFalse(Path("src/slurmforge/storage/aggregate.py").exists())
         self.assertFalse(Path("src/slurmforge/storage/layout.py").exists())
+        with self.assertRaises(ModuleNotFoundError):
+            __import__("slurmforge.read_models")
+        with self.assertRaises(ModuleNotFoundError):
+            __import__(".".join(("slurmforge", "schema")))
+        self.assertFalse(Path("src/slurmforge/spec/output_contract.py").exists())
+        self.assertFalse(Path("src/slurmforge/schema").exists())
 
     def test_public_facades_do_not_export_internal_helpers(self) -> None:
         import slurmforge.notifications as notifications
@@ -85,6 +91,8 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
             "normalize_run_path",
             "parse_stage_output_contract",
             "run_id_for",
+            "StageOutputContract",
+            "StageOutputSpec",
         }
         plans_internal = {
             "group_plan_from_dict",
@@ -139,6 +147,62 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
             self.assertFalse(hasattr(notifications, name), name)
             self.assertNotIn(name, notifications.__all__)
 
+    def test_storage_loader_no_longer_owns_root_read_model(self) -> None:
+        import slurmforge.storage.loader as loader
+
+        for name in (
+            "collect_stage_statuses",
+            "is_stage_batch_root",
+            "is_train_eval_pipeline_root",
+            "iter_stage_run_dirs",
+        ):
+            self.assertFalse(hasattr(loader, name), name)
+
+    def test_contracts_package_is_leaf(self) -> None:
+        blocked = {
+            "slurmforge.controller",
+            "slurmforge.emit",
+            "slurmforge.executor",
+            "slurmforge.inputs",
+            "slurmforge.lineage",
+            "slurmforge.notifications",
+            "slurmforge.orchestration",
+            "slurmforge.outputs",
+            "slurmforge.planner",
+            "slurmforge.plans",
+            "slurmforge.resolver",
+            "slurmforge.root_model",
+            "slurmforge.runtime",
+            "slurmforge.slurm",
+            "slurmforge.spec",
+            "slurmforge.status",
+            "slurmforge.storage",
+            "slurmforge.submission",
+        }
+        violations: list[str] = []
+        for path in sorted(Path("src/slurmforge/contracts").rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.iter_child_nodes(tree):
+                if not isinstance(node, ast.ImportFrom):
+                    continue
+                module = _absolute_import_module(path, node)
+                if any(module == item or module.startswith(f"{item}.") for item in blocked):
+                    violations.append(f"{path}:{node.lineno} imports {module}")
+        self.assertEqual(violations, [])
+
+    def test_plans_do_not_import_spec_or_removed_schema(self) -> None:
+        blocked = {".".join(("slurmforge", "spec")), ".".join(("slurmforge", "schema"))}
+        violations: list[str] = []
+        for path in sorted(Path("src/slurmforge/plans").rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.iter_child_nodes(tree):
+                if not isinstance(node, ast.ImportFrom):
+                    continue
+                module = _absolute_import_module(path, node)
+                if any(module == item or module.startswith(f"{item}.") for item in blocked):
+                    violations.append(f"{path}:{node.lineno} imports {module}")
+        self.assertEqual(violations, [])
+
     def test_orchestration_returns_data_instead_of_printing(self) -> None:
         violations: list[str] = []
         for path in sorted(Path("src/slurmforge/orchestration").rglob("*.py")):
@@ -156,6 +220,20 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
     def test_orchestration_status_view_is_named_for_status_workflow(self) -> None:
         self.assertFalse(Path("src/slurmforge/orchestration/render.py").exists())
         self.assertTrue(Path("src/slurmforge/orchestration/status_view.py").exists())
+
+    def test_output_discovery_is_split_by_output_kind(self) -> None:
+        discovery_root = Path("src/slurmforge/outputs/discovery")
+        self.assertFalse(Path("src/slurmforge/outputs/discovery.py").exists())
+        self.assertTrue((discovery_root / "context.py").exists())
+        self.assertTrue((discovery_root / "models.py").exists())
+        self.assertTrue((discovery_root / "registry.py").exists())
+        self.assertTrue((discovery_root / "service.py").exists())
+        self.assertTrue((discovery_root / "writer.py").exists())
+        for name in ("file.py", "files.py", "manifest.py", "metric.py"):
+            self.assertTrue((discovery_root / "handlers" / name).exists())
+        service_text = (discovery_root / "service.py").read_text(encoding="utf-8")
+        self.assertNotIn("if output_cfg.kind ==", service_text)
+        self.assertNotIn("elif output_cfg.kind ==", service_text)
 
     def test_cli_stage_common_is_split_by_concern(self) -> None:
         self.assertFalse(Path("src/slurmforge/cli/stage_common.py").exists())

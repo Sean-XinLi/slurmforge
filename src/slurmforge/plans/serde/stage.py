@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...schema import input_binding_from_dict
-from ...spec.output_contract import stage_output_contract_from_dict
+from ...contracts import input_binding_from_dict
+from ...contracts.outputs import stage_output_contract_from_dict
 from ..stage import EntryPlan, GroupPlan, StageBatchPlan, StageInstancePlan
 from .budget import budget_plan_from_dict
 from .common import require_plan_schema

@@ -4,7 +4,7 @@ import copy
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..schema import InputInjection, InputSource
+from ..contracts import InputInjection, InputSource
 from .models import (
     ArtifactStoreSpec,
     BeforeStepSpec,
@@ -14,7 +14,7 @@ from .models import (
     StageInputSpec,
     StageSpec,
 )
-from .output_contract import parse_stage_output_contract
+from ..contracts.outputs import parse_stage_output_contract
 from .parse_common import optional_mapping, reject_unknown_keys, require_mapping
 from .parse_resources import parse_resources
 

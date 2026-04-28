@@ -9,15 +9,14 @@ import yaml
 
 from ..errors import ConfigContractError
 from ..notifications import deliver_notification
-from ..read_models import load_notification_summary_input
-from ..read_models.status import refresh_train_eval_pipeline_status
+from ..root_model import collect_stage_statuses, load_notification_summary_input, refresh_train_eval_pipeline_status
 from ..slurm import SlurmClient
 from ..spec import parse_experiment_spec, validate_experiment_spec
 from ..submission import prepare_stage_submission, read_submission_state, submit_prepared_stage_batch
 from ..status import reconcile_stage_batch_with_slurm
 from ..status.models import TERMINAL_STATES
 from ..storage.controller import write_controller_status
-from ..storage.loader import collect_stage_statuses, load_stage_batch_plan, load_train_eval_pipeline_plan
+from ..storage.loader import load_stage_batch_plan, load_train_eval_pipeline_plan
 from .materialization import ensure_stage_materialized, project_root_from_pipeline
 from .state import load_controller_state, record_controller_event, save_controller_state
 

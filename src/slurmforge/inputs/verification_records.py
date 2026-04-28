@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from ..io import content_digest, file_digest, to_jsonable
-from ..schema import (
+from ..contracts import (
     InputBinding,
     binding_is_ready_for_injection,
     resolved_kind_matches_expectation,

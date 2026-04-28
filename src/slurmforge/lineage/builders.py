@@ -6,7 +6,7 @@ from typing import Any, Iterable
 
 from ..io import SchemaVersion
 from ..plans import TrainEvalPipelinePlan, StageBatchPlan, StageInstancePlan
-from ..schema import InputBinding
+from ..contracts import InputBinding
 
 
 def _binding_record(instance: StageInstancePlan, binding: InputBinding) -> dict[str, Any]:

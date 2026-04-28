@@ -11,9 +11,23 @@ from ..orchestration import (
     emit_sourced_stage_batch,
     summarize_stage_batch,
 )
+from ..spec import ExperimentSpec, parse_experiment_spec, validate_experiment_spec
 from .args import dry_run_mode_from_args
 from .dry_run import emit_machine_dry_run_if_requested
 from .render import print_lines, print_sourced_stage_batch_execution_result
+
+
+def _spec_for_sourced_plan(plan) -> ExperimentSpec:
+    project_root = Path(plan.lineage.source_root)
+    if plan.batch.stage_instances:
+        project_root = Path(str(plan.batch.stage_instances[0].lineage.get("project_root") or project_root))
+    spec = parse_experiment_spec(
+        plan.spec_snapshot,
+        config_path=(Path(plan.lineage.source_root) / "spec_snapshot.yaml").resolve(),
+        project_root=project_root.resolve(),
+    )
+    validate_experiment_spec(spec)
+    return spec
 
 
 def handle_resubmit(args: argparse.Namespace) -> None:
@@ -54,7 +68,7 @@ def handle_resubmit(args: argparse.Namespace) -> None:
             return
         print(f"[RESUBMIT] selected_runs=0 stage={args.stage} query={args.query}")
         return
-    if emit_machine_dry_run_if_requested(args, plan.spec, plan.batch, command="resubmit"):
+    if emit_machine_dry_run_if_requested(args, _spec_for_sourced_plan(plan), plan.batch, command="resubmit"):
         return
     print(f"[RESUBMIT] selected_runs={len(plan.selected_runs)} source={source_root}")
     if dry_run_mode_from_args(args):

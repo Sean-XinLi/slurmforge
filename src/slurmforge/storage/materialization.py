@@ -126,5 +126,5 @@ def materialize_sourced_stage_batch_plan(plan: SourcedStageBatchPlan) -> Sourced
     batch = replace(plan.batch, batch_id=reserved.batch_id, submission_root=str(reserved.root))
     concrete = replace(plan, batch=batch, lineage=lineage)
     write_source_contract(concrete)
-    write_stage_batch_layout(concrete.batch, spec_snapshot=concrete.spec.raw)
+    write_stage_batch_layout(concrete.batch, spec_snapshot=concrete.spec_snapshot)
     return concrete

@@ -6,7 +6,7 @@ from pathlib import Path
 from ..errors import ConfigContractError
 from ..io import SchemaVersion
 from ..plans import RunDefinition
-from ..schema import (
+from ..contracts import (
     InputBinding,
     InputSource,
     ResolvedInput,

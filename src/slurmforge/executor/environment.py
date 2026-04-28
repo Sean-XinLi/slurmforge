@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from ..plans import StageInstancePlan
-from ..schema import InputBinding
+from ..contracts import InputBinding
 from .bindings import binding_injected_value
 
 

@@ -15,7 +15,7 @@ from .runtime import (
 )
 from .stage import EntryPlan, GroupPlan, StageBatchPlan, StageInstancePlan
 from .train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalControllerPlan, TrainEvalPipelinePlan
-from ..schema import RunDefinition
+from ..contracts import RunDefinition
 from .sources import (
     PriorBatchLineage,
     SelectedStageRun,

@@ -24,7 +24,7 @@ from ..plans import (
     UserRuntimePlan,
 )
 from ..resolver import default_stage_input_bindings
-from ..schema import InputBinding
+from ..contracts import InputBinding
 from ..sizing import GpuSizingResolution, resolve_stage_gpu_sizing
 from ..spec import ExperimentSpec, StageSpec
 from ..spec.sizing import stage_gpu_sizing_inputs

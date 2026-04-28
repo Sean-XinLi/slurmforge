@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..schema import InputInjection, InputSource
-from .output_contract import StageOutputContract
+from ..contracts import InputInjection, InputSource
+from ..contracts.outputs import StageOutputContract
 
 
 JsonObject = dict[str, Any]

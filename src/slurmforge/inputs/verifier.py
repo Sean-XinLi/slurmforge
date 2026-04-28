@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ..errors import InputContractError
 from ..io import SchemaVersion, utc_now, write_json
-from ..schema import InputBinding
+from ..contracts import InputBinding
 from ..plans import StageBatchPlan, StageInstancePlan
 from .models import StageInputVerificationReport
 from .verification_records import record_for_binding

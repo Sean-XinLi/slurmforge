@@ -17,7 +17,7 @@ class InputVerifierTests(StageBatchSystemTestCase):
 
     def test_required_unresolved_input_fails(self) -> None:
         from slurmforge.inputs import verify_stage_instance_inputs
-        from slurmforge.schema import InputBinding, InputSource, ResolvedInput
+        from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
 
         with tempfile.TemporaryDirectory() as tmp:
             instance = self._stage_instance(Path(tmp))
@@ -37,7 +37,7 @@ class InputVerifierTests(StageBatchSystemTestCase):
 
     def test_digest_mismatch_fails(self) -> None:
         from slurmforge.inputs import verify_stage_instance_inputs
-        from slurmforge.schema import InputBinding, InputSource, ResolvedInput
+        from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -61,7 +61,7 @@ class InputVerifierTests(StageBatchSystemTestCase):
 
     def test_resolved_kind_must_match_expectation(self) -> None:
         from slurmforge.inputs import verify_stage_instance_inputs
-        from slurmforge.schema import InputBinding, InputSource, ResolvedInput
+        from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
 
         with tempfile.TemporaryDirectory() as tmp:
             instance = self._stage_instance(Path(tmp))

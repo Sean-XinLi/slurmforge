@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..schema import binding_is_ready_for_injection
+from ..contracts import binding_is_ready_for_injection
 from ..runtime import check_runtime_contract
 from ..inputs import verify_stage_instance_inputs
 from ..io import SchemaVersion, stable_json, to_jsonable

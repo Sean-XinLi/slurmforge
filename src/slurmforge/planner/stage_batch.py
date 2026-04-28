@@ -6,7 +6,7 @@ from pathlib import Path
 from ..errors import ConfigContractError
 from ..overrides import deep_set
 from ..plans import RunDefinition, StageBatchPlan, StageInstancePlan
-from ..schema import InputBinding, binding_is_ready_for_injection
+from ..contracts import InputBinding, binding_is_ready_for_injection
 from ..spec import (
     ExperimentSpec,
     expand_run_definitions,

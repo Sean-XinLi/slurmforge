@@ -3,11 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from .controller import reconcile_controller_job
-from ..read_models.status import refresh_root_status
+from ..root_model import (
+    collect_stage_statuses,
+    detect_root,
+    is_stage_batch_root,
+    refresh_root_status,
+)
 from ..submission import reconcile_root_submissions
 from ..status import state_matches
 from ..storage.controller import read_controller_status
-from ..storage.loader import collect_stage_statuses, is_stage_batch_root, is_train_eval_pipeline_root
 from ..storage.materialization import read_materialization_status
 
 
@@ -24,12 +28,10 @@ def render_status_lines(
     reconcile: bool = False,
     missing_output_grace_seconds: int = 300,
 ) -> list[str]:
-    if not root.exists():
-        raise FileNotFoundError(f"status root does not exist: {root}")
-    if not is_stage_batch_root(root) and not is_train_eval_pipeline_root(root):
-        raise FileNotFoundError(f"not a stage batch or train/eval pipeline root: {root}")
+    descriptor = detect_root(root)
+    root = descriptor.root
     lines: list[str] = []
-    root_is_pipeline = is_train_eval_pipeline_root(root)
+    root_is_pipeline = descriptor.kind == "train_eval_pipeline"
     if reconcile and root_is_pipeline:
         reconcile_controller_job(root)
     if reconcile:
@@ -39,7 +41,7 @@ def render_status_lines(
             missing_output_grace_seconds=missing_output_grace_seconds,
         )
         refresh_root_status(root)
-    if is_stage_batch_root(root):
+    if descriptor.kind == "stage_batch":
         materialization = read_materialization_status(root)
         if materialization is not None:
             failure_class = materialization.failure_class or "-"

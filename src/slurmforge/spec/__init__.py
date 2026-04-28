@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from .output_contract import (
-    StageOutputContract,
-    StageOutputSpec,
-)
 from .models import (
     ArtifactStoreSpec,
     BeforeStepSpec,
@@ -63,8 +59,6 @@ __all__ = [
     "RuntimeSpec",
     "SizingSpec",
     "StageGpuSizingSpec",
-    "StageOutputContract",
-    "StageOutputSpec",
     "StageInputSpec",
     "StageSpec",
     "StorageSpec",

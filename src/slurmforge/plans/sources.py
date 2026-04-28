@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from ..io import SchemaVersion
-from ..spec import ExperimentSpec
-from ..schema import RunDefinition
+from ..contracts import RunDefinition
 from .stage import StageBatchPlan
 
 
@@ -44,7 +44,7 @@ class PriorBatchLineage:
 
 @dataclass(frozen=True)
 class SourcedStageBatchPlan:
-    spec: ExperimentSpec
+    spec_snapshot: dict[str, Any]
     batch: StageBatchPlan
     source: StageBatchSource
     lineage: PriorBatchLineage

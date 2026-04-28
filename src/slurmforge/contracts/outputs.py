@@ -6,7 +6,6 @@ from typing import Any
 from ..errors import ConfigContractError
 from ..io import SchemaVersion
 
-
 OUTPUT_KINDS = {"file", "files", "metric", "manifest"}
 OUTPUT_SELECTORS = {"latest_step", "first", "last"}
 

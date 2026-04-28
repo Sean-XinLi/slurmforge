@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..io import read_json
-from ..schema import InputBinding, input_binding_from_dict, input_injection_value
+from ..contracts import InputBinding, input_binding_from_dict, input_injection_value
 
 
 def _input_bindings_path(run_dir: Path) -> Path:

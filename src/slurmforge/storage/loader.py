@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from ..io import read_json
 from ..plans import (
-    TRAIN_EVAL_PIPELINE_KIND,
     TrainEvalPipelinePlan,
     RunDefinition,
     StageBatchPlan,
@@ -18,7 +17,6 @@ from ..plans.serde import (
     stage_outputs_record_from_dict,
     stage_instance_plan_from_dict,
 )
-from ..status import StageStatusRecord, read_stage_status
 from .paths import stage_outputs_path, stage_plan_path
 
 
@@ -35,38 +33,6 @@ def load_execution_stage_batch_plan(batch_root: Path) -> StageBatchPlan:
 
 def load_train_eval_pipeline_plan(pipeline_root: Path) -> TrainEvalPipelinePlan:
     return train_eval_pipeline_plan_from_dict(read_json(pipeline_root / "train_eval_pipeline_plan.json"))
-
-
-def is_stage_batch_root(path: Path) -> bool:
-    manifest = path / "manifest.json"
-    return manifest.exists() and read_json(manifest).get("kind") == "stage_batch"
-
-
-def is_train_eval_pipeline_root(path: Path) -> bool:
-    manifest = path / "manifest.json"
-    return manifest.exists() and read_json(manifest).get("kind") == TRAIN_EVAL_PIPELINE_KIND
-
-
-def iter_stage_run_dirs(root: Path) -> Iterable[Path]:
-    if is_stage_batch_root(root):
-        yield from sorted((root / "runs").glob("*"))
-        return
-    if is_train_eval_pipeline_root(root):
-        for stage_root in sorted((root / "stage_batches").glob("*")):
-            runs_dir = stage_root / "runs"
-            if runs_dir.exists():
-                yield from sorted(runs_dir.glob("*"))
-        return
-    raise FileNotFoundError(f"Not a stage batch or train/eval pipeline root: {root}")
-
-
-def collect_stage_statuses(root: Path) -> list[StageStatusRecord]:
-    statuses: list[StageStatusRecord] = []
-    for run_dir in iter_stage_run_dirs(root):
-        status = read_stage_status(run_dir)
-        if status is not None:
-            statuses.append(status)
-    return statuses
 
 
 def load_stage_outputs(run_dir: Path) -> dict[str, Any] | None:

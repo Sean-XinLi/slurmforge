@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..root_model import is_stage_batch_root, is_train_eval_pipeline_root
 from ..slurm import SlurmClient
 from ..status import reconcile_stage_batch_with_slurm
-from ..storage.loader import is_stage_batch_root, is_train_eval_pipeline_root, load_execution_stage_batch_plan
+from ..storage.loader import load_execution_stage_batch_plan
 from .ledger import submitted_group_job_ids
 
 

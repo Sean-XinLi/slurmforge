@@ -3,7 +3,7 @@ from __future__ import annotations
 import shlex
 
 from ...plans import StageInstancePlan
-from ...schema import InputBinding
+from ...contracts import InputBinding
 from ..bindings import binding_injected_value
 from .args import args_to_argv, flag
 from .command import command_entry_command, python_script_command

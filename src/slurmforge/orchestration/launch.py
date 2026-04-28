@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ..emit import write_controller_submit_file
 from ..plans import SourcedStageBatchPlan
-from ..read_models.status import refresh_stage_batch_status, refresh_train_eval_pipeline_status
+from ..root_model import refresh_stage_batch_status, refresh_train_eval_pipeline_status
 from ..spec import ExperimentSpec
 from ..storage.batch_layout import write_stage_batch_layout
 from ..storage.train_eval_pipeline_layout import write_train_eval_pipeline_layout
