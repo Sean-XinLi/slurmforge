@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ...config_contract.workflows import STAGE_EVAL, STAGE_TRAIN
 from .common import JsonObject
 from .environment import EnvironmentSpec
 from .notifications import NotificationsSpec
@@ -46,5 +47,5 @@ class ExperimentSpec:
         stages = self.enabled_stages
         if selected is not None:
             stages = {name: stage for name, stage in stages.items() if name in selected}
-        order = [name for name in ("train", "eval") if name in stages]
+        order = [name for name in (STAGE_TRAIN, STAGE_EVAL) if name in stages]
         return tuple(order)

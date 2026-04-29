@@ -104,6 +104,39 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                     violations.append(f"{path}:{node.lineno} imports {module}")
         self.assertEqual(violations, [])
 
+    def test_record_contract_layers_do_not_import_config_schema(self) -> None:
+        blocked = "slurmforge.config_schema"
+        violations: list[str] = []
+        for package in ("contracts", "sizing"):
+            for path in sorted(Path("src/slurmforge", package).rglob("*.py")):
+                tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+                for node in ast.iter_child_nodes(tree):
+                    if not isinstance(node, ast.ImportFrom):
+                        continue
+                    module = absolute_import_module(path, node)
+                    if module == blocked or module.startswith(f"{blocked}."):
+                        violations.append(f"{path}:{node.lineno} imports {module}")
+        self.assertEqual(violations, [])
+
+    def test_internal_code_imports_config_contract_not_legacy_defaults_facade(
+        self,
+    ) -> None:
+        violations: list[str] = []
+        root = Path("src/slurmforge")
+        self.assertFalse((root / "defaults.py").exists())
+        for path in sorted(root.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.iter_child_nodes(tree):
+                modules: list[str] = []
+                if isinstance(node, ast.ImportFrom):
+                    modules.append(absolute_import_module(path, node))
+                elif isinstance(node, ast.Import):
+                    modules.extend(alias.name for alias in node.names)
+                for module in modules:
+                    if module == "slurmforge.defaults":
+                        violations.append(f"{path}:{node.lineno} imports {module}")
+        self.assertEqual(violations, [])
+
     def test_plans_do_not_import_spec_or_schema(self) -> None:
         blocked = {".".join(("slurmforge", "spec")), ".".join(("slurmforge", "schema"))}
         violations: list[str] = []

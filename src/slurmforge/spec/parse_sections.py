@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 
+from ..config_contract.workflows import STAGE_EVAL, STAGE_TRAIN
 from ..config_schema import (
     allowed_stage_keys,
     allowed_top_level_keys,
@@ -68,7 +69,8 @@ def parse_experiment_spec(
     if unknown_stages:
         joined = ", ".join(str(item) for item in unknown_stages)
         raise ConfigContractError(
-            f"Unsupported stage keys: {joined}. Stage-batch v1 only supports train and eval"
+            f"Unsupported stage keys: {joined}. "
+            f"Supported stages: {STAGE_TRAIN}, {STAGE_EVAL}"
         )
     stages = {
         str(name): parse_stage(str(name), stage_raw)
@@ -77,9 +79,13 @@ def parse_experiment_spec(
     enabled = {name: stage for name, stage in stages.items() if stage.enabled}
     if not enabled:
         raise ConfigContractError("At least one stage must be enabled")
-    if "eval" in enabled and "train" not in enabled and enabled["eval"].depends_on:
+    if (
+        STAGE_EVAL in enabled
+        and STAGE_TRAIN not in enabled
+        and enabled[STAGE_EVAL].depends_on
+    ):
         raise ConfigContractError(
-            "`stages.eval.depends_on` requires enabled `stages.train`"
+            f"`stages.{STAGE_EVAL}.depends_on` requires enabled `stages.{STAGE_TRAIN}`"
         )
     for name, stage in enabled.items():
         for dep in stage.depends_on:

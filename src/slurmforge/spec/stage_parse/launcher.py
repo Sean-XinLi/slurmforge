@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+from ...config_contract.defaults import DEFAULT_STAGE_LAUNCHER_TYPE
 from ...config_schema import reject_unknown_config_keys
 from ..models import LauncherSpec
 from ..parse_common import optional_mapping
@@ -15,7 +16,7 @@ def parse_launcher(raw: Any, *, name: str) -> LauncherSpec:
         data.get("rendezvous"), f"stages.{name}.launcher.rendezvous"
     )
     reject_unknown_config_keys(rendezvous, parent=f"stages.{name}.launcher.rendezvous")
-    launcher_type = str(data.get("type") or "single")
+    launcher_type = str(data.get("type") or DEFAULT_STAGE_LAUNCHER_TYPE)
     options = copy.deepcopy(data)
     options.pop("type", None)
     return LauncherSpec(type=launcher_type, options=options)

@@ -1,8 +1,26 @@
 from __future__ import annotations
 
+from ..config_contract.defaults import (
+    DEFAULT_LAUNCHER_MODE,
+    DEFAULT_LAUNCHER_NNODES,
+    DEFAULT_LAUNCHER_NPROC_PER_NODE,
+    DEFAULT_RENDEZVOUS_PORT,
+)
+from ..config_contract.options import (
+    ENTRY_COMMAND,
+    ENTRY_PYTHON_SCRIPT,
+    LAUNCHER_COMMAND,
+    LAUNCHER_MODE_MULTI_NODE,
+    LAUNCHER_MODE_SINGLE_NODE,
+    LAUNCHER_MPIRUN,
+    LAUNCHER_SINGLE,
+    LAUNCHER_SRUN,
+    LAUNCHER_TORCHRUN,
+    options_for,
+    options_sentence,
+)
 from ..errors import ConfigContractError
 from ..sizing.models import GpuSizingResolution
-from ..config_schema import options_for, options_sentence
 from .models import StageSpec
 from .validation_common import explicit_int, require_port
 
@@ -15,13 +33,13 @@ def validate_launcher_contract(
             f"`stages.{stage.name}.launcher.type` must be "
             f"{options_sentence('stages.*.launcher.type')}"
         )
-    if stage.launcher.type == "torchrun":
+    if stage.launcher.type == LAUNCHER_TORCHRUN:
         _validate_torchrun_launcher(stage, sizing_resolution=sizing_resolution)
-    if stage.entry.type == "command" and stage.launcher.type not in {
-        "single",
-        "command",
-        "srun",
-        "mpirun",
+    if stage.entry.type == ENTRY_COMMAND and stage.launcher.type not in {
+        LAUNCHER_SINGLE,
+        LAUNCHER_COMMAND,
+        LAUNCHER_SRUN,
+        LAUNCHER_MPIRUN,
     }:
         raise ConfigContractError(
             f"`stages.{stage.name}.launcher.type={stage.launcher.type}` cannot wrap command entries"
@@ -31,29 +49,33 @@ def validate_launcher_contract(
 def _validate_torchrun_launcher(
     stage: StageSpec, *, sizing_resolution: GpuSizingResolution
 ) -> None:
-    if stage.entry.type != "python_script":
+    if stage.entry.type != ENTRY_PYTHON_SCRIPT:
         raise ConfigContractError(
             f"`stages.{stage.name}.launcher.type=torchrun` requires a python_script entry"
         )
     mode = str(
         stage.launcher.options.get("mode")
-        or ("multi_node" if stage.resources.nodes > 1 else "single_node")
+        or (
+            LAUNCHER_MODE_MULTI_NODE
+            if stage.resources.nodes > 1
+            else DEFAULT_LAUNCHER_MODE
+        )
     )
     if mode not in options_for("stages.*.launcher.mode"):
         raise ConfigContractError(
             f"`stages.{stage.name}.launcher.mode` must be "
             f"{options_sentence('stages.*.launcher.mode')}"
         )
-    if mode == "single_node" and stage.resources.nodes != 1:
+    if mode == LAUNCHER_MODE_SINGLE_NODE and stage.resources.nodes != 1:
         raise ConfigContractError(
             f"`stages.{stage.name}.launcher.mode=single_node` requires resources.nodes == 1"
         )
-    if mode == "multi_node" and stage.resources.nodes < 2:
+    if mode == LAUNCHER_MODE_MULTI_NODE and stage.resources.nodes < 2:
         raise ConfigContractError(
             f"`stages.{stage.name}.launcher.mode=multi_node` requires resources.nodes >= 2"
         )
     nnodes = explicit_int(
-        stage.launcher.options.get("nnodes", "auto"),
+        stage.launcher.options.get("nnodes", DEFAULT_LAUNCHER_NNODES),
         field=f"stages.{stage.name}.launcher.nnodes",
     )
     if nnodes is not None and nnodes != stage.resources.nodes:
@@ -61,7 +83,7 @@ def _validate_torchrun_launcher(
             f"`stages.{stage.name}.launcher.nnodes` must equal resources.nodes ({stage.resources.nodes})"
         )
     nproc_per_node = explicit_int(
-        stage.launcher.options.get("nproc_per_node", "auto"),
+        stage.launcher.options.get("nproc_per_node", DEFAULT_LAUNCHER_NPROC_PER_NODE),
         field=f"stages.{stage.name}.launcher.nproc_per_node",
     )
     if nproc_per_node is not None:
@@ -83,6 +105,6 @@ def _validate_torchrun_launcher(
             f"`stages.{stage.name}.launcher.rendezvous` must be a mapping"
         )
     require_port(
-        rendezvous.get("port", 29500),
+        rendezvous.get("port", DEFAULT_RENDEZVOUS_PORT),
         field=f"stages.{stage.name}.launcher.rendezvous.port",
     )

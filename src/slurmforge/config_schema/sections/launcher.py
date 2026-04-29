@@ -2,8 +2,18 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import ALL_STARTER_TEMPLATES
-from ..models import ConfigField, ConfigOption
+from ...config_contract.defaults import (
+    DEFAULT_LAUNCHER_MODE,
+    DEFAULT_LAUNCHER_NNODES,
+    DEFAULT_LAUNCHER_NPROC_PER_NODE,
+    DEFAULT_RENDEZVOUS_BACKEND,
+    DEFAULT_RENDEZVOUS_ENDPOINT,
+    DEFAULT_RENDEZVOUS_PORT,
+    DEFAULT_STAGE_LAUNCHER_TYPE,
+)
+from ...config_contract.options import LAUNCHER_MODES, LAUNCHER_TYPES
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
+from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -14,15 +24,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Launcher",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="single",
-        options=(
-            ConfigOption("single", "Run one process directly."),
-            ConfigOption("python", "Launch through Python."),
-            ConfigOption("torchrun", "Launch distributed PyTorch."),
-            ConfigOption("srun", "Launch through Slurm srun."),
-            ConfigOption("mpirun", "Launch through MPI."),
-            ConfigOption("command", "Launch a raw command."),
-        ),
+        default_value=DEFAULT_STAGE_LAUNCHER_TYPE,
+        options=LAUNCHER_TYPES,
     ),
     ConfigField(
         path="stages.*.launcher.mode",
@@ -32,11 +35,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Launcher",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="single_node",
-        options=(
-            ConfigOption("single_node", "Launch on one node."),
-            ConfigOption("multi_node", "Launch across multiple nodes."),
-        ),
+        default_value=DEFAULT_LAUNCHER_MODE,
+        options=LAUNCHER_MODES,
     ),
     ConfigField(
         path="stages.*.launcher.nnodes",
@@ -47,7 +47,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer-or-auto",
         templates=ALL_STARTER_TEMPLATES,
-        default="auto",
+        default_value=DEFAULT_LAUNCHER_NNODES,
     ),
     ConfigField(
         path="stages.*.launcher.nproc_per_node",
@@ -58,7 +58,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer-or-auto",
         templates=ALL_STARTER_TEMPLATES,
-        default="auto",
+        default_value=DEFAULT_LAUNCHER_NPROC_PER_NODE,
     ),
     ConfigField(
         path="stages.*.launcher.rendezvous",
@@ -69,7 +69,10 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
-        default="backend=c10d, endpoint=auto, port=29500",
+        default_display=(
+            f"backend={DEFAULT_RENDEZVOUS_BACKEND}, "
+            f"endpoint={DEFAULT_RENDEZVOUS_ENDPOINT}, port={DEFAULT_RENDEZVOUS_PORT}"
+        ),
     ),
     ConfigField(
         path="stages.*.launcher.rendezvous.backend",
@@ -79,7 +82,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Launcher",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="c10d",
+        default_value=DEFAULT_RENDEZVOUS_BACKEND,
     ),
     ConfigField(
         path="stages.*.launcher.rendezvous.endpoint",
@@ -89,7 +92,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Launcher",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="auto",
+        default_value=DEFAULT_RENDEZVOUS_ENDPOINT,
     ),
     ConfigField(
         path="stages.*.launcher.rendezvous.port",
@@ -100,7 +103,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="port",
         templates=ALL_STARTER_TEMPLATES,
-        default="29500",
+        default_value=DEFAULT_RENDEZVOUS_PORT,
     ),
     ConfigField(
         path="stages.*.launcher.args",
@@ -111,7 +114,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
-        default="[]",
+        default_display="[]",
     ),
     ConfigField(
         path="stages.*.launcher.srun_args",
@@ -122,6 +125,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
-        default="[]",
+        default_display="[]",
     ),
 )

@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-
-@dataclass(frozen=True)
-class ConfigOption:
-    value: str
-    description: str
+from ..config_contract.options import ConfigOption
 
 
 @dataclass(frozen=True)
@@ -20,7 +17,8 @@ class ConfigField:
     value_type: str = "value"
     required: bool | None = False
     templates: tuple[str, ...] = ()
-    default: str | None = None
+    default_value: Any = None
+    default_display: str | None = None
     options: tuple[ConfigOption, ...] = ()
     yaml_comment: str | None = None
     first_edit: bool = False

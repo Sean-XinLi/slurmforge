@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from textwrap import dedent
 
-from ..defaults import TEMPLATE_TRAIN_EVAL
+from ..config_contract.workflows import TEMPLATE_TRAIN_EVAL
 from . import InitRequest
 from .catalog import get_template
 from .config_yaml import render_starter_config

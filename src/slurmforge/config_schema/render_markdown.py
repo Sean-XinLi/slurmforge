@@ -68,7 +68,7 @@ def render_global_field_reference() -> str:
             f"{_field_value_type(field)} | "
             f"{_required_text(field)} | "
             f"{field.level} | "
-            f"{_cell(field.default)} | "
+            f"{_cell(_default_display(field))} | "
             f"{_cell(_options_text(field))} | "
             f"{_cell(field.short_help)} | "
             f"{_cell(field.when_to_change)} |"
@@ -85,8 +85,8 @@ def _render_field_block(field: ConfigField) -> list[str]:
         f"- Type: `{_field_value_type(field)}`",
         f"- Required: {_required_text(field)}",
         f"- Level: `{field.level}`",
-        f"- Default: `{field.default}`"
-        if field.default is not None
+        f"- Default: `{_default_display(field)}`"
+        if _default_display(field) is not None
         else "- Default: template-specific",
         f"- When to change: {field.when_to_change}",
     ]
@@ -132,6 +132,16 @@ def _required_text(field: ConfigField) -> str:
     if field.required is False:
         return "no"
     return "contextual"
+
+
+def _default_display(field: ConfigField) -> str | None:
+    if field.default_display is not None:
+        return field.default_display
+    if field.default_value is None:
+        return None
+    if isinstance(field.default_value, bool):
+        return str(field.default_value).lower()
+    return str(field.default_value)
 
 
 def _cell(value: str | None) -> str:

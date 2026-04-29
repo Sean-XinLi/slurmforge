@@ -2,14 +2,28 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import (
-    ALL_STARTER_TEMPLATES,
+from ...config_contract.defaults import (
     DEFAULT_CHECKPOINT_PATH,
+    DEFAULT_INPUT_EXPECTS,
+    DEFAULT_INPUT_INJECT_MODE,
+    DEFAULT_OUTPUT_DISCOVER_SELECT,
+    DEFAULT_OUTPUT_REQUIRED,
+)
+from ...config_contract.options import (
+    INPUT_EXPECTS,
+    INPUT_INJECT_MODES,
+    INPUT_SOURCE_KINDS,
+    OUTPUT_KINDS,
+    OUTPUT_SELECTORS,
+)
+from ...config_contract.workflows import (
+    ALL_STARTER_TEMPLATES,
     EVAL_TEMPLATES,
+    STAGE_TRAIN,
     TEMPLATE_TRAIN_EVAL,
     TRAIN_TEMPLATES,
 )
-from ..models import ConfigField, ConfigOption
+from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -21,7 +35,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="list",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default="template-specific",
+        default_display="template-specific",
         required=False,
     ),
     ConfigField(
@@ -32,7 +46,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="common",
         templates=TRAIN_TEMPLATES,
-        default="checkpoints/**/*.pt",
+        default_display="checkpoints/**/*.pt",
         first_edit=True,
     ),
     ConfigField(
@@ -43,7 +57,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="common",
         templates=EVAL_TEMPLATES,
-        default="template-specific",
+        default_display="template-specific",
         first_edit=True,
     ),
     ConfigField(
@@ -54,7 +68,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="common",
         templates=EVAL_TEMPLATES,
-        default="eval/metrics.json $.accuracy",
+        default_display="eval/metrics.json $.accuracy",
         first_edit=True,
     ),
     ConfigField(
@@ -65,11 +79,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=EVAL_TEMPLATES,
-        default="template-specific",
-        options=(
-            ConfigOption("upstream_output", "Read an output from a previous stage."),
-            ConfigOption("external_path", "Read an explicit user-provided path."),
-        ),
+        default_display="template-specific",
+        options=INPUT_SOURCE_KINDS,
         required=True,
     ),
     ConfigField(
@@ -80,7 +91,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default="train",
+        default_display=STAGE_TRAIN,
         required=None,
     ),
     ConfigField(
@@ -91,7 +102,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default="checkpoint",
+        default_display="checkpoint",
         required=None,
     ),
     ConfigField(
@@ -103,7 +114,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="path",
         templates=EVAL_TEMPLATES,
-        default=DEFAULT_CHECKPOINT_PATH,
+        default_display=DEFAULT_CHECKPOINT_PATH,
         required=None,
     ),
     ConfigField(
@@ -114,12 +125,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=EVAL_TEMPLATES,
-        default="path",
-        options=(
-            ConfigOption("path", "Inject a filesystem path."),
-            ConfigOption("manifest", "Inject a manifest payload."),
-            ConfigOption("value", "Inject a scalar value."),
-        ),
+        default_value=DEFAULT_INPUT_EXPECTS,
+        options=INPUT_EXPECTS,
         required=False,
     ),
     ConfigField(
@@ -131,7 +138,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="boolean",
         templates=EVAL_TEMPLATES,
-        default="false",
+        default_value=False,
         required=False,
     ),
     ConfigField(
@@ -142,12 +149,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=EVAL_TEMPLATES,
-        default="path",
-        options=(
-            ConfigOption("path", "Pass the resolved input path."),
-            ConfigOption("value", "Pass the resolved input value."),
-            ConfigOption("json", "Pass the resolved input encoded as JSON."),
-        ),
+        default_value=DEFAULT_INPUT_INJECT_MODE,
+        options=INPUT_INJECT_MODES,
         required=False,
     ),
     ConfigField(
@@ -158,7 +161,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="common",
         templates=EVAL_TEMPLATES,
-        default="checkpoint_path",
+        default_display="checkpoint_path",
         required=False,
     ),
     ConfigField(
@@ -169,7 +172,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=EVAL_TEMPLATES,
-        default="SFORGE_INPUT_CHECKPOINT",
+        default_display="SFORGE_INPUT_CHECKPOINT",
         required=False,
     ),
     ConfigField(
@@ -180,13 +183,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="template-specific",
-        options=(
-            ConfigOption("file", "One managed file."),
-            ConfigOption("files", "Multiple discovered files."),
-            ConfigOption("metric", "A metric value read from JSON."),
-            ConfigOption("manifest", "A manifest JSON file."),
-        ),
+        default_display="template-specific",
+        options=OUTPUT_KINDS,
         required=True,
     ),
     ConfigField(
@@ -198,7 +196,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="boolean",
         templates=ALL_STARTER_TEMPLATES,
-        default="false",
+        default_value=DEFAULT_OUTPUT_REQUIRED,
         required=False,
     ),
     ConfigField(
@@ -210,7 +208,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="path",
         templates=EVAL_TEMPLATES,
-        default="eval/metrics.json",
+        default_display="eval/metrics.json",
         required=False,
     ),
     ConfigField(
@@ -221,7 +219,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="common",
         templates=EVAL_TEMPLATES,
-        default="$.accuracy",
+        default_display="$.accuracy",
         required=False,
     ),
     ConfigField(
@@ -233,7 +231,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="list",
         templates=TRAIN_TEMPLATES,
-        default="checkpoints/**/*.pt",
+        default_display="checkpoints/**/*.pt",
         required=False,
     ),
     ConfigField(
@@ -244,12 +242,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=TRAIN_TEMPLATES,
-        default="latest_step",
-        options=(
-            ConfigOption("latest_step", "Pick the path with the highest step number."),
-            ConfigOption("first", "Pick the first sorted match."),
-            ConfigOption("last", "Pick the last sorted match."),
-        ),
+        default_value=DEFAULT_OUTPUT_DISCOVER_SELECT,
+        options=OUTPUT_SELECTORS,
         required=False,
     ),
 )

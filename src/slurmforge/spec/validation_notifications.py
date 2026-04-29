@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..errors import ConfigContractError
-from ..config_schema import options_for, options_sentence
+from ..config_contract.options import options_for, options_sentence
 from .models import ExperimentSpec
 from .validation_common import reject_newline
 

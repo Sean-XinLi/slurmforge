@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import (
-    ALL_STARTER_TEMPLATES,
+from ...config_contract.defaults import (
+    DEFAULT_EXECUTOR_MODULE,
     DEFAULT_PYTHON_BIN,
+    DEFAULT_PYTHON_MIN_VERSION,
 )
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
@@ -17,7 +19,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runtime",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="[]",
+        default_display="[]",
         required=False,
     ),
     ConfigField(
@@ -28,7 +30,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runtime",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="[]",
+        default_display="[]",
         required=False,
     ),
     ConfigField(
@@ -40,7 +42,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="path",
         templates=ALL_STARTER_TEMPLATES,
-        default="template-specific",
+        default_display="template-specific",
         required=True,
     ),
     ConfigField(
@@ -52,7 +54,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
-        default="[]",
+        default_display="[]",
         required=False,
     ),
     ConfigField(
@@ -63,7 +65,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runtime",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="{}",
+        default_display="{}",
         required=False,
     ),
     ConfigField(
@@ -74,7 +76,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runtime",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default=DEFAULT_PYTHON_BIN,
+        default_value=DEFAULT_PYTHON_BIN,
         required=True,
         first_edit=True,
     ),
@@ -87,7 +89,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="version",
         templates=ALL_STARTER_TEMPLATES,
-        default="3.10",
+        default_value=DEFAULT_PYTHON_MIN_VERSION,
         required=False,
     ),
     ConfigField(
@@ -99,7 +101,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="python-module",
         templates=ALL_STARTER_TEMPLATES,
-        default="slurmforge.executor.stage",
+        default_value=DEFAULT_EXECUTOR_MODULE,
         required=False,
     ),
     ConfigField(
@@ -110,7 +112,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runtime",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default=DEFAULT_PYTHON_BIN,
+        default_value=DEFAULT_PYTHON_BIN,
         required=True,
         first_edit=True,
     ),
@@ -123,7 +125,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="version",
         templates=ALL_STARTER_TEMPLATES,
-        default="3.10",
+        default_value=DEFAULT_PYTHON_MIN_VERSION,
         required=False,
     ),
     ConfigField(
@@ -135,7 +137,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
-        default="{}",
+        default_display="{}",
         required=False,
     ),
 )

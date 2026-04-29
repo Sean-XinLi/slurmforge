@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from math import ceil
 
-from ..config_schema import options_for, options_sentence
+from ..config_contract.defaults import AUTO_VALUE
+from ..config_contract.options import options_for, options_sentence
 from ..errors import ConfigContractError
 from .models import (
     GpuHardwareProfile,
@@ -14,7 +15,7 @@ from .models import StageGpuSizingPolicy
 
 
 def _is_auto(value: int | str) -> bool:
-    return str(value).lower() == "auto"
+    return str(value).lower() == AUTO_VALUE
 
 
 def _ceil_to(value: int, quantum: int) -> int:
@@ -135,7 +136,7 @@ def resolve_stage_gpu_sizing(
         )
 
     return GpuSizingResolution(
-        mode="auto",
+        mode=AUTO_VALUE,
         stage_name=stage_name,
         nodes=nodes,
         gpu_type=gpu_type,

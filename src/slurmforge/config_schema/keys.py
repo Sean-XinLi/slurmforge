@@ -5,9 +5,10 @@ from functools import lru_cache
 from typing import Any
 
 from ..errors import ConfigContractError
+from ..config_contract.workflows import SUPPORTED_STAGE_KEYS
 from .fields import CONFIG_FIELDS
 
-_STAGE_KEYS = frozenset({"train", "eval"})
+_STAGE_KEYS = SUPPORTED_STAGE_KEYS
 _DYNAMIC_PARENT_KEYS = frozenset(
     {
         "environments",
@@ -23,10 +24,6 @@ _DYNAMIC_PARENT_KEYS = frozenset(
         "environments.*.env",
     }
 )
-_EXTRA_ALLOWED_KEYS = {
-    "stages.*.outputs.*": frozenset({"schema_version"}),
-    "stages.*.outputs.*.discover": frozenset({"schema_version"}),
-}
 
 
 def allowed_top_level_keys() -> set[str]:
@@ -100,8 +97,6 @@ def _allowed_key_map() -> dict[str, frozenset[str]]:
     keys: dict[str, set[str]] = {"<root>": set()}
     for field in CONFIG_FIELDS:
         _add_path(keys, field.path)
-    for parent, children in _EXTRA_ALLOWED_KEYS.items():
-        keys.setdefault(parent, set()).update(children)
     for parent in _DYNAMIC_PARENT_KEYS:
         keys.setdefault(parent, set())
     return {parent: frozenset(children) for parent, children in keys.items()}

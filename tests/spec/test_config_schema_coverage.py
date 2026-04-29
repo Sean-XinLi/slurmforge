@@ -29,6 +29,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
 
     def test_schema_carries_required_and_enum_contracts(self) -> None:
         from slurmforge.config_schema import all_fields
+        from slurmforge.config_contract.options import OPTIONS_BY_PATH
 
         by_path = {field.path: field for field in all_fields()}
         required_counts = Counter(field.required for field in all_fields())
@@ -49,6 +50,12 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
             [option.value for option in by_path["stages.*.launcher.type"].options],
             ["single", "python", "torchrun", "srun", "mpirun", "command"],
         )
+        enum_mismatches = {
+            field.path: field.options
+            for field in all_fields()
+            if field.options and field.options != OPTIONS_BY_PATH[field.path]
+        }
+        self.assertEqual(enum_mismatches, {})
 
     def test_key_registry_exposes_current_config_surface(self) -> None:
         from slurmforge.config_schema import (
@@ -104,11 +111,11 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         )
         self.assertEqual(
             allowed_keys("stages.train.outputs.checkpoint"),
-            {"schema_version", "kind", "required", "discover", "file", "json_path"},
+            {"kind", "required", "discover", "file", "json_path"},
         )
         self.assertEqual(
             allowed_keys("stages.train.outputs.checkpoint.discover"),
-            {"schema_version", "globs", "select"},
+            {"globs", "select"},
         )
         self.assertTrue(is_dynamic_parent("runs.axes"))
         self.assertTrue(is_dynamic_parent("stages.train.entry.args"))

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from ...config_schema import render_first_edit_list
-from ...defaults import (
-    DEFAULT_CONFIG_FILENAME,
-    DEFAULT_STORAGE_ROOT,
+from ...config_contract.defaults import DEFAULT_CONFIG_FILENAME, DEFAULT_STORAGE_ROOT
+from ...config_contract.workflows import (
     TEMPLATE_EVAL_CHECKPOINT,
     TEMPLATE_TRAIN_EVAL,
     TEMPLATE_TRAIN_ONLY,
 )
+from ...config_schema import render_first_edit_list
 from ..models import InitRequest, StarterCommandSet, StarterReadmePlan
 
 

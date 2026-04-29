@@ -3,6 +3,17 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+from ..config_contract.defaults import (
+    DEFAULT_CONTROLLER_CPUS,
+    DEFAULT_CONTROLLER_ENVIRONMENT,
+    DEFAULT_CONTROLLER_MEM,
+    DEFAULT_CONTROLLER_TIME_LIMIT,
+    DEFAULT_ENVIRONMENT_NAME,
+    DEFAULT_EXECUTOR_MODULE,
+    DEFAULT_PYTHON_MIN_VERSION,
+    DEFAULT_RUNTIME_NAME,
+    DEFAULT_STAGE_RESOURCES_PARTITION,
+)
 from ..config_schema import reject_unknown_config_keys
 from ..errors import ConfigContractError
 from .models import (
@@ -25,7 +36,7 @@ def parse_python_runtime(raw: Any, *, name: str) -> PythonRuntimeSpec:
         raise ConfigContractError(f"`{name}.bin` is required")
     return PythonRuntimeSpec(
         bin=str(data["bin"]),
-        min_version=str(data.get("min_version") or "3.10"),
+        min_version=str(data.get("min_version") or DEFAULT_PYTHON_MIN_VERSION),
     )
 
 
@@ -34,7 +45,7 @@ def parse_executor_runtime(raw: Any) -> ExecutorRuntimeSpec:
     reject_unknown_config_keys(data, parent="runtime.executor")
     return ExecutorRuntimeSpec(
         python=parse_python_runtime(data.get("python"), name="runtime.executor.python"),
-        executor_module=str(data.get("module") or "slurmforge.executor.stage"),
+        executor_module=str(data.get("module") or DEFAULT_EXECUTOR_MODULE),
     )
 
 
@@ -55,8 +66,8 @@ def parse_runtime(raw: Any) -> RuntimeSpec:
         str(name): parse_user_runtime(value, name=f"runtime.user.{name}")
         for name, value in sorted(user_raw.items())
     }
-    if "default" not in user:
-        raise ConfigContractError("`runtime.user.default` is required")
+    if DEFAULT_RUNTIME_NAME not in user:
+        raise ConfigContractError(f"`runtime.user.{DEFAULT_RUNTIME_NAME}` is required")
     return RuntimeSpec(
         executor=parse_executor_runtime(data.get("executor")),
         user=user,
@@ -112,6 +123,10 @@ def parse_environments(raw: Any) -> dict[str, EnvironmentSpec]:
                 optional_mapping(env_data.get("env"), f"environments.{env_name}.env")
             ),
         )
+    if DEFAULT_ENVIRONMENT_NAME not in parsed:
+        parsed[DEFAULT_ENVIRONMENT_NAME] = EnvironmentSpec(
+            name=DEFAULT_ENVIRONMENT_NAME
+        )
     return parsed
 
 
@@ -122,18 +137,26 @@ def parse_orchestration(raw: Any) -> OrchestrationSpec:
     reject_unknown_config_keys(controller, parent="orchestration.controller")
     return OrchestrationSpec(
         controller=ControllerSpec(
-            partition=None
-            if controller.get("partition") in (None, "")
-            else str(controller.get("partition")),
-            cpus=int(controller.get("cpus", 1) or 1),
-            mem=None
-            if controller.get("mem") in (None, "")
-            else str(controller.get("mem")),
-            time_limit=None
-            if controller.get("time_limit") in (None, "")
-            else str(controller.get("time_limit")),
-            environment=""
-            if controller.get("environment") in (None, "")
-            else str(controller.get("environment")),
+            partition=(
+                DEFAULT_STAGE_RESOURCES_PARTITION
+                if controller.get("partition") in (None, "")
+                else str(controller.get("partition"))
+            ),
+            cpus=int(controller.get("cpus", DEFAULT_CONTROLLER_CPUS)),
+            mem=(
+                DEFAULT_CONTROLLER_MEM
+                if controller.get("mem") in (None, "")
+                else str(controller.get("mem"))
+            ),
+            time_limit=(
+                DEFAULT_CONTROLLER_TIME_LIMIT
+                if controller.get("time_limit") in (None, "")
+                else str(controller.get("time_limit"))
+            ),
+            environment=(
+                DEFAULT_CONTROLLER_ENVIRONMENT
+                if controller.get("environment") in (None, "")
+                else str(controller.get("environment"))
+            ),
         )
     )

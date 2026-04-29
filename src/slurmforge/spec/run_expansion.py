@@ -4,17 +4,18 @@ import copy
 import itertools
 from typing import Any
 
+from ..config_contract.options import RUN_CASES, RUN_MATRIX, RUN_SINGLE
 from ..contracts import RunDefinition
 from .models import ExperimentSpec
 from .run_ids import matrix_run_id_for, run_id_for, validate_case_run_id
 
 
 def iter_run_overrides(spec: ExperimentSpec) -> tuple[dict[str, Any], ...]:
-    if spec.runs.type == "single":
+    if spec.runs.type == RUN_SINGLE:
         return ({},)
-    if spec.runs.type == "cases":
+    if spec.runs.type == RUN_CASES:
         return tuple(copy.deepcopy(case.set) for case in spec.runs.cases)
-    if spec.runs.type == "matrix":
+    if spec.runs.type == RUN_MATRIX:
         return tuple(
             copy.deepcopy(overrides)
             for _case_name, _combo_index, overrides in _matrix_run_expansions(spec)
@@ -23,14 +24,14 @@ def iter_run_overrides(spec: ExperimentSpec) -> tuple[dict[str, Any], ...]:
 
 
 def expand_run_definitions(spec: ExperimentSpec) -> tuple[RunDefinition, ...]:
-    if spec.runs.type == "matrix":
+    if spec.runs.type == RUN_MATRIX:
         return _expand_matrix_run_definitions(spec)
     runs: list[RunDefinition] = []
     overrides = iter_run_overrides(spec)
     for index, run_overrides in enumerate(overrides, start=1):
         run_id = (
             validate_case_run_id(spec.runs.cases[index - 1].name)
-            if spec.runs.type == "cases"
+            if spec.runs.type == RUN_CASES
             else run_id_for(index, run_overrides, spec.spec_snapshot_digest)
         )
         runs.append(

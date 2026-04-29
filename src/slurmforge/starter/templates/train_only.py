@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...config_contract.defaults import DEFAULT_CONFIG_FILENAME
+from ...config_contract.workflows import STAGE_TRAIN, TEMPLATE_TRAIN_ONLY
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
-from ...defaults import DEFAULT_CONFIG_FILENAME, TEMPLATE_TRAIN_ONLY
 from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import train_script
@@ -12,7 +13,7 @@ from .stage_specs import train_stage
 
 def build_config(_request: InitRequest) -> dict[str, Any]:
     config = base_config()
-    config["stages"] = {"train": train_stage()}
+    config["stages"] = {STAGE_TRAIN: train_stage()}
     return config
 
 

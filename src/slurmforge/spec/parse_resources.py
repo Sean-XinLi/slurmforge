@@ -3,6 +3,16 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+from ..config_contract.defaults import (
+    AUTO_VALUE,
+    DEFAULT_GPU_SIZING_ROUND_TO,
+    DEFAULT_GPU_SIZING_SAFETY_FACTOR,
+    DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK,
+    DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
+    DEFAULT_STAGE_RESOURCES_NODES,
+    DEFAULT_STAGE_RESOURCES_PARTITION,
+    DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
+)
 from ..config_schema import reject_unknown_config_keys
 from .models import (
     GpuSizingDefaultsSpec,
@@ -22,26 +32,32 @@ def parse_resources(raw: Any, *, name: str) -> ResourceSpec:
         extra_args = (extra,)
     else:
         extra_args = tuple(str(item) for item in extra)
-    raw_gpus_per_node = data.get("gpus_per_node", 0)
-    if str(raw_gpus_per_node).lower() == "auto":
-        gpus_per_node: int | str = "auto"
+    raw_gpus_per_node = data.get("gpus_per_node", DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE)
+    if str(raw_gpus_per_node).lower() == AUTO_VALUE:
+        gpus_per_node: int | str = AUTO_VALUE
     else:
         gpus_per_node = int(raw_gpus_per_node or 0)
     return ResourceSpec(
-        partition=None
-        if data.get("partition") in (None, "")
-        else str(data.get("partition")),
+        partition=(
+            DEFAULT_STAGE_RESOURCES_PARTITION
+            if data.get("partition") in (None, "")
+            else str(data.get("partition"))
+        ),
         account=None if data.get("account") in (None, "") else str(data.get("account")),
         qos=None if data.get("qos") in (None, "") else str(data.get("qos")),
-        time_limit=None
-        if data.get("time_limit") in (None, "")
-        else str(data.get("time_limit")),
+        time_limit=(
+            DEFAULT_STAGE_RESOURCES_TIME_LIMIT
+            if data.get("time_limit") in (None, "")
+            else str(data.get("time_limit"))
+        ),
         gpu_type=""
         if data.get("gpu_type") in (None, "")
         else str(data.get("gpu_type")),
-        nodes=int(data.get("nodes", 1)),
+        nodes=int(data.get("nodes", DEFAULT_STAGE_RESOURCES_NODES)),
         gpus_per_node=gpus_per_node,
-        cpus_per_task=int(data.get("cpus_per_task", 1)),
+        cpus_per_task=int(
+            data.get("cpus_per_task", DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK)
+        ),
         mem=None if data.get("mem") in (None, "") else str(data.get("mem")),
         constraint=None
         if data.get("constraint") in (None, "")
@@ -86,7 +102,13 @@ def parse_sizing(raw: Any) -> SizingSpec:
     reject_unknown_config_keys(defaults, parent="sizing.gpu.defaults")
     return SizingSpec(
         gpu=GpuSizingDefaultsSpec(
-            safety_factor=float(defaults.get("safety_factor", 1.0) or 1.0),
-            round_to=int(defaults.get("round_to", 1) or 1),
+            safety_factor=float(
+                defaults.get("safety_factor", DEFAULT_GPU_SIZING_SAFETY_FACTOR)
+                or DEFAULT_GPU_SIZING_SAFETY_FACTOR
+            ),
+            round_to=int(
+                defaults.get("round_to", DEFAULT_GPU_SIZING_ROUND_TO)
+                or DEFAULT_GPU_SIZING_ROUND_TO
+            ),
         )
     )

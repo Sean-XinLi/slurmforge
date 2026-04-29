@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ..config_contract.options import EMAIL_EVENT_BATCH_FINISHED
 from ..io import SchemaVersion, content_digest, read_json, write_json
 from ..plans.stage import StageBatchPlan
 from .sbatch_helpers import _q
@@ -51,7 +52,7 @@ def _notification_enabled(batch: StageBatchPlan, event: str) -> bool:
 
 
 def write_stage_notification_submit_file(
-    batch: StageBatchPlan, event: str = "batch_finished"
+    batch: StageBatchPlan, event: str = EMAIL_EVENT_BATCH_FINISHED
 ) -> Path:
     manifest = load_stage_submit_manifest(Path(batch.submission_root))
     generation_id = str(manifest["generation_id"])
@@ -133,18 +134,18 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
         submit_lines.append(f'printf "%s\\n" "{group_id}=${{{var_name}}}"')
         job_vars[group_id] = var_name
     notification_entries: list[dict[str, str]] = []
-    if _notification_enabled(batch, "batch_finished"):
+    if _notification_enabled(batch, EMAIL_EVENT_BATCH_FINISHED):
         notify_path = submit_dir / "notify_batch_finished.sbatch"
         notify_path.write_text(
             render_stage_notification_sbatch(
-                batch, "batch_finished", generation_id=generation_id
+                batch, EMAIL_EVENT_BATCH_FINISHED, generation_id=generation_id
             ),
             encoding="utf-8",
         )
         notify_path.chmod(0o755)
         notification_entries.append(
             {
-                "event": "batch_finished",
+                "event": EMAIL_EVENT_BATCH_FINISHED,
                 "sbatch_path": str(notify_path),
             }
         )

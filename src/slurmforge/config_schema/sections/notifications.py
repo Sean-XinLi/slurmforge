@@ -2,10 +2,17 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import (
-    ALL_STARTER_TEMPLATES,
+from ...config_contract.defaults import (
+    DEFAULT_EMAIL_ENABLED,
+    DEFAULT_EMAIL_EVENTS,
+    DEFAULT_EMAIL_FROM,
+    DEFAULT_EMAIL_MODE,
+    DEFAULT_EMAIL_SENDMAIL,
+    DEFAULT_EMAIL_SUBJECT_PREFIX,
 )
-from ..models import ConfigField, ConfigOption
+from ...config_contract.options import EMAIL_EVENTS, EMAIL_MODES
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
+from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -16,7 +23,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Notifications",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="false",
+        default_value=DEFAULT_EMAIL_ENABLED,
     ),
     ConfigField(
         path="notifications.email.to",
@@ -26,7 +33,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Notifications",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="[]",
+        default_display="[]",
     ),
     ConfigField(
         path="notifications.email.from",
@@ -36,7 +43,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Notifications",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="slurmforge@localhost",
+        default_value=DEFAULT_EMAIL_FROM,
     ),
     ConfigField(
         path="notifications.email.sendmail",
@@ -47,7 +54,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="path",
         templates=ALL_STARTER_TEMPLATES,
-        default="/usr/sbin/sendmail",
+        default_value=DEFAULT_EMAIL_SENDMAIL,
     ),
     ConfigField(
         path="notifications.email.subject_prefix",
@@ -57,7 +64,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Notifications",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="SlurmForge",
+        default_value=DEFAULT_EMAIL_SUBJECT_PREFIX,
     ),
     ConfigField(
         path="notifications.email.on",
@@ -67,16 +74,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Notifications",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="batch_finished",
-        options=(
-            ConfigOption(
-                "batch_finished", "Send after a stage batch reaches terminal state."
-            ),
-            ConfigOption(
-                "train_eval_pipeline_finished",
-                "Send after a train/eval pipeline reaches terminal state.",
-            ),
-        ),
+        default_display=", ".join(DEFAULT_EMAIL_EVENTS),
+        options=EMAIL_EVENTS,
     ),
     ConfigField(
         path="notifications.email.mode",
@@ -86,7 +85,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Notifications",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="summary",
-        options=(ConfigOption("summary", "Send a compact workflow summary."),),
+        default_value=DEFAULT_EMAIL_MODE,
+        options=EMAIL_MODES,
     ),
 )

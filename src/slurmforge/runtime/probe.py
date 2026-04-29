@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from ..defaults import DEFAULT_PYTHON_BIN
+from ..config_contract.defaults import DEFAULT_PYTHON_BIN, DEFAULT_PYTHON_MIN_VERSION
 from ..errors import RuntimeContractError
 from ..io import SchemaVersion
 
@@ -46,7 +46,7 @@ def _version_tuple(value: str) -> tuple[int, ...]:
 def probe_python_runtime(
     python_bin: str,
     *,
-    min_version: str = "3.10",
+    min_version: str = DEFAULT_PYTHON_MIN_VERSION,
     runtime_role: str = "python",
     runtime_name: str = "",
 ) -> RuntimeProbeRecord:

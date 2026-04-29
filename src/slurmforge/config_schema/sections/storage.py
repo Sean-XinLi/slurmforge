@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import (
-    ALL_STARTER_TEMPLATES,
+from ...config_contract.defaults import (
+    DEFAULT_ARTIFACT_STORE_FAIL_ON_VERIFY_ERROR,
+    DEFAULT_ARTIFACT_STORE_STRATEGY,
+    DEFAULT_ARTIFACT_STORE_VERIFY_DIGEST,
     DEFAULT_STORAGE_ROOT,
 )
-from ..models import ConfigField, ConfigOption
+from ...config_contract.options import ARTIFACT_FALLBACK_STRATEGIES, ARTIFACT_STRATEGIES
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
+from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -17,7 +21,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default=DEFAULT_STORAGE_ROOT,
+        default_value=DEFAULT_STORAGE_ROOT,
         required=True,
         first_edit=True,
     ),
@@ -29,16 +33,9 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="copy",
+        default_value=DEFAULT_ARTIFACT_STORE_STRATEGY,
         required=False,
-        options=(
-            ConfigOption("copy", "Copy managed artifacts into the run store."),
-            ConfigOption("hardlink", "Hardlink managed artifacts into the run store."),
-            ConfigOption("symlink", "Symlink managed artifacts into the run store."),
-            ConfigOption(
-                "register_only", "Track artifact paths without copying files."
-            ),
-        ),
+        options=ARTIFACT_STRATEGIES,
     ),
     ConfigField(
         path="artifact_store.fallback_strategy",
@@ -48,15 +45,9 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
         required=False,
-        options=(
-            ConfigOption("null", "Disable fallback handling."),
-            ConfigOption("copy", "Copy artifacts when the primary strategy fails."),
-            ConfigOption("hardlink", "Hardlink artifacts when supported."),
-            ConfigOption("symlink", "Symlink artifacts when supported."),
-            ConfigOption("register_only", "Record artifacts without copying files."),
-        ),
+        options=ARTIFACT_FALLBACK_STRATEGIES,
     ),
     ConfigField(
         path="artifact_store.verify_digest",
@@ -66,7 +57,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="true",
+        default_value=DEFAULT_ARTIFACT_STORE_VERIFY_DIGEST,
         required=False,
     ),
     ConfigField(
@@ -77,7 +68,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="true",
+        default_value=DEFAULT_ARTIFACT_STORE_FAIL_ON_VERIFY_ERROR,
         required=False,
     ),
 )

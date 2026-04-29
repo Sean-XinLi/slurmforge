@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import ALL_STARTER_TEMPLATES
-from ..models import ConfigField, ConfigOption
+from ...config_contract.defaults import DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB
+from ...config_contract.options import GPU_SIZING_ESTIMATORS
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
+from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -15,7 +17,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
         required=False,
     ),
     ConfigField(
@@ -26,14 +28,9 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage GPU",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="required when gpu_sizing is present",
+        default_display="required when gpu_sizing is present",
         required=None,
-        options=(
-            ConfigOption(
-                "heuristic",
-                "Estimate GPU count from target memory and hardware profile.",
-            ),
-        ),
+        options=GPU_SIZING_ESTIMATORS,
     ),
     ConfigField(
         path="stages.*.gpu_sizing.target_memory_gb",
@@ -44,7 +41,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="float",
         templates=ALL_STARTER_TEMPLATES,
-        default="required when gpu_sizing is present",
+        default_display="required when gpu_sizing is present",
         required=None,
     ),
     ConfigField(
@@ -56,7 +53,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default="1",
+        default_value=DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB,
         required=False,
     ),
     ConfigField(
@@ -68,7 +65,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
         required=False,
     ),
     ConfigField(
@@ -80,7 +77,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="float",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
         required=False,
     ),
     ConfigField(
@@ -92,7 +89,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
         required=False,
     ),
 )

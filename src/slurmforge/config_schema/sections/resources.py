@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import (
-    ALL_STARTER_TEMPLATES,
+from ...config_contract.defaults import (
     DEFAULT_PARTITION,
+    DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK,
+    DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
+    DEFAULT_STAGE_RESOURCES_NODES,
+    DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
 )
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
@@ -17,7 +21,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Resources",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default="template-specific",
+        default_display="template-specific",
         first_edit=True,
     ),
     ConfigField(
@@ -28,7 +32,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Resources",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default=DEFAULT_PARTITION,
+        default_display=DEFAULT_PARTITION,
     ),
     ConfigField(
         path="stages.*.resources.account",
@@ -38,7 +42,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Resources",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
     ),
     ConfigField(
         path="stages.*.resources.qos",
@@ -48,7 +52,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Resources",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
     ),
     ConfigField(
         path="stages.*.resources.gpu_type",
@@ -58,7 +62,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Resources",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="",
+        default_display="",
     ),
     ConfigField(
         path="stages.*.resources.nodes",
@@ -69,7 +73,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default="1",
+        default_value=DEFAULT_STAGE_RESOURCES_NODES,
     ),
     ConfigField(
         path="stages.*.resources.gpus_per_node",
@@ -80,7 +84,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="integer-or-auto",
         templates=ALL_STARTER_TEMPLATES,
-        default="1",
+        default_value=DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
     ),
     ConfigField(
         path="stages.*.resources.cpus_per_task",
@@ -91,7 +95,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default="template-specific",
+        default_value=DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK,
     ),
     ConfigField(
         path="stages.*.resources.mem",
@@ -101,7 +105,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Resources",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default="template-specific",
+        default_display="template-specific",
     ),
     ConfigField(
         path="stages.*.resources.constraint",
@@ -111,7 +115,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Resources",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
     ),
     ConfigField(
         path="stages.*.resources.extra_sbatch_args",
@@ -122,7 +126,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
-        default="[]",
+        default_display="[]",
     ),
     ConfigField(
         path="stages.*.resources.time_limit",
@@ -133,6 +137,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="duration",
         templates=ALL_STARTER_TEMPLATES,
-        default="01:00:00",
+        default_value=DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
     ),
 )

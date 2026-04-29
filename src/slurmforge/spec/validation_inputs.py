@@ -2,9 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..errors import ConfigContractError
+from ..config_contract.options import (
+    INPUT_EXPECTS_VALUE,
+    INPUT_SOURCE_EXTERNAL_PATH,
+    INPUT_SOURCE_UPSTREAM_OUTPUT,
+    options_for,
+    options_sentence,
+)
 from ..contracts import inject_mode_matches_expectation, resolved_kind_for_output_kind
-from ..config_schema import options_for, options_sentence
+from ..errors import ConfigContractError
 from .models import ExperimentSpec, StageSpec
 
 
@@ -30,9 +36,9 @@ def validate_stage_inputs_contract(
                 f"`stages.{stage.name}.inputs.{input_name}.inject.mode` is not compatible with "
                 f"expects={input_spec.expects}"
             )
-        if input_spec.source.kind == "upstream_output":
+        if input_spec.source.kind == INPUT_SOURCE_UPSTREAM_OUTPUT:
             _validate_upstream_input(spec, stage, input_name)
-        elif input_spec.source.kind == "external_path":
+        elif input_spec.source.kind == INPUT_SOURCE_EXTERNAL_PATH:
             _validate_external_input(spec, stage, input_name, check_paths=check_paths)
         else:
             raise ConfigContractError(
@@ -86,7 +92,7 @@ def _validate_external_input(
     check_paths: bool,
 ) -> None:
     input_spec = stage.inputs[input_name]
-    if input_spec.expects == "value":
+    if input_spec.expects == INPUT_EXPECTS_VALUE:
         raise ConfigContractError(
             f"`stages.{stage.name}.inputs.{input_name}.expects=value` cannot use external_path"
         )

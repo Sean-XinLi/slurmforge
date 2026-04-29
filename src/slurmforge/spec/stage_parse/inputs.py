@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_schema import options_for, options_sentence, reject_unknown_config_keys
+from ...config_contract.defaults import (
+    DEFAULT_INPUT_EXPECTS,
+    DEFAULT_INPUT_INJECT_MODE,
+)
+from ...config_contract.options import (
+    INPUT_SOURCE_EXTERNAL_PATH,
+    INPUT_SOURCE_UPSTREAM_OUTPUT,
+    options_for,
+    options_sentence,
+)
+from ...config_schema import reject_unknown_config_keys
 from ...contracts import InputInjection, InputSource
 from ...errors import ConfigContractError
 from ..models import StageInputSpec
@@ -33,7 +43,7 @@ def parse_inputs(raw: Any, *, stage_name: str) -> dict[str, StageInputSpec]:
         source = _parse_input_source(
             source_data, stage_name=stage_name, input_name=str(input_name)
         )
-        expects = str(input_data.get("expects") or "path")
+        expects = str(input_data.get("expects") or DEFAULT_INPUT_EXPECTS)
         if expects not in options_for("stages.*.inputs.*.expects"):
             raise ConfigContractError(
                 f"`stages.{stage_name}.inputs.{input_name}.expects` must be "
@@ -51,7 +61,7 @@ def parse_inputs(raw: Any, *, stage_name: str) -> dict[str, StageInputSpec]:
                 env=None
                 if inject_data.get("env") in (None, "")
                 else str(inject_data.get("env")),
-                mode=str(inject_data.get("mode") or "path"),
+                mode=str(inject_data.get("mode") or DEFAULT_INPUT_INJECT_MODE),
             ),
         )
     return parsed
@@ -70,7 +80,7 @@ def _parse_input_source(
             f"`stages.{stage_name}.inputs.{input_name}.source.kind` must be "
             f"{options_sentence('stages.*.inputs.*.source.kind')}"
         )
-    if kind == "upstream_output":
+    if kind == INPUT_SOURCE_UPSTREAM_OUTPUT:
         if source_data.get("stage") in (None, ""):
             raise ConfigContractError(
                 f"`stages.{stage_name}.inputs.{input_name}.source.stage` is required"
@@ -80,7 +90,7 @@ def _parse_input_source(
                 f"`stages.{stage_name}.inputs.{input_name}.source.output` is required"
             )
         return InputSource(
-            kind="upstream_output",
+            kind=INPUT_SOURCE_UPSTREAM_OUTPUT,
             stage=str(source_data["stage"]),
             output=str(source_data["output"]),
         )
@@ -88,4 +98,4 @@ def _parse_input_source(
         raise ConfigContractError(
             f"`stages.{stage_name}.inputs.{input_name}.source.path` is required"
         )
-    return InputSource(kind="external_path", path=str(source_data["path"]))
+    return InputSource(kind=INPUT_SOURCE_EXTERNAL_PATH, path=str(source_data["path"]))

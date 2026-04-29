@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from tests.support.case import StageBatchSystemTestCase
-from tests.support.public import write_demo_project
 import tempfile
 from pathlib import Path
+
+from tests.support.case import StageBatchSystemTestCase
+from tests.support.public import write_demo_project
 
 
 class ContractTests(StageBatchSystemTestCase):
@@ -53,11 +54,11 @@ class ContractTests(StageBatchSystemTestCase):
     def test_stage_output_contract_parse_and_from_dict_share_type(self) -> None:
         from slurmforge.contracts import StageOutputContract
         from slurmforge.contracts.outputs import (
-            parse_stage_output_contract,
             stage_output_contract_from_dict,
         )
+        from slurmforge.spec.stage_parse.outputs import parse_stage_output_config
 
-        contract = parse_stage_output_contract(
+        contract = parse_stage_output_config(
             {
                 "checkpoint": {
                     "kind": "file",
@@ -94,14 +95,12 @@ class ContractTests(StageBatchSystemTestCase):
         self.assertEqual(restored.outputs["checkpoint"].discover.select, "latest_step")
 
     def test_stage_output_contract_rejects_latest_selector_alias(self) -> None:
-        from slurmforge.contracts.outputs import parse_stage_output_contract
         from slurmforge.errors import ConfigContractError
+        from slurmforge.spec.stage_parse.outputs import parse_stage_output_config
 
         alias = "latest"
-        with self.assertRaisesRegex(
-            ConfigContractError, "latest_step, first, or last"
-        ):
-            parse_stage_output_contract(
+        with self.assertRaisesRegex(ConfigContractError, "latest_step, first, or last"):
+            parse_stage_output_config(
                 {
                     "checkpoint": {
                         "kind": "file",
@@ -115,14 +114,28 @@ class ContractTests(StageBatchSystemTestCase):
             )
 
     def test_invalid_output_kind_is_config_contract_error(self) -> None:
-        from slurmforge.contracts.outputs import parse_stage_output_contract
         from slurmforge.errors import ConfigContractError
+        from slurmforge.spec.stage_parse.outputs import parse_stage_output_config
 
         with self.assertRaisesRegex(
             ConfigContractError, "`stages.train.outputs.bad.kind`"
         ):
-            parse_stage_output_contract(
-                {"bad": {"kind": "unknown"}}, stage_name="train"
+            parse_stage_output_config({"bad": {"kind": "unknown"}}, stage_name="train")
+
+    def test_stage_output_config_rejects_persisted_record_schema_version(self) -> None:
+        from slurmforge.errors import ConfigContractError
+        from slurmforge.spec.stage_parse.outputs import parse_stage_output_config
+
+        with self.assertRaisesRegex(ConfigContractError, "schema_version"):
+            parse_stage_output_config(
+                {
+                    "checkpoint": {
+                        "schema_version": 1,
+                        "kind": "file",
+                        "discover": {"globs": ["checkpoints/*.pt"]},
+                    }
+                },
+                stage_name="train",
             )
 
     def test_notification_summary_input_lives_in_contracts(self) -> None:

@@ -2,14 +2,22 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import (
-    ALL_STARTER_TEMPLATES,
+from ...config_contract.defaults import (
     DEFAULT_EVAL_SCRIPT,
+    DEFAULT_STAGE_ENABLED,
+    DEFAULT_STAGE_ENTRY_TYPE,
+    DEFAULT_STAGE_ENTRY_WORKDIR,
+    DEFAULT_STAGE_ENVIRONMENT,
+    DEFAULT_STAGE_RUNTIME,
     DEFAULT_TRAIN_SCRIPT,
+)
+from ...config_contract.options import ENTRY_TYPES
+from ...config_contract.workflows import (
+    ALL_STARTER_TEMPLATES,
     EVAL_TEMPLATES,
     TRAIN_TEMPLATES,
 )
-from ..models import ConfigField, ConfigOption
+from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -20,7 +28,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stages",
         level="common",
         templates=TRAIN_TEMPLATES,
-        default=DEFAULT_TRAIN_SCRIPT,
+        default_display=DEFAULT_TRAIN_SCRIPT,
         required=True,
         first_edit=True,
     ),
@@ -32,7 +40,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stages",
         level="common",
         templates=EVAL_TEMPLATES,
-        default=DEFAULT_EVAL_SCRIPT,
+        default_display=DEFAULT_EVAL_SCRIPT,
         required=True,
         first_edit=True,
     ),
@@ -44,7 +52,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stages",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="template-specific",
+        default_display="template-specific",
     ),
     ConfigField(
         path="stages.*.enabled",
@@ -55,7 +63,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="boolean",
         templates=ALL_STARTER_TEMPLATES,
-        default="true",
+        default_value=DEFAULT_STAGE_ENABLED,
     ),
     ConfigField(
         path="stages.*.environment",
@@ -65,7 +73,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stages",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="default",
+        default_value=DEFAULT_STAGE_ENVIRONMENT,
     ),
     ConfigField(
         path="stages.*.runtime",
@@ -75,7 +83,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stages",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="default",
+        default_value=DEFAULT_STAGE_RUNTIME,
     ),
     ConfigField(
         path="stages.*.entry.script",
@@ -86,7 +94,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="path",
         templates=ALL_STARTER_TEMPLATES,
-        default="template-specific",
+        default_display="template-specific",
         required=None,
     ),
     ConfigField(
@@ -98,7 +106,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="command",
         templates=ALL_STARTER_TEMPLATES,
-        default="contextual",
+        default_display="contextual",
         required=None,
     ),
     ConfigField(
@@ -110,7 +118,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="path",
         templates=ALL_STARTER_TEMPLATES,
-        default=".",
+        default_value=DEFAULT_STAGE_ENTRY_WORKDIR,
         required=False,
     ),
     ConfigField(
@@ -121,12 +129,9 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stages",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="python_script",
+        default_value=DEFAULT_STAGE_ENTRY_TYPE,
         required=False,
-        options=(
-            ConfigOption("python_script", "Run a Python file."),
-            ConfigOption("command", "Run a shell command."),
-        ),
+        options=ENTRY_TYPES,
     ),
     ConfigField(
         path="stages.*.entry.args",
@@ -136,7 +141,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stages",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default="template-specific",
+        default_display="template-specific",
         required=False,
         first_edit=True,
     ),
@@ -149,7 +154,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
-        default="[]",
+        default_display="[]",
         required=False,
     ),
     ConfigField(
@@ -160,7 +165,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stages",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="",
+        default_display="",
         required=False,
     ),
     ConfigField(
@@ -172,7 +177,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="command",
         templates=ALL_STARTER_TEMPLATES,
-        default="required when before[] is present",
+        default_display="required when before[] is present",
         required=True,
     ),
 )

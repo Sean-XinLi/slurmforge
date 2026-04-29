@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ..config_contract.options import options_for as contract_options_for
+from ..config_contract.options import options_sentence as contract_options_sentence
 from .fields import CONFIG_FIELDS
 from .models import ConfigField
 
@@ -23,7 +25,7 @@ def first_edit_fields_for_template(template: str) -> tuple[ConfigField, ...]:
 
 
 def options_for(path: str) -> tuple[str, ...]:
-    return tuple(option.value for option in field_by_path(path).options)
+    return contract_options_for(path)
 
 
 def options_csv(path: str) -> str:
@@ -31,7 +33,7 @@ def options_csv(path: str) -> str:
 
 
 def options_sentence(path: str) -> str:
-    return _sentence_join(options_for(path))
+    return contract_options_sentence(path)
 
 
 def comment_for(path: str) -> str:
@@ -45,9 +47,3 @@ def option_comment(path: str, *, indent: int) -> str:
 
 def _field_applies(field: ConfigField, template: str) -> bool:
     return not field.templates or template in field.templates
-
-
-def _sentence_join(values: tuple[str, ...]) -> str:
-    if len(values) <= 1:
-        return "".join(values)
-    return f"{', '.join(values[:-1])}, or {values[-1]}"

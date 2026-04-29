@@ -532,7 +532,7 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `stages.*.resources` | value | no | common | template-specific |  | Slurm partition, CPU, GPU, memory, and time settings for each stage. | Set these before real cluster runs so train and eval request the right resources. |
 | `stages.*.resources.account` | value | no | intermediate | null |  | Slurm account charged for each stage task. | Set this when your cluster requires an account for GPU or partition access. |
 | `stages.*.resources.constraint` | value | no | advanced | null |  | Raw Slurm constraint requested for each stage task. | Use this for cluster-specific node feature constraints that are not covered by gpu_type. |
-| `stages.*.resources.cpus_per_task` | integer | no | common | template-specific |  | CPU count requested for each stage task. | Set this to match dataloader, preprocessing, or evaluation CPU needs. |
+| `stages.*.resources.cpus_per_task` | integer | no | common | 1 |  | CPU count requested for each stage task. | Set this to match dataloader, preprocessing, or evaluation CPU needs. |
 | `stages.*.resources.extra_sbatch_args` | list | no | advanced | [] |  | Additional raw sbatch arguments appended to each stage task script. | Use this for site-specific Slurm flags that do not have a first-class config field. |
 | `stages.*.resources.gpu_type` | value | no | intermediate |  |  | Named GPU type from hardware.gpu_types used for GPU sizing and Slurm constraints. | Set this when a stage must target a specific accelerator family. |
 | `stages.*.resources.gpus_per_node` | integer-or-auto | no | common | 1 |  | GPU count per node, or auto when GPU sizing is configured. | Set this to match the model memory and launcher requirements. |

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..config_contract.options import ENTRY_PYTHON_SCRIPT
 from ..errors import ConfigContractError
 from ..sizing.gpu import resolve_stage_gpu_sizing
 from .models import ExperimentSpec, StageSpec
@@ -64,7 +65,7 @@ def _validate_stage_paths(spec: ExperimentSpec, stage: StageSpec) -> None:
         raise ConfigContractError(
             f"`stages.{stage.name}.entry.workdir` does not exist: {workdir}"
         )
-    if stage.entry.type == "python_script":
+    if stage.entry.type == ENTRY_PYTHON_SCRIPT:
         script = resolve_script(spec, stage)
         if not script.exists() or not script.is_file():
             raise ConfigContractError(

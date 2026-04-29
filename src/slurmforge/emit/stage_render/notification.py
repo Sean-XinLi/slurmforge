@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...defaults import DEFAULT_PYTHON_BIN
+from ...config_contract.defaults import DEFAULT_PYTHON_BIN
 from ...plans.notifications import FinalizerPlan
 from ...plans.resources import ControlResourcesPlan
 from ...plans.runtime import EnvironmentPlan

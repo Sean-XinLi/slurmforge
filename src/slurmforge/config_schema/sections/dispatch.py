@@ -2,12 +2,18 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import (
-    ALL_STARTER_TEMPLATES,
+from ...config_contract.defaults import (
+    DEFAULT_CONTROLLER_CPUS,
+    DEFAULT_CONTROLLER_ENVIRONMENT,
+    DEFAULT_CONTROLLER_MEM,
+    DEFAULT_CONTROLLER_TIME_LIMIT,
+    DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS,
+    DEFAULT_DISPATCH_OVERFLOW_POLICY,
     DEFAULT_PARTITION,
-    TEMPLATE_TRAIN_EVAL,
 )
-from ..models import ConfigField, ConfigOption
+from ...config_contract.options import DISPATCH_POLICIES
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES, TEMPLATE_TRAIN_EVAL
+from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -18,7 +24,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="1",
+        default_value=DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS,
     ),
     ConfigField(
         path="dispatch.overflow_policy",
@@ -28,12 +34,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="serialize_groups",
-        options=(
-            ConfigOption("serialize_groups", "Queue array groups within GPU budget."),
-            ConfigOption("error", "Reject plans that exceed the GPU budget."),
-            ConfigOption("best_effort", "Submit groups without strict serialization."),
-        ),
+        default_value=DEFAULT_DISPATCH_OVERFLOW_POLICY,
+        options=DISPATCH_POLICIES,
     ),
     ConfigField(
         path="orchestration.controller",
@@ -43,7 +45,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="advanced",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default="partition=gpu, cpus=1, mem=2G, time_limit=01:00:00",
+        default_display="partition=gpu, cpus=1, mem=2G, time_limit=01:00:00",
     ),
     ConfigField(
         path="orchestration.controller.partition",
@@ -53,7 +55,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="advanced",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default=DEFAULT_PARTITION,
+        default_display=DEFAULT_PARTITION,
     ),
     ConfigField(
         path="orchestration.controller.cpus",
@@ -64,7 +66,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default="1",
+        default_value=DEFAULT_CONTROLLER_CPUS,
     ),
     ConfigField(
         path="orchestration.controller.mem",
@@ -74,7 +76,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="advanced",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default="2G",
+        default_value=DEFAULT_CONTROLLER_MEM,
     ),
     ConfigField(
         path="orchestration.controller.time_limit",
@@ -85,7 +87,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="duration",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default="01:00:00",
+        default_value=DEFAULT_CONTROLLER_TIME_LIMIT,
     ),
     ConfigField(
         path="orchestration.controller.environment",
@@ -95,6 +97,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="advanced",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default="default",
+        default_value=DEFAULT_CONTROLLER_ENVIRONMENT,
     ),
 )

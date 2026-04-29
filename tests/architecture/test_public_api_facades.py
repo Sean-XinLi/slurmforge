@@ -24,7 +24,7 @@ class PublicApiFacadeTests(StageBatchSystemTestCase):
             "normalize_cli_override_path",
             "normalize_run_override_path",
             "normalize_stage_shorthand_path",
-            "parse_stage_output_contract",
+            "parse_stage_output_config",
             "Run" + "CaseSpec",
             "run_id_for",
             "StageOutputContract",

@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...config_contract.defaults import DEFAULT_CHECKPOINT_PATH, DEFAULT_CONFIG_FILENAME
+from ...config_contract.workflows import STAGE_EVAL, TEMPLATE_EVAL_CHECKPOINT
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
-from ...defaults import (
-    DEFAULT_CHECKPOINT_PATH,
-    DEFAULT_CONFIG_FILENAME,
-    TEMPLATE_EVAL_CHECKPOINT,
-)
 from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import checkpoint_file, eval_script
@@ -16,7 +13,7 @@ from .stage_specs import eval_stage_external_checkpoint
 
 def build_config(_request: InitRequest) -> dict[str, Any]:
     config = base_config()
-    config["stages"] = {"eval": eval_stage_external_checkpoint()}
+    config["stages"] = {STAGE_EVAL: eval_stage_external_checkpoint()}
     return config
 
 

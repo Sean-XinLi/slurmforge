@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import ALL_STARTER_TEMPLATES
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
@@ -15,7 +15,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
-        default="{}",
+        default_display="{}",
     ),
     ConfigField(
         path="hardware.gpu_types.*.memory_gb",
@@ -26,7 +26,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="float",
         templates=ALL_STARTER_TEMPLATES,
-        default="0",
+        default_display="0",
     ),
     ConfigField(
         path="hardware.gpu_types.*.usable_memory_fraction",
@@ -37,7 +37,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="float",
         templates=ALL_STARTER_TEMPLATES,
-        default="0",
+        default_display="0",
     ),
     ConfigField(
         path="hardware.gpu_types.*.max_gpus_per_node",
@@ -48,7 +48,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
     ),
     ConfigField(
         path="hardware.gpu_types.*.slurm.constraint",
@@ -58,6 +58,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Hardware",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default="null",
+        default_display="null",
     ),
 )

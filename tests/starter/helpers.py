@@ -4,9 +4,11 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Callable
 
-from slurmforge.defaults import (
+from slurmforge.config_contract.defaults import (
     DEFAULT_CHECKPOINT_PATH,
     DEFAULT_CONFIG_FILENAME,
+)
+from slurmforge.config_contract.workflows import (
     TEMPLATE_TRAIN_EVAL,
     TEMPLATE_TRAIN_ONLY,
 )

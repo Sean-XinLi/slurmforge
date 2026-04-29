@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Final
 
-from ...defaults import (
-    ALL_STARTER_TEMPLATES,
-)
-from ..models import ConfigField, ConfigOption
+from ...config_contract.defaults import DEFAULT_RUN_TYPE
+from ...config_contract.options import RUN_TYPES
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
+from ..models import ConfigField
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -16,13 +16,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runs",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default="single",
-        options=(
-            ConfigOption("single", "Plan one run."),
-            ConfigOption("grid", "Plan every combination from top-level axes."),
-            ConfigOption("cases", "Plan named hand-authored run variants."),
-            ConfigOption("matrix", "Plan named cases, each with its own grid."),
-        ),
+        default_value=DEFAULT_RUN_TYPE,
+        options=RUN_TYPES,
     ),
     ConfigField(
         path="runs.axes",
@@ -33,7 +28,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
-        default="contextual",
+        default_display="contextual",
         required=None,
     ),
     ConfigField(
@@ -45,7 +40,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
-        default="contextual",
+        default_display="contextual",
         required=None,
     ),
     ConfigField(
@@ -56,7 +51,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runs",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default="required for cases and matrix",
+        default_display="required for cases and matrix",
         required=True,
     ),
     ConfigField(
@@ -68,7 +63,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
-        default="{}",
+        default_display="{}",
         required=False,
     ),
     ConfigField(
@@ -80,7 +75,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
-        default="contextual",
+        default_display="contextual",
         required=None,
     ),
 )

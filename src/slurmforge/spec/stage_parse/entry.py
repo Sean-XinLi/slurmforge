@@ -3,7 +3,17 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from ...config_schema import options_for, options_sentence, reject_unknown_config_keys
+from ...config_contract.defaults import (
+    DEFAULT_STAGE_ENTRY_TYPE,
+    DEFAULT_STAGE_ENTRY_WORKDIR,
+)
+from ...config_contract.options import (
+    ENTRY_COMMAND,
+    ENTRY_PYTHON_SCRIPT,
+    options_for,
+    options_sentence,
+)
+from ...config_schema import reject_unknown_config_keys
 from ...errors import ConfigContractError
 from ..models import EntrySpec
 from ..parse_common import optional_mapping, require_mapping
@@ -13,7 +23,8 @@ def parse_entry(raw: Any, *, name: str) -> EntrySpec:
     data = require_mapping(raw, f"stages.{name}.entry")
     reject_unknown_config_keys(data, parent=f"stages.{name}.entry")
     entry_type = str(
-        data.get("type") or ("command" if "command" in data else "python_script")
+        data.get("type")
+        or (ENTRY_COMMAND if ENTRY_COMMAND in data else DEFAULT_STAGE_ENTRY_TYPE)
     )
     if entry_type not in options_for("stages.*.entry.type"):
         raise ConfigContractError(
@@ -21,11 +32,11 @@ def parse_entry(raw: Any, *, name: str) -> EntrySpec:
         )
     script = data.get("script")
     command = data.get("command")
-    if entry_type == "python_script" and not script:
+    if entry_type == ENTRY_PYTHON_SCRIPT and not script:
         raise ConfigContractError(
             f"`stages.{name}.entry.script` is required for python_script stages"
         )
-    if entry_type == "command" and command in (None, "", []):
+    if entry_type == ENTRY_COMMAND and command in (None, "", []):
         raise ConfigContractError(
             f"`stages.{name}.entry.command` is required for command stages"
         )
@@ -34,6 +45,6 @@ def parse_entry(raw: Any, *, name: str) -> EntrySpec:
         type=entry_type,
         script=None if script in (None, "") else str(script),
         command=command,
-        workdir=str(data.get("workdir") or "."),
+        workdir=str(data.get("workdir") or DEFAULT_STAGE_ENTRY_WORKDIR),
         args=copy.deepcopy(args),
     )

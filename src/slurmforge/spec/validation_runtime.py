@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..config_contract.defaults import DEFAULT_RUNTIME_NAME
 from ..errors import ConfigContractError
 from .models import ExperimentSpec
 from .validation_common import reject_newline
@@ -42,8 +43,8 @@ def validate_runtime_contract(spec: ExperimentSpec) -> None:
     if not spec.runtime.executor.executor_module:
         raise ConfigContractError("`runtime.executor.module` must not be empty")
     validate_environment_contract(spec)
-    if "default" not in spec.runtime.user:
-        raise ConfigContractError("`runtime.user.default` is required")
+    if DEFAULT_RUNTIME_NAME not in spec.runtime.user:
+        raise ConfigContractError(f"`runtime.user.{DEFAULT_RUNTIME_NAME}` is required")
     for runtime_name, runtime in spec.runtime.user.items():
         if not runtime.python.bin:
             raise ConfigContractError(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...config_contract.defaults import DEFAULT_ENVIRONMENT_NAME, DEFAULT_RUNTIME_NAME
 from ..config_comments import comment_for, inline_comment_for, option_comment
 from .scalar import scalar
 
@@ -23,11 +24,11 @@ def render_project(lines: list[str], config: dict[str, Any]) -> None:
 
 
 def render_environments(lines: list[str], config: dict[str, Any]) -> None:
-    env = config["environments"]["default"]
+    env = config["environments"][DEFAULT_ENVIRONMENT_NAME]
     lines.extend(
         [
             "environments:",
-            "  default:",
+            f"  {DEFAULT_ENVIRONMENT_NAME}:",
             comment_for("environments.*.modules", indent=4),
             f"    modules: {scalar(env['modules'])}",
             comment_for("environments.*.source", indent=4),
@@ -42,7 +43,7 @@ def render_environments(lines: list[str], config: dict[str, Any]) -> None:
 def render_runtime(lines: list[str], config: dict[str, Any]) -> None:
     executor = config["runtime"]["executor"]
     executor_python = executor["python"]
-    user_default = config["runtime"]["user"]["default"]
+    user_default = config["runtime"]["user"][DEFAULT_RUNTIME_NAME]
     user_python = user_default["python"]
     lines.extend(
         [
@@ -55,7 +56,7 @@ def render_runtime(lines: list[str], config: dict[str, Any]) -> None:
             comment_for("runtime.executor.module", indent=4),
             f"    module: {scalar(executor['module'])}",
             "  user:",
-            "    default:",
+            f"    {DEFAULT_RUNTIME_NAME}:",
             "      python:",
             comment_for("runtime.user.*.python.bin", indent=8),
             f"        bin: {scalar(user_python['bin'])}",
