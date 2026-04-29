@@ -45,7 +45,11 @@ def resolve_stage_inputs_from_prior_source(
                 resolution = dict(resolved["resolution"])
         elif source.kind == "external_path":
             source_path = Path(source.path).expanduser()
-            source_path = source_path if source_path.is_absolute() else spec.project_root / source_path
+            source_path = (
+                source_path
+                if source_path.is_absolute()
+                else spec.project_root / source_path
+            )
             source_path = source_path.resolve()
             resolved_payload = (
                 ResolvedInput(kind=input_spec.expects, path=str(source_path))
@@ -54,7 +58,10 @@ def resolve_stage_inputs_from_prior_source(
             )
             resolution = {
                 "kind": source.kind,
-                "resolved": {"kind": resolved_payload.kind, "path": resolved_payload.path},
+                "resolved": {
+                    "kind": resolved_payload.kind,
+                    "path": resolved_payload.path,
+                },
                 "source_exists": source_path.exists(),
             }
         binding = InputBinding(

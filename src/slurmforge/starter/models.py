@@ -50,7 +50,6 @@ class StarterCommandSet:
 class StarterReadmePlan:
     template: str
     commands: StarterCommandSet
-    editable_fields: tuple[str, ...]
     notes: tuple[str, ...] = ()
 
 

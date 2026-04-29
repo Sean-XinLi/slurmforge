@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from ..config_contract.options import EMAIL_EVENT_BATCH_FINISHED
 from ..io import SchemaVersion, content_digest, read_json, write_json
 from ..plans.stage import StageBatchPlan
 from .sbatch_helpers import _q
@@ -50,16 +51,23 @@ def _notification_enabled(batch: StageBatchPlan, event: str) -> bool:
     return email.enabled and event in set(email.events)
 
 
-def write_stage_notification_submit_file(batch: StageBatchPlan, event: str = "batch_finished") -> Path:
+def write_stage_notification_submit_file(
+    batch: StageBatchPlan, event: str = EMAIL_EVENT_BATCH_FINISHED
+) -> Path:
     manifest = load_stage_submit_manifest(Path(batch.submission_root))
     generation_id = str(manifest["generation_id"])
-    path = _submit_root(batch) / "notifications" / generation_id / f"notify_{event}.sbatch"
+    path = (
+        _submit_root(batch) / "notifications" / generation_id / f"notify_{event}.sbatch"
+    )
     for item in manifest.get("notifications", ()):
         if str(item.get("event") or "") == event and item.get("sbatch_path"):
             path = Path(str(item["sbatch_path"]))
             break
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage_notification_sbatch(batch, event, generation_id=generation_id), encoding="utf-8")
+    path.write_text(
+        render_stage_notification_sbatch(batch, event, generation_id=generation_id),
+        encoding="utf-8",
+    )
     path.chmod(0o755)
     return path
 
@@ -72,7 +80,12 @@ def write_stage_notification_barrier_file(
 ) -> Path:
     manifest = load_stage_submit_manifest(Path(batch.submission_root))
     generation_id = str(manifest["generation_id"])
-    path = _submit_root(batch) / "notifications" / generation_id / f"barrier_{event}_{barrier_index:03d}.sbatch"
+    path = (
+        _submit_root(batch)
+        / "notifications"
+        / generation_id
+        / f"barrier_{event}_{barrier_index:03d}.sbatch"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         render_stage_notification_barrier_sbatch(
@@ -96,7 +109,10 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
     sbatch_paths: list[Path] = []
     for group in batch.group_plans:
         path = submit_dir / f"{group.group_id}.sbatch"
-        path.write_text(render_stage_group_sbatch(batch, group, generation_id=generation_id), encoding="utf-8")
+        path.write_text(
+            render_stage_group_sbatch(batch, group, generation_id=generation_id),
+            encoding="utf-8",
+        )
         path.chmod(0o755)
         sbatch_paths.append(path)
     submit_script = submit_dir / "submit.sh"
@@ -118,16 +134,18 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
         submit_lines.append(f'printf "%s\\n" "{group_id}=${{{var_name}}}"')
         job_vars[group_id] = var_name
     notification_entries: list[dict[str, str]] = []
-    if _notification_enabled(batch, "batch_finished"):
+    if _notification_enabled(batch, EMAIL_EVENT_BATCH_FINISHED):
         notify_path = submit_dir / "notify_batch_finished.sbatch"
         notify_path.write_text(
-            render_stage_notification_sbatch(batch, "batch_finished", generation_id=generation_id),
+            render_stage_notification_sbatch(
+                batch, EMAIL_EVENT_BATCH_FINISHED, generation_id=generation_id
+            ),
             encoding="utf-8",
         )
         notify_path.chmod(0o755)
         notification_entries.append(
             {
-                "event": "batch_finished",
+                "event": EMAIL_EVENT_BATCH_FINISHED,
                 "sbatch_path": str(notify_path),
             }
         )
@@ -160,7 +178,7 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
             [
                 "#!/usr/bin/env bash",
                 "set -euo pipefail",
-                f"exec {_q(str(submit_script))} \"$@\"",
+                f'exec {_q(str(submit_script))} "$@"',
             ]
         )
         + "\n",

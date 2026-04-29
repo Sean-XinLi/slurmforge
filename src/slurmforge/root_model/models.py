@@ -6,7 +6,11 @@ from typing import Any, Literal
 
 from ..io import SchemaVersion
 from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND
-from ..status.models import RunStatusRecord, StageStatusRecord, TrainEvalPipelineStatusRecord
+from ..status.models import (
+    RunStatusRecord,
+    StageStatusRecord,
+    TrainEvalPipelineStatusRecord,
+)
 from ..contracts import NotificationSummaryInput
 
 STAGE_BATCH_KIND = "stage_batch"

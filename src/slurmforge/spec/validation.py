@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..errors import ConfigContractError
-from ..field_options import options_for, options_sentence
+from ..config_contract.options import options_for, options_sentence
 from .models import ExperimentSpec
 from .validation_notifications import validate_notifications_contract
 from .validation_resources import validate_hardware_contract, validate_sizing_contract
@@ -31,7 +31,10 @@ def _validate_artifact_store_contract(spec: ExperimentSpec) -> None:
         raise ConfigContractError(
             f"`artifact_store.strategy` must be {options_sentence('artifact_store.strategy')}"
         )
-    if spec.artifact_store.fallback_strategy is not None and spec.artifact_store.fallback_strategy not in allowed:
+    if (
+        spec.artifact_store.fallback_strategy is not None
+        and spec.artifact_store.fallback_strategy not in allowed
+    ):
         raise ConfigContractError(
             "`artifact_store.fallback_strategy` must be "
             f"{options_sentence('artifact_store.strategy')}"

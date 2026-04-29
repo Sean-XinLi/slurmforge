@@ -1,4 +1,5 @@
 """Lineage index queries."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -54,7 +55,11 @@ def find_bound_input(
         if item.get("input_name") != input_name:
             continue
         resolution = dict(item.get("resolution") or {})
-        if lineage_ref is not None and resolution.get("lineage_ref") not in {lineage_ref, None, ""}:
+        if lineage_ref is not None and resolution.get("lineage_ref") not in {
+            lineage_ref,
+            None,
+            "",
+        }:
             continue
         return dict(item)
     return None

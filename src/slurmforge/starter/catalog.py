@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from ..config_contract.workflows import (
+    TEMPLATE_EVAL_CHECKPOINT,
+    TEMPLATE_TRAIN_EVAL,
+    TEMPLATE_TRAIN_ONLY,
+)
 from ..errors import UsageError
-from .defaults import TEMPLATE_EVAL_CHECKPOINT, TEMPLATE_TRAIN_EVAL, TEMPLATE_TRAIN_ONLY
 from .models import StarterTemplate
 from .templates import (
     EVAL_CHECKPOINT_TEMPLATE,

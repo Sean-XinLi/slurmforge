@@ -17,7 +17,9 @@ class StageOutputFinalizationResult:
     reason: str = ""
 
 
-def finalize_successful_stage_outputs(attempt: ExecutionAttempt, workdir: Path) -> StageOutputFinalizationResult:
+def finalize_successful_stage_outputs(
+    attempt: ExecutionAttempt, workdir: Path
+) -> StageOutputFinalizationResult:
     output_result = discover_stage_outputs(
         attempt.instance,
         workdir,
@@ -31,11 +33,17 @@ def finalize_successful_stage_outputs(attempt: ExecutionAttempt, workdir: Path) 
             failure_class="missing_output",
             reason=output_result.failure_reason,
         )
-    write_stage_outputs_record(output_result.stage_outputs, run_dir=attempt.run_dir, attempt_dir=attempt.attempt_dir)
+    write_stage_outputs_record(
+        output_result.stage_outputs,
+        run_dir=attempt.run_dir,
+        attempt_dir=attempt.attempt_dir,
+    )
     return StageOutputFinalizationResult(artifact_paths=artifact_paths)
 
 
-def failure_class_for_exception(exc: BaseException, current_failure_class: str | None) -> str:
+def failure_class_for_exception(
+    exc: BaseException, current_failure_class: str | None
+) -> str:
     if isinstance(exc, ArtifactIntegrityError):
         return "artifact_integrity_error"
     if isinstance(exc, RuntimeContractError):

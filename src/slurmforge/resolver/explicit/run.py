@@ -31,11 +31,17 @@ def upstream_bindings_from_run(
     if instance is None or outputs is None:
         raise ConfigContractError(f"No stage plan and outputs found under {run_dir}")
     consumer_stage = consumer_stage_name or stage_name_for_kind(spec, "eval")
-    selected_input = input_name or stage_source_input_name(spec, stage_name=consumer_stage)
+    selected_input = input_name or stage_source_input_name(
+        spec, stage_name=consumer_stage
+    )
     input_spec = spec.enabled_stages[consumer_stage].inputs.get(selected_input)
     if input_spec is None:
-        raise ConfigContractError(f"`stages.{consumer_stage}.inputs.{selected_input}` is required")
-    _producer_stage, output_name = producer_output_for_input(input_spec, producer_stage_name=instance.stage_name)
+        raise ConfigContractError(
+            f"`stages.{consumer_stage}.inputs.{selected_input}` is required"
+        )
+    _producer_stage, output_name = producer_output_for_input(
+        input_spec, producer_stage_name=instance.stage_name
+    )
     output = output_ref(outputs, output_name)
     if output is None:
         raise ConfigContractError(f"No `{output_name}` output found under {run_dir}")
@@ -53,7 +59,11 @@ def upstream_bindings_from_run(
                 path_binding_for_input(
                     input_name=selected_input,
                     inject=inject,
-                    source=InputSource(kind="upstream_output", stage=instance.stage_name, output=output_name),
+                    source=InputSource(
+                        kind="upstream_output",
+                        stage=instance.stage_name,
+                        output=output_name,
+                    ),
                     expects=input_spec.expects,
                     resolved=resolved_output(output),
                     resolution=upstream_resolution(

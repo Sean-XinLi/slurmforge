@@ -8,7 +8,9 @@ from ...spec import ExperimentSpec, StageSpec
 from ...spec.sizing import stage_gpu_sizing_inputs
 
 
-def resource_sizing_payload(spec: ExperimentSpec, stage: StageSpec) -> GpuSizingResolution:
+def resource_sizing_payload(
+    spec: ExperimentSpec, stage: StageSpec
+) -> GpuSizingResolution:
     request, policy, gpu_types, defaults = stage_gpu_sizing_inputs(spec, stage)
     return resolve_stage_gpu_sizing(
         request=request,
@@ -18,7 +20,9 @@ def resource_sizing_payload(spec: ExperimentSpec, stage: StageSpec) -> GpuSizing
     )
 
 
-def resource_payload(spec: ExperimentSpec, stage: StageSpec, resource_sizing: GpuSizingResolution) -> ResourcePlan:
+def resource_payload(
+    spec: ExperimentSpec, stage: StageSpec, resource_sizing: GpuSizingResolution
+) -> ResourcePlan:
     hardware_gpu = spec.hardware.gpu_types.get(stage.resources.gpu_type)
     hardware_slurm = hardware_gpu.slurm if hardware_gpu is not None else {}
     constraint = stage.resources.constraint

@@ -23,7 +23,7 @@ Template choices:
 - `train-only`: train produces a checkpoint and stops.
 - `eval-checkpoint`: eval consumes an explicit checkpoint path. The starter writes `checkpoint.pt` as sample input.
 
-`sforge init` is intentionally narrow. It only selects the template, chooses the project output directory, and confirms overwrite behavior. The generated config is always named `experiment.yaml` inside that directory.
+`sforge init` is intentionally narrow. It only selects the template, chooses the project output directory, and confirms overwrite behavior. The generated config is always named `experiment.yaml` inside that directory. `README.sforge.md` gives the workflow path, while `CONFIG.sforge.md` explains only the fields used by the selected starter.
 
 ## Connect Your Model
 
@@ -31,10 +31,12 @@ The generated `train.py` and `eval.py` are runnable scaffolds. Keep the `SECTION
 
 The default `train-eval` contract is:
 
-- `stages.train.entry.args` become CLI flags such as `--epochs` and `--lr`.
+<!-- QUICKSTART_STARTER_CONTRACT_START -->
+- `stages.train.entry.args` keys become CLI flags exactly as written; SlurmForge only prepends `--` when the key has no dash prefix.
 - Train writes a `.pt` checkpoint under `checkpoints/`; the starter YAML discovers it with `checkpoints/**/*.pt`.
 - Eval receives that checkpoint as `--checkpoint_path` and `SFORGE_INPUT_CHECKPOINT`.
 - Eval writes `eval/metrics.json` with a numeric `accuracy` field.
+<!-- QUICKSTART_STARTER_CONTRACT_END -->
 
 ## Validate And Preview
 

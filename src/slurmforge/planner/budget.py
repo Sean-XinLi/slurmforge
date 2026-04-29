@@ -102,7 +102,9 @@ def apply_budget_plan(
         current_used = 0
         for group in gpu_groups:
             if current and current_used + group.gpus_per_task > max_available_gpus:
-                wave_throttles = _allocate_wave_throttles(current, max_available_gpus=max_available_gpus)
+                wave_throttles = _allocate_wave_throttles(
+                    current, max_available_gpus=max_available_gpus
+                )
                 waves.append(_wave_payload(waves, current, wave_throttles))
                 throttles.update(wave_throttles)
                 current = []
@@ -110,7 +112,9 @@ def apply_budget_plan(
             current.append(group)
             current_used += group.gpus_per_task
         if current:
-            wave_throttles = _allocate_wave_throttles(current, max_available_gpus=max_available_gpus)
+            wave_throttles = _allocate_wave_throttles(
+                current, max_available_gpus=max_available_gpus
+            )
             waves.append(_wave_payload(waves, current, wave_throttles))
             throttles.update(wave_throttles)
         policy_applied = "global_waves" if len(waves) > 1 else "global_shared_budget"
@@ -127,14 +131,18 @@ def apply_budget_plan(
                     )
                 )
         if overflow_policy == "best_effort":
-            warnings.append("best_effort accepted; global wave planning still enforces the GPU ceiling")
+            warnings.append(
+                "best_effort accepted; global wave planning still enforces the GPU ceiling"
+            )
         if overflow_policy == "error" and len(waves) > 1:
             raise ConfigContractError(
                 "stage batch requires multiple GPU waves to satisfy dispatch.max_available_gpus; "
                 "use overflow_policy=serialize_groups"
             )
 
-    updated_groups = tuple(replace(group, array_throttle=throttles[group.group_id]) for group in groups)
+    updated_groups = tuple(
+        replace(group, array_throttle=throttles[group.group_id]) for group in groups
+    )
     budget_plan = BudgetPlan(
         max_available_gpus=max_available_gpus,
         overflow_policy=overflow_policy,
@@ -175,5 +183,7 @@ def _wave_payload(
             )
             for item in groups
         ),
-        total_wave_gpus=sum(item.gpus_per_task * throttles[item.group_id] for item in groups),
+        total_wave_gpus=sum(
+            item.gpus_per_task * throttles[item.group_id] for item in groups
+        ),
     )

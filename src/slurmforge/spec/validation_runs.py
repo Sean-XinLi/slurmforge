@@ -2,17 +2,23 @@ from __future__ import annotations
 
 import re
 
+from ..config_contract.options import (
+    RUN_CASES,
+    RUN_GRID,
+    RUN_MATRIX,
+    RUN_SINGLE,
+    options_sentence,
+)
 from ..errors import ConfigContractError
-from ..field_options import options_sentence
 from .models import ExperimentSpec
 from .run_paths import normalize_run_override_path
 from .validation_common import path_exists_or_allowed_for_args
 
 
 def validate_runs_contract(spec: ExperimentSpec) -> None:
-    if spec.runs.type == "single":
+    if spec.runs.type == RUN_SINGLE:
         return
-    if spec.runs.type == "grid":
+    if spec.runs.type == RUN_GRID:
         if not spec.runs.axes:
             raise ConfigContractError(
                 "`runs.axes` must contain at least one axis for grid runs"
@@ -23,7 +29,7 @@ def validate_runs_contract(spec: ExperimentSpec) -> None:
                     f"`runs.axes.{path}` does not target a known config path"
                 )
         return
-    if spec.runs.type in {"cases", "matrix"}:
+    if spec.runs.type in {RUN_CASES, RUN_MATRIX}:
         if not spec.runs.cases:
             raise ConfigContractError("`runs.cases` must contain at least one case")
         seen: set[str] = set()
@@ -42,7 +48,7 @@ def validate_runs_contract(spec: ExperimentSpec) -> None:
                     raise ConfigContractError(
                         f"`runs.cases.{case.name}.set.{path}` does not target a known config path"
                     )
-            if spec.runs.type == "matrix":
+            if spec.runs.type == RUN_MATRIX:
                 if not case.axes:
                     raise ConfigContractError(
                         f"`runs.cases.{case.name}.axes` must contain at least one axis for matrix runs"

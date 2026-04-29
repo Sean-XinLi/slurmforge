@@ -4,7 +4,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..io import SchemaVersion, read_json, require_schema, to_jsonable, utc_now, write_json
+from ..io import (
+    SchemaVersion,
+    read_json,
+    require_schema,
+    to_jsonable,
+    utc_now,
+    write_json,
+)
 from .models import NotificationDeliveryRecord
 
 
@@ -34,8 +41,12 @@ def append_notification_event(root: Path, event: str, **payload: Any) -> None:
         handle.write(json.dumps(to_jsonable(record), sort_keys=True) + "\n")
 
 
-def notification_delivery_record_from_dict(payload: dict[str, Any]) -> NotificationDeliveryRecord:
-    require_schema(payload, name="notification_delivery", version=SchemaVersion.NOTIFICATION)
+def notification_delivery_record_from_dict(
+    payload: dict[str, Any],
+) -> NotificationDeliveryRecord:
+    require_schema(
+        payload, name="notification_delivery", version=SchemaVersion.NOTIFICATION
+    )
     return NotificationDeliveryRecord(
         event=str(payload["event"]),
         root_kind=str(payload["root_kind"]),
@@ -49,12 +60,16 @@ def notification_delivery_record_from_dict(payload: dict[str, Any]) -> Notificat
         scheduler_job_id=str(payload.get("scheduler_job_id") or ""),
         sbatch_path=str(payload.get("sbatch_path") or ""),
         barrier_job_ids=tuple(str(item) for item in payload.get("barrier_job_ids", ())),
-        dependency_job_ids=tuple(str(item) for item in payload.get("dependency_job_ids", ())),
+        dependency_job_ids=tuple(
+            str(item) for item in payload.get("dependency_job_ids", ())
+        ),
         submitted_at=str(payload.get("submitted_at") or ""),
     )
 
 
-def read_notification_record(root: Path, event: str, backend: str = "email") -> NotificationDeliveryRecord | None:
+def read_notification_record(
+    root: Path, event: str, backend: str = "email"
+) -> NotificationDeliveryRecord | None:
     path = notification_record_path(root, event, backend)
     if not path.exists():
         return None

@@ -11,6 +11,40 @@ from pathlib import Path
 
 
 class SchemaContractTests(StageBatchSystemTestCase):
+    def test_generated_starter_config_example_is_valid(self) -> None:
+        from slurmforge.spec.parse_sections import parse_experiment_spec
+        from slurmforge.spec.validation import validate_experiment_spec
+        from slurmforge.starter.config_examples import render_starter_example
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = root / "starter.yaml"
+            raw = yaml.safe_load(render_starter_example(root))
+
+            spec = parse_experiment_spec(
+                raw,
+                config_path=cfg_path,
+                project_root=root,
+            )
+            validate_experiment_spec(spec, check_paths=False)
+
+    def test_generated_advanced_config_example_is_valid(self) -> None:
+        from slurmforge.spec.parse_sections import parse_experiment_spec
+        from slurmforge.spec.validation import validate_experiment_spec
+        from slurmforge.starter.config_examples import render_advanced_example
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cfg_path = root / "advanced.yaml"
+            raw = yaml.safe_load(render_advanced_example())
+
+            spec = parse_experiment_spec(
+                raw,
+                config_path=cfg_path,
+                project_root=root,
+            )
+            validate_experiment_spec(spec, check_paths=False)
+
     def test_bad_output_contract_fails_validation_before_planning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -178,3 +212,92 @@ class SchemaContractTests(StageBatchSystemTestCase):
 
             with self.assertRaisesRegex(Exception, "unknown environment `missing_env`"):
                 load_experiment_spec(cfg_path)
+
+    def test_remaining_config_sections_reject_unknown_keys(self) -> None:
+        cases = (
+            (
+                "artifact_store",
+                lambda payload: payload["artifact_store"].update({"unknown": True}),
+                "Unsupported keys under `artifact_store`: unknown",
+            ),
+            (
+                "dispatch",
+                lambda payload: payload["dispatch"].update({"unknown": True}),
+                "Unsupported keys under `dispatch`: unknown",
+            ),
+            (
+                "entry",
+                lambda payload: payload["stages"]["train"]["entry"].update(
+                    {"unknown": True}
+                ),
+                "Unsupported keys under `stages.train.entry`: unknown",
+            ),
+            (
+                "input",
+                lambda payload: payload["stages"]["eval"]["inputs"][
+                    "checkpoint"
+                ].update({"unknown": True}),
+                "Unsupported keys under `stages.eval.inputs.checkpoint`: unknown",
+            ),
+            (
+                "input inject",
+                lambda payload: payload["stages"]["eval"]["inputs"]["checkpoint"][
+                    "inject"
+                ].update({"unknown": True}),
+                "Unsupported keys under `stages.eval.inputs.checkpoint.inject`: unknown",
+            ),
+            (
+                "input source",
+                lambda payload: payload["stages"]["eval"]["inputs"]["checkpoint"][
+                    "source"
+                ].update({"unknown": True}),
+                "Unsupported keys under `stages.eval.inputs.checkpoint.source`: unknown",
+            ),
+            (
+                "output",
+                lambda payload: payload["stages"]["train"]["outputs"][
+                    "checkpoint"
+                ].update({"unknown": True}),
+                "Unsupported keys under `stages.train.outputs.checkpoint`: unknown",
+            ),
+            (
+                "output discover",
+                lambda payload: payload["stages"]["train"]["outputs"]["checkpoint"][
+                    "discover"
+                ].update({"unknown": True}),
+                "Unsupported keys under `stages.train.outputs.checkpoint.discover`: unknown",
+            ),
+        )
+        for name, mutate, message in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                cfg_path = write_demo_project(root)
+                payload = yaml.safe_load(cfg_path.read_text())
+                mutate(payload)
+                cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+
+                with self.assertRaisesRegex(Exception, message):
+                    load_experiment_spec(cfg_path)
+
+    def test_removed_launcher_aliases_are_rejected(self) -> None:
+        cases = (
+            ("nodes", 2),
+            ("processes_per_node", 4),
+            ("master_port", 29501),
+        )
+        for key, value in cases:
+            with self.subTest(key=key), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                cfg_path = write_demo_project(root)
+                payload = yaml.safe_load(cfg_path.read_text())
+                payload["stages"]["train"]["launcher"] = {
+                    "type": "torchrun",
+                    key: value,
+                }
+                cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+
+                with self.assertRaisesRegex(
+                    Exception,
+                    f"Unsupported keys under `stages.train.launcher`: {key}",
+                ):
+                    load_experiment_spec(cfg_path)

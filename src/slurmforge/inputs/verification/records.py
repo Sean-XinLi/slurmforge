@@ -58,7 +58,9 @@ def record_for_binding(
             path_kind="unknown",
             state="failed" if required else "skipped",
             failure_class="input_contract_error" if required else None,
-            reason="required input did not resolve" if required else "optional input is unresolved",
+            reason="required input did not resolve"
+            if required
+            else "optional input is unresolved",
         )
     if not resolved_kind_matches_expectation(binding.resolved.kind, binding.expects):
         return InputVerificationRecord(
@@ -78,7 +80,9 @@ def record_for_binding(
         )
     if binding.resolved.kind == "value":
         return _record_for_value(binding, base=base, expected_digest=expected_digest)
-    return _record_for_path(binding, base=base, expected_digest=expected_digest, required=required)
+    return _record_for_path(
+        binding, base=base, expected_digest=expected_digest, required=required
+    )
 
 
 def _record_for_value(

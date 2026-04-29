@@ -30,7 +30,11 @@ def _next_attempt_id(run_dir: Path) -> str:
     attempts = run_dir / "attempts"
     if not attempts.exists():
         return "0001"
-    existing = [int(path.name) for path in attempts.iterdir() if path.is_dir() and path.name.isdigit()]
+    existing = [
+        int(path.name)
+        for path in attempts.iterdir()
+        if path.is_dir() and path.name.isdigit()
+    ]
     return f"{(max(existing) + 1) if existing else 1:04d}"
 
 
@@ -119,7 +123,9 @@ def complete_attempt(
             stage_name=attempt.instance.stage_name,
             state=status_state,
             latest_attempt_id=attempt.attempt_id,
-            latest_output_digest=_stage_output_digest(attempt.run_dir) if status_state == "success" else None,
+            latest_output_digest=_stage_output_digest(attempt.run_dir)
+            if status_state == "success"
+            else None,
             failure_class=failure_class,
             reason=reason,
         ),

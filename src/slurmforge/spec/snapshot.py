@@ -25,7 +25,9 @@ def load_spec_snapshot(root: Path) -> dict[str, Any]:
     return payload
 
 
-def load_experiment_spec_from_snapshot(root: Path, *, project_root: Path) -> ExperimentSpec:
+def load_experiment_spec_from_snapshot(
+    root: Path, *, project_root: Path
+) -> ExperimentSpec:
     path = spec_snapshot_path(root)
     spec = parse_experiment_spec(
         load_spec_snapshot(root),

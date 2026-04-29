@@ -39,13 +39,19 @@ def append_controller_event(pipeline_root: Path, event: str, **payload: Any) -> 
 def controller_job_record_from_dict(payload: dict[str, Any]) -> ControllerJobRecord:
     unexpected = set(payload) - _JOB_KEYS
     if unexpected:
-        raise RecordContractError(f"controller_job.json has unexpected mutable fields: {sorted(unexpected)}")
+        raise RecordContractError(
+            f"controller_job.json has unexpected mutable fields: {sorted(unexpected)}"
+        )
     missing = _JOB_KEYS - set(payload)
     if missing:
-        raise RecordContractError(f"controller_job.json is missing required fields: {sorted(missing)}")
+        raise RecordContractError(
+            f"controller_job.json is missing required fields: {sorted(missing)}"
+        )
     version = int(payload["schema_version"])
     if version != SchemaVersion.CONTROLLER_JOB:
-        raise RecordContractError(f"controller_job.schema_version is not supported: {version}")
+        raise RecordContractError(
+            f"controller_job.schema_version is not supported: {version}"
+        )
     return ControllerJobRecord(
         schema_version=version,
         pipeline_id=str(payload["pipeline_id"]),
@@ -71,7 +77,9 @@ def write_controller_job(
     if path.exists():
         current = read_json(path)
         if current != payload:
-            raise RuntimeError(f"controller job record is immutable and already exists: {path}")
+            raise RuntimeError(
+                f"controller job record is immutable and already exists: {path}"
+            )
         return record
     write_json(path, record)
     return record

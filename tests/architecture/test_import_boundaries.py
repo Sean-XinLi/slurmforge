@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from pathlib import Path
 
 from tests.architecture.helpers import (
     absolute_import_module,
@@ -9,7 +10,6 @@ from tests.architecture.helpers import (
     top_level_package_edges,
 )
 from tests.support.case import StageBatchSystemTestCase
-from pathlib import Path
 
 
 class ImportBoundaryTests(StageBatchSystemTestCase):
@@ -102,6 +102,57 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                     module == item or module.startswith(f"{item}.") for item in blocked
                 ):
                     violations.append(f"{path}:{node.lineno} imports {module}")
+        self.assertEqual(violations, [])
+
+    def test_record_contract_layers_do_not_import_config_schema(self) -> None:
+        blocked = "slurmforge.config_schema"
+        violations: list[str] = []
+        for package in ("contracts", "sizing"):
+            for path in sorted(Path("src/slurmforge", package).rglob("*.py")):
+                tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+                for node in ast.iter_child_nodes(tree):
+                    if not isinstance(node, ast.ImportFrom):
+                        continue
+                    module = absolute_import_module(path, node)
+                    if module == blocked or module.startswith(f"{blocked}."):
+                        violations.append(f"{path}:{node.lineno} imports {module}")
+        self.assertEqual(violations, [])
+
+    def test_output_selector_normalization_has_single_owner(self) -> None:
+        definitions: list[str] = []
+        for path in sorted(Path("src/slurmforge").rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef) and node.name in {
+                    "_normalize_selector",
+                    "normalize_output_selector",
+                }:
+                    definitions.append(f"{path}:{node.name}")
+
+        self.assertEqual(
+            definitions,
+            [
+                "src/slurmforge/contracts/output_selectors.py:normalize_output_selector"
+            ],
+        )
+
+    def test_internal_code_imports_config_contract_not_legacy_defaults_facade(
+        self,
+    ) -> None:
+        violations: list[str] = []
+        root = Path("src/slurmforge")
+        self.assertFalse((root / "defaults.py").exists())
+        for path in sorted(root.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.iter_child_nodes(tree):
+                modules: list[str] = []
+                if isinstance(node, ast.ImportFrom):
+                    modules.append(absolute_import_module(path, node))
+                elif isinstance(node, ast.Import):
+                    modules.extend(alias.name for alias in node.names)
+                for module in modules:
+                    if module == "slurmforge.defaults":
+                        violations.append(f"{path}:{node.lineno} imports {module}")
         self.assertEqual(violations, [])
 
     def test_plans_do_not_import_spec_or_schema(self) -> None:

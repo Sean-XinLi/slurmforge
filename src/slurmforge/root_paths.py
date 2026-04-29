@@ -18,4 +18,6 @@ def parent_pipeline_root_for_stage_batch(stage_batch_root: Path) -> Path | None:
         payload = read_json(manifest)
     except Exception:
         return None
-    return candidate.resolve() if payload.get("kind") == TRAIN_EVAL_PIPELINE_KIND else None
+    return (
+        candidate.resolve() if payload.get("kind") == TRAIN_EVAL_PIPELINE_KIND else None
+    )

@@ -4,7 +4,12 @@ from .bindings import default_bindings
 from .entry import before_payload, entry_payload
 from .launcher import launcher_payload
 from .notifications import notification_payload
-from .resources import artifact_store_payload, control_resources_payload, resource_payload, resource_sizing_payload
+from .resources import (
+    artifact_store_payload,
+    control_resources_payload,
+    resource_payload,
+    resource_sizing_payload,
+)
 from .runtime import environment_payload, executor_runtime_payload, runtime_payload
 
 __all__ = [

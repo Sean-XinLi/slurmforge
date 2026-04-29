@@ -1,0 +1,95 @@
+from __future__ import annotations
+
+from typing import Final
+
+from ...config_contract.defaults import DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB
+from ...config_contract.options import GPU_SIZING_ESTIMATORS
+from ...config_contract.workflows import ALL_STARTER_TEMPLATES
+from ..models import ConfigField
+
+FIELDS: Final[tuple[ConfigField, ...]] = (
+    ConfigField(
+        path="stages.*.gpu_sizing",
+        title="Stage GPU sizing",
+        short_help="Automatic GPU count sizing policy for a stage.",
+        when_to_change="Use this when stages should derive GPU count from estimated memory instead of hard-coding gpus_per_node.",
+        section="Stage GPU",
+        level="advanced",
+        value_type="mapping",
+        templates=ALL_STARTER_TEMPLATES,
+        default_display="null",
+        required=False,
+    ),
+    ConfigField(
+        path="stages.*.gpu_sizing.estimator",
+        title="GPU sizing estimator",
+        short_help="Estimator name used to size a stage's GPU request.",
+        when_to_change="Set this to the estimator implementation that knows how to estimate your stage workload.",
+        section="Stage GPU",
+        level="advanced",
+        templates=ALL_STARTER_TEMPLATES,
+        default_display="required when gpu_sizing is present",
+        required=None,
+        options=GPU_SIZING_ESTIMATORS,
+    ),
+    ConfigField(
+        path="stages.*.gpu_sizing.target_memory_gb",
+        title="GPU sizing target memory",
+        short_help="Estimated target memory in GB for a stage.",
+        when_to_change="Set this to the stage's estimated peak GPU memory requirement.",
+        section="Stage GPU",
+        level="advanced",
+        value_type="float",
+        templates=ALL_STARTER_TEMPLATES,
+        default_display="required when gpu_sizing is present",
+        required=None,
+    ),
+    ConfigField(
+        path="stages.*.gpu_sizing.min_gpus_per_job",
+        title="Minimum GPUs per job",
+        short_help="Lower bound applied to automatic GPU sizing.",
+        when_to_change="Increase this when launchers or workloads require a minimum GPU count.",
+        section="Stage GPU",
+        level="advanced",
+        value_type="integer",
+        templates=ALL_STARTER_TEMPLATES,
+        default_value=DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB,
+        required=False,
+    ),
+    ConfigField(
+        path="stages.*.gpu_sizing.max_gpus_per_job",
+        title="Maximum GPUs per job",
+        short_help="Upper bound applied to automatic GPU sizing.",
+        when_to_change="Set this to cap GPU use for cost, quota, or launcher limits.",
+        section="Stage GPU",
+        level="advanced",
+        value_type="integer",
+        templates=ALL_STARTER_TEMPLATES,
+        default_display="null",
+        required=False,
+    ),
+    ConfigField(
+        path="stages.*.gpu_sizing.safety_factor",
+        title="Stage GPU sizing safety factor",
+        short_help="Stage-specific multiplier overriding sizing.gpu.defaults.safety_factor.",
+        when_to_change="Use this when one stage needs a different memory safety margin.",
+        section="Stage GPU",
+        level="advanced",
+        value_type="float",
+        templates=ALL_STARTER_TEMPLATES,
+        default_display="null",
+        required=False,
+    ),
+    ConfigField(
+        path="stages.*.gpu_sizing.round_to",
+        title="Stage GPU sizing round-to",
+        short_help="Stage-specific GPU count granularity overriding sizing.gpu.defaults.round_to.",
+        when_to_change="Use this when one stage needs a different GPU rounding policy.",
+        section="Stage GPU",
+        level="advanced",
+        value_type="integer",
+        templates=ALL_STARTER_TEMPLATES,
+        default_display="null",
+        required=False,
+    ),
+)

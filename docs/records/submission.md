@@ -4,6 +4,7 @@
 
 Every stage instance has `input_bindings.json`:
 
+<!-- SUBMISSION_BINDING_JSON_START -->
 ```json
 {
   "schema_version": 1,
@@ -42,11 +43,13 @@ Every stage instance has `input_bindings.json`:
   }
 }
 ```
+<!-- SUBMISSION_BINDING_JSON_END -->
 
 The binding file is the source of truth. Environment variables and CLI flags are derived injection forms. `checkpoint` is only a conventional name in examples; eval may use any input name if the source and injection contract are explicit.
 
 The YAML input contract is explicit:
 
+<!-- SUBMISSION_INPUT_YAML_START -->
 ```yaml
 inputs:
   checkpoint:
@@ -59,7 +62,9 @@ inputs:
     inject:
       flag: checkpoint_path
       env: SFORGE_INPUT_CHECKPOINT
+      mode: path
 ```
+<!-- SUBMISSION_INPUT_YAML_END -->
 
 Allowed source kinds are `upstream_output` and `external_path`. CLI shortcuts such as `--checkpoint` compile to `external_path` bindings with `resolution.source_role=checkpoint`; checkpoint is not a separate core source kind.
 

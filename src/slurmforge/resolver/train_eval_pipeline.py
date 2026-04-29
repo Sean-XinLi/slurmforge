@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..contracts import InputBinding, InputSource, RunDefinition, binding_is_ready_for_injection
+from ..contracts import (
+    InputBinding,
+    InputSource,
+    RunDefinition,
+    binding_is_ready_for_injection,
+)
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..spec import ExperimentSpec, StageInputSpec
 from ..status.reader import read_stage_status
@@ -21,7 +26,9 @@ from .output_refs import (
 )
 
 
-def _producer_ref(input_spec: StageInputSpec, depends_on: tuple[str, ...]) -> tuple[str, str] | None:
+def _producer_ref(
+    input_spec: StageInputSpec, depends_on: tuple[str, ...]
+) -> tuple[str, str] | None:
     if input_spec.source.kind == "upstream_output":
         return input_spec.source.stage, input_spec.source.output
     return None
@@ -39,7 +46,9 @@ def _pipeline_upstream_binding(
     if producer_batch is None:
         return unresolved_binding(
             input_spec,
-            source=InputSource(kind="upstream_output", stage=producer_stage, output=output_name),
+            source=InputSource(
+                kind="upstream_output", stage=producer_stage, output=output_name
+            ),
             reason=f"producer stage `{producer_stage}` is not in the pipeline plan",
         )
     producer_root = Path(producer_batch.submission_root)
@@ -48,7 +57,9 @@ def _pipeline_upstream_binding(
     if producer_plan is None:
         return unresolved_binding(
             input_spec,
-            source=InputSource(kind="upstream_output", stage=producer_stage, output=output_name),
+            source=InputSource(
+                kind="upstream_output", stage=producer_stage, output=output_name
+            ),
             reason=f"producer stage plan was not found for run `{run.run_id}`",
         )
     status = read_stage_status(producer_run_dir)
@@ -56,7 +67,9 @@ def _pipeline_upstream_binding(
         state = "missing" if status is None else status.state
         return unresolved_binding(
             input_spec,
-            source=InputSource(kind="upstream_output", stage=producer_stage, output=output_name),
+            source=InputSource(
+                kind="upstream_output", stage=producer_stage, output=output_name
+            ),
             reason=f"producer stage `{producer_stage}` is not successful for run `{run.run_id}`: {state}",
         )
     outputs = load_stage_outputs(producer_run_dir)
@@ -64,12 +77,16 @@ def _pipeline_upstream_binding(
     if output is None:
         return unresolved_binding(
             input_spec,
-            source=InputSource(kind="upstream_output", stage=producer_stage, output=output_name),
+            source=InputSource(
+                kind="upstream_output", stage=producer_stage, output=output_name
+            ),
             reason=f"producer output `{output_name}` was not found for run `{run.run_id}`",
         )
     return InputBinding(
         input_name=input_spec.name,
-        source=InputSource(kind="upstream_output", stage=producer_plan.stage_name, output=output_name),
+        source=InputSource(
+            kind="upstream_output", stage=producer_plan.stage_name, output=output_name
+        ),
         expects=input_spec.expects,
         resolved=resolved_output(output),
         inject=inject_payload(input_spec),
@@ -124,13 +141,16 @@ def resolve_stage_inputs_for_train_eval_pipeline(
     blocked_reasons: dict[str, str] = {}
     for run in run_defs:
         bindings = tuple(
-            _resolve_input_for_pipeline(spec, plan, stage_name, run, stage.inputs[input_name])
+            _resolve_input_for_pipeline(
+                spec, plan, stage_name, run, stage.inputs[input_name]
+            )
             for input_name in sorted(stage.inputs)
         )
         failures = [
             f"{binding.input_name}: {binding.resolution.get('reason') or 'unresolved'}"
             for binding in bindings
-            if binding.inject.get("required") and not binding_is_ready_for_injection(binding)
+            if binding.inject.get("required")
+            and not binding_is_ready_for_injection(binding)
         ]
         if failures:
             blocked.append(run.run_id)

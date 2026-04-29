@@ -26,7 +26,9 @@ def reserve_derived_stage_batch_root(
         except FileExistsError:
             continue
         return ReservedDerivedStageBatchRoot(batch_id=batch_id, root=root.resolve())
-    raise RuntimeError(f"could not reserve a derived stage batch root under {derived_root}")
+    raise RuntimeError(
+        f"could not reserve a derived stage batch root under {derived_root}"
+    )
 
 
 def _source_plan_payload(plan: SourcedStageBatchPlan) -> dict[str, object]:

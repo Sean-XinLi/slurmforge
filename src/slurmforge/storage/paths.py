@@ -1,4 +1,5 @@
 """Filesystem path conventions for stage run directories."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -56,5 +57,9 @@ def next_attempt_id(run_dir: Path) -> str:
     root = attempts_dir(run_dir)
     if not root.exists():
         return "0001"
-    existing = [int(path.name) for path in root.iterdir() if path.is_dir() and path.name.isdigit()]
+    existing = [
+        int(path.name)
+        for path in root.iterdir()
+        if path.is_dir() and path.name.isdigit()
+    ]
     return f"{(max(existing) + 1) if existing else 1:04d}"

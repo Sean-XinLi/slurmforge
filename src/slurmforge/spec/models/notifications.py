@@ -2,16 +2,24 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ...config_contract.defaults import (
+    DEFAULT_EMAIL_ENABLED,
+    DEFAULT_EMAIL_FROM,
+    DEFAULT_EMAIL_MODE,
+    DEFAULT_EMAIL_SENDMAIL,
+    DEFAULT_EMAIL_SUBJECT_PREFIX,
+)
+
 
 @dataclass(frozen=True)
 class EmailNotificationSpec:
-    enabled: bool = False
+    enabled: bool = DEFAULT_EMAIL_ENABLED
     to: tuple[str, ...] = ()
     events: tuple[str, ...] = ()
-    mode: str = "summary"
-    from_address: str = "slurmforge@localhost"
-    sendmail: str = "/usr/sbin/sendmail"
-    subject_prefix: str = "SlurmForge"
+    mode: str = DEFAULT_EMAIL_MODE
+    from_address: str = DEFAULT_EMAIL_FROM
+    sendmail: str = DEFAULT_EMAIL_SENDMAIL
+    subject_prefix: str = DEFAULT_EMAIL_SUBJECT_PREFIX
 
 
 @dataclass(frozen=True)

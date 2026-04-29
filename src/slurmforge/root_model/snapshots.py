@@ -19,7 +19,10 @@ def refresh_stage_batch_status(batch_root: Path) -> RootStatusSnapshot:
         stage_statuses=tuple(statuses),
         run_statuses=aggregate_run_statuses(statuses),
     )
-    write_json(root / "run_status.json", {"schema_version": SchemaVersion.STATUS, "runs": snapshot.run_statuses})
+    write_json(
+        root / "run_status.json",
+        {"schema_version": SchemaVersion.STATUS, "runs": snapshot.run_statuses},
+    )
     return snapshot
 
 
@@ -35,7 +38,10 @@ def refresh_train_eval_pipeline_status(pipeline_root: Path) -> RootStatusSnapsho
         run_statuses=aggregate_run_statuses(statuses),
         pipeline_status=pipeline_status,
     )
-    write_json(root / "run_status.json", {"schema_version": SchemaVersion.STATUS, "runs": snapshot.run_statuses})
+    write_json(
+        root / "run_status.json",
+        {"schema_version": SchemaVersion.STATUS, "runs": snapshot.run_statuses},
+    )
     write_json(root / "train_eval_pipeline_status.json", pipeline_status)
     return snapshot
 
@@ -64,5 +70,7 @@ def load_root_status_snapshot(root: Path) -> RootStatusSnapshot:
         kind="train_eval_pipeline",
         stage_statuses=tuple(statuses),
         run_statuses=run_statuses,
-        pipeline_status=aggregate_train_eval_pipeline_status(plan.pipeline_id, statuses),
+        pipeline_status=aggregate_train_eval_pipeline_status(
+            plan.pipeline_id, statuses
+        ),
     )

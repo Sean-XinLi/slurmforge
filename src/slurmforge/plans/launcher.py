@@ -25,4 +25,3 @@ class LauncherPlan:
     rendezvous: RendezvousPlan | None = None
     args: tuple[str, ...] = ()
     srun_args: tuple[str, ...] = ()
-    master_port: int | None = None

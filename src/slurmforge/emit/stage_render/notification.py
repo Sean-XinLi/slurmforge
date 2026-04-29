@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ...config_contract.defaults import DEFAULT_PYTHON_BIN
 from ...plans.notifications import FinalizerPlan
 from ...plans.resources import ControlResourcesPlan
 from ...plans.runtime import EnvironmentPlan
@@ -29,11 +30,13 @@ def _finalizer_environment(batch: StageBatchPlan) -> EnvironmentPlan:
 def _finalizer_python_bin(batch: StageBatchPlan) -> str:
     runtime_plan = _finalizer_plan(batch).runtime_plan
     if runtime_plan is None:
-        return "python3"
+        return DEFAULT_PYTHON_BIN
     return runtime_plan.executor.python.bin
 
 
-def render_stage_notification_sbatch(batch: StageBatchPlan, event: str, *, generation_id: str) -> str:
+def render_stage_notification_sbatch(
+    batch: StageBatchPlan, event: str, *, generation_id: str
+) -> str:
     notification_dir = _submit_root(batch) / "notifications" / generation_id
     logs_dir = _submit_root(batch) / "logs" / generation_id
     python_bin = _finalizer_python_bin(batch)
@@ -68,7 +71,13 @@ def render_stage_notification_barrier_sbatch(
     logs_dir = _submit_root(batch) / "logs" / generation_id
     resources = _finalizer_resources(batch)
     lines = render_control_job_headers(
-        job_name=_job_name("sforge", batch.project, batch.stage_name, "notify-barrier", str(barrier_index)),
+        job_name=_job_name(
+            "sforge",
+            batch.project,
+            batch.stage_name,
+            "notify-barrier",
+            str(barrier_index),
+        ),
         stdout_path=logs_dir / f"notify-barrier-{event}-{barrier_index:03d}-%j.out",
         stderr_path=logs_dir / f"notify-barrier-{event}-{barrier_index:03d}-%j.err",
         resources=resources,

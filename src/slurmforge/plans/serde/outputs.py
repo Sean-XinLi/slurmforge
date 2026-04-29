@@ -21,8 +21,12 @@ def output_ref_from_dict(payload: dict[str, Any]) -> OutputRef:
         strategy=str(payload.get("strategy") or ""),
         source_digest=str(payload.get("source_digest") or ""),
         managed_digest=str(payload.get("managed_digest") or ""),
-        verified=None if payload.get("verified") is None else bool(payload.get("verified")),
-        size_bytes=None if payload.get("size_bytes") is None else int(payload.get("size_bytes")),
+        verified=None
+        if payload.get("verified") is None
+        else bool(payload.get("verified")),
+        size_bytes=None
+        if payload.get("size_bytes") is None
+        else int(payload.get("size_bytes")),
         selection_reason=str(payload.get("selection_reason") or ""),
         value=payload.get("value"),
     )
@@ -33,7 +37,10 @@ def stage_outputs_record_from_dict(payload: dict[str, Any]) -> StageOutputsRecor
     return StageOutputsRecord(
         stage_instance_id=str(payload["stage_instance_id"]),
         producer_attempt_id=str(payload["producer_attempt_id"]),
-        outputs={str(name): output_ref_from_dict(dict(item)) for name, item in dict(payload.get("outputs") or {}).items()},
+        outputs={
+            str(name): output_ref_from_dict(dict(item))
+            for name, item in dict(payload.get("outputs") or {}).items()
+        },
         artifacts=tuple(str(item) for item in payload.get("artifacts", ())),
         artifact_manifest=str(payload["artifact_manifest"]),
     )
@@ -42,7 +49,9 @@ def stage_outputs_record_from_dict(payload: dict[str, Any]) -> StageOutputsRecor
 def artifact_store_plan_from_dict(payload: dict[str, Any]) -> ArtifactStorePlan:
     return ArtifactStorePlan(
         strategy=str(payload["strategy"]),
-        fallback_strategy=None if payload["fallback_strategy"] in (None, "") else str(payload["fallback_strategy"]),
+        fallback_strategy=None
+        if payload["fallback_strategy"] in (None, "")
+        else str(payload["fallback_strategy"]),
         verify_digest=bool(payload["verify_digest"]),
         fail_on_verify_error=bool(payload["fail_on_verify_error"]),
     )

@@ -1,9 +1,22 @@
 """Input contract dataclasses shared by spec, planner, resolver, and executor."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..config_contract.defaults import DEFAULT_INPUT_INJECT_MODE
+from ..config_contract.options import (
+    INPUT_EXPECTS_MANIFEST,
+    INPUT_EXPECTS_PATH,
+    INPUT_EXPECTS_VALUE,
+    INPUT_INJECT_JSON,
+    INPUT_INJECT_PATH,
+    INPUT_INJECT_VALUE,
+    OUTPUT_KIND_FILES,
+    OUTPUT_KIND_MANIFEST,
+    OUTPUT_KIND_METRIC,
+)
 from ..io import SchemaVersion, require_schema, stable_json
 
 JsonObject = dict[str, Any]
@@ -13,7 +26,7 @@ JsonObject = dict[str, Any]
 class InputInjection:
     flag: str | None = None
     env: str | None = None
-    mode: str = "path"
+    mode: str = DEFAULT_INPUT_INJECT_MODE
 
 
 @dataclass(frozen=True)
@@ -52,7 +65,9 @@ def input_source_from_dict(payload: JsonObject | InputSource) -> InputSource:
         return payload
     values = dict(payload)
     if "schema_version" in values:
-        require_schema(values, name="input_source", version=SchemaVersion.INPUT_CONTRACT)
+        require_schema(
+            values, name="input_source", version=SchemaVersion.INPUT_CONTRACT
+        )
     return InputSource(
         kind=str(values["kind"]),
         stage=str(values.get("stage") or ""),
@@ -61,12 +76,16 @@ def input_source_from_dict(payload: JsonObject | InputSource) -> InputSource:
     )
 
 
-def resolved_input_from_dict(payload: JsonObject | ResolvedInput | None) -> ResolvedInput:
+def resolved_input_from_dict(
+    payload: JsonObject | ResolvedInput | None,
+) -> ResolvedInput:
     if isinstance(payload, ResolvedInput):
         return payload
     values = dict(payload or {})
     if values and "schema_version" in values:
-        require_schema(values, name="resolved_input", version=SchemaVersion.INPUT_CONTRACT)
+        require_schema(
+            values, name="resolved_input", version=SchemaVersion.INPUT_CONTRACT
+        )
     return ResolvedInput(
         kind=str(values.get("kind") or "unresolved"),
         path=str(values.get("path") or ""),
@@ -90,11 +109,14 @@ def input_binding_from_dict(payload: JsonObject) -> InputBinding:
 
 
 def resolved_kind_for_output_kind(output_kind: str, cardinality: str = "one") -> str:
-    if output_kind == "metric":
-        return "value"
-    if output_kind in {"files", "manifest"} or cardinality == "many":
-        return "manifest"
-    return "path"
+    if output_kind == OUTPUT_KIND_METRIC:
+        return INPUT_EXPECTS_VALUE
+    if (
+        output_kind in {OUTPUT_KIND_FILES, OUTPUT_KIND_MANIFEST}
+        or cardinality == "many"
+    ):
+        return INPUT_EXPECTS_MANIFEST
+    return INPUT_EXPECTS_PATH
 
 
 def resolved_kind_matches_expectation(kind: str, expects: str) -> bool:
@@ -102,31 +124,36 @@ def resolved_kind_matches_expectation(kind: str, expects: str) -> bool:
 
 
 def inject_mode_matches_expectation(mode: str, expects: str) -> bool:
-    if expects in {"path", "manifest"}:
-        return mode in {"path", "json"}
-    if expects == "value":
-        return mode in {"value", "json"}
+    if expects in {INPUT_EXPECTS_PATH, INPUT_EXPECTS_MANIFEST}:
+        return mode in {INPUT_INJECT_PATH, INPUT_INJECT_JSON}
+    if expects == INPUT_EXPECTS_VALUE:
+        return mode in {INPUT_INJECT_VALUE, INPUT_INJECT_JSON}
     return False
 
 
 def resolved_payload_present(binding: InputBinding) -> bool:
     resolved = binding.resolved
-    if resolved.kind in {"path", "manifest"}:
+    if resolved.kind in {INPUT_EXPECTS_PATH, INPUT_EXPECTS_MANIFEST}:
         return bool(resolved.path)
-    if resolved.kind == "value":
+    if resolved.kind == INPUT_EXPECTS_VALUE:
         return resolved.value is not None
     return False
 
 
 def input_injection_value(binding: InputBinding) -> str | None:
     resolved = binding.resolved
-    mode = str(binding.inject.get("mode") or "path")
-    if mode == "path":
-        return resolved.path if resolved.kind in {"path", "manifest"} and resolved.path else None
-    if mode == "value":
-        return None if resolved.kind != "value" else str(resolved.value)
-    if mode == "json":
-        payload = resolved.value if resolved.kind == "value" else resolved
+    mode = str(binding.inject.get("mode") or DEFAULT_INPUT_INJECT_MODE)
+    if mode == INPUT_INJECT_PATH:
+        return (
+            resolved.path
+            if resolved.kind in {INPUT_EXPECTS_PATH, INPUT_EXPECTS_MANIFEST}
+            and resolved.path
+            else None
+        )
+    if mode == INPUT_INJECT_VALUE:
+        return None if resolved.kind != INPUT_EXPECTS_VALUE else str(resolved.value)
+    if mode == INPUT_INJECT_JSON:
+        payload = resolved.value if resolved.kind == INPUT_EXPECTS_VALUE else resolved
         return stable_json(payload)
     return None
 
@@ -136,7 +163,7 @@ def binding_is_ready_for_injection(binding: InputBinding) -> bool:
         return False
     if not resolved_kind_matches_expectation(binding.resolved.kind, binding.expects):
         return False
-    mode = str(binding.inject.get("mode") or "path")
+    mode = str(binding.inject.get("mode") or DEFAULT_INPUT_INJECT_MODE)
     if not inject_mode_matches_expectation(mode, binding.expects):
         return False
     return input_injection_value(binding) is not None
@@ -146,15 +173,20 @@ def resolved_input_from_output_ref(output: Any) -> ResolvedInput:
     if isinstance(output, dict):
         values = dict(output)
         output_name = str(values.get("output_name") or "")
-        output_kind = str(values.get("kind") or "file")
+        output_kind = str(values.get("kind") or "")
         path = str(values.get("path") or "")
-        digest = str(values.get("digest") or values.get("managed_digest") or values.get("source_digest") or "")
+        digest = str(
+            values.get("digest")
+            or values.get("managed_digest")
+            or values.get("source_digest")
+            or ""
+        )
         value = values.get("value")
         cardinality = str(values.get("cardinality") or "one")
         producer = str(values.get("producer_stage_instance_id") or "")
     else:
         output_name = str(getattr(output, "output_name", ""))
-        output_kind = str(getattr(output, "kind", "file"))
+        output_kind = str(getattr(output, "kind", ""))
         path = str(getattr(output, "path", ""))
         digest = str(
             getattr(output, "digest", "")
@@ -165,9 +197,9 @@ def resolved_input_from_output_ref(output: Any) -> ResolvedInput:
         cardinality = str(getattr(output, "cardinality", "one"))
         producer = str(getattr(output, "producer_stage_instance_id", ""))
     resolved_kind = resolved_kind_for_output_kind(output_kind, cardinality)
-    if resolved_kind == "value":
+    if resolved_kind == INPUT_EXPECTS_VALUE:
         return ResolvedInput(
-            kind="value",
+            kind=INPUT_EXPECTS_VALUE,
             path=path,
             value=value,
             digest=digest,

@@ -45,6 +45,9 @@ def environment_payload(spec: ExperimentSpec, name: str) -> EnvironmentPlan:
     return EnvironmentPlan(
         name=environment.name,
         modules=environment.modules,
-        source=tuple(EnvironmentSourcePlan(path=source.path, args=source.args) for source in environment.source),
+        source=tuple(
+            EnvironmentSourcePlan(path=source.path, args=source.args)
+            for source in environment.source
+        ),
         env=copy.deepcopy(environment.env),
     )

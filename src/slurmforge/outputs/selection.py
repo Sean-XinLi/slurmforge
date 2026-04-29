@@ -20,7 +20,10 @@ def glob_paths(workdir: Path, patterns: list[str]) -> list[str]:
 
 
 def _step_number(path: str) -> int | None:
-    numbers = [int(item) for item in re.findall(r"(?<![A-Za-z])(\d+)(?![A-Za-z])", Path(path).stem)]
+    numbers = [
+        int(item)
+        for item in re.findall(r"(?<![A-Za-z])(\d+)(?![A-Za-z])", Path(path).stem)
+    ]
     return max(numbers) if numbers else None
 
 
@@ -30,7 +33,10 @@ def select_file(paths: list[str], selector: str) -> tuple[str | None, str]:
     if selector == "latest_step":
         with_steps = [(path, _step_number(path)) for path in paths]
         if any(step is not None for _path, step in with_steps):
-            selected = max(with_steps, key=lambda item: (-1 if item[1] is None else item[1], item[0]))[0]
+            selected = max(
+                with_steps,
+                key=lambda item: (-1 if item[1] is None else item[1], item[0]),
+            )[0]
             return selected, "latest_step"
         return paths[-1], "lexicographic_last"
     if selector == "first":

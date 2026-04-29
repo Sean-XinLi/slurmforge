@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...config_comments import comment_for
 from ..scalar import scalar
 from .entry import render_entry, render_launcher
 from .inputs import render_inputs
@@ -9,9 +10,7 @@ from .outputs import render_outputs
 from .resources import render_resources
 
 
-def render_stages(
-    lines: list[str], template_name: str, config: dict[str, Any]
-) -> None:
+def render_stages(lines: list[str], template_name: str, config: dict[str, Any]) -> None:
     lines.append("stages:")
     stages = config["stages"]
     for index, (stage_name, stage) in enumerate(stages.items()):
@@ -29,11 +28,13 @@ def _render_stage(
     lines.extend(
         [
             f"  {stage_name}:",
-            "    # Stage role. Starter workflows use train and/or eval.",
+            comment_for("stages.*.kind", indent=4),
             f"    kind: {scalar(stage['kind'])}",
+            comment_for("stages.*.enabled", indent=4),
             f"    enabled: {scalar(stage['enabled'])}",
-            "    # Must reference keys under environments and runtime.user.",
+            comment_for("stages.*.environment", indent=4),
             f"    environment: {scalar(stage['environment'])}",
+            comment_for("stages.*.runtime", indent=4),
             f"    runtime: {scalar(stage['runtime'])}",
         ]
     )
@@ -44,7 +45,7 @@ def _render_stage(
     if "depends_on" in stage:
         lines.extend(
             [
-                "    # Upstream stages that must complete before this stage is selected.",
+                comment_for("stages.*.depends_on", indent=4),
                 "    depends_on:",
             ]
         )

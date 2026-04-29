@@ -43,8 +43,8 @@ For scripts or CI, choose a template explicitly:
 sforge init --template train-eval --output ./demo --force
 ```
 
-This writes `./demo/experiment.yaml`, `./demo/train.py`, `./demo/eval.py`,
-and `./demo/README.sforge.md`.
+This writes `./demo/experiment.yaml`, `./demo/CONFIG.sforge.md`,
+`./demo/README.sforge.md`, and the template's stage scripts.
 
 Available starter templates:
 

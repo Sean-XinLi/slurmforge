@@ -7,8 +7,8 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
+from ..config_contract.defaults import DEFAULT_OUTPUT_DIR
 from ..errors import UsageError
-from ..starter.defaults import DEFAULT_OUTPUT_DIR
 from ..starter import (
     InitRequest,
     StarterWriteError,

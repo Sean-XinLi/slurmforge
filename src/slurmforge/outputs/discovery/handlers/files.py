@@ -18,7 +18,9 @@ def discover_files_output(
     if not paths:
         return OutputDiscoveryItem(
             output_name=output_name,
-            missing_required_reason=_missing_required(output_name) if output_cfg.required else "",
+            missing_required_reason=_missing_required(output_name)
+            if output_cfg.required
+            else "",
         )
 
     artifacts = tuple(
@@ -33,7 +35,9 @@ def discover_files_output(
         for path in paths
     )
     output_ref = write_files_output_manifest(output_name, artifacts, context)
-    return OutputDiscoveryItem(output_name=output_name, output_ref=output_ref, artifacts=artifacts)
+    return OutputDiscoveryItem(
+        output_name=output_name, output_ref=output_ref, artifacts=artifacts
+    )
 
 
 def _missing_required(output_name: str) -> str:

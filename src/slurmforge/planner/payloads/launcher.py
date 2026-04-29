@@ -19,20 +19,21 @@ def launcher_payload(stage: StageSpec, resources: ResourcePlan) -> LauncherPlan:
     return LauncherPlan(type=launcher_type)
 
 
-def _torchrun_launcher_payload(stage: StageSpec, resources: ResourcePlan, options: dict[str, Any]) -> LauncherPlan:
+def _torchrun_launcher_payload(
+    stage: StageSpec, resources: ResourcePlan, options: dict[str, Any]
+) -> LauncherPlan:
     nodes = resources.nodes
     gpus = resources.gpus_per_node
     nproc_default = gpus if gpus > 0 else 1
     mode = str(options.get("mode") or ("multi_node" if nodes > 1 else "single_node"))
     rendezvous = dict(options.get("rendezvous") or {})
-    port = rendezvous.get("port", options.get("master_port", 29500))
-    master_port = None if options.get("master_port") is None else int(options["master_port"])
+    port = rendezvous.get("port", 29500)
     return LauncherPlan(
         type="torchrun",
         mode=mode,
-        nnodes=_auto_int(options.get("nnodes") or options.get("nodes") or "auto", nodes),
+        nnodes=_auto_int(options.get("nnodes") or "auto", nodes),
         nproc_per_node=_auto_int(
-            options.get("nproc_per_node") or options.get("processes_per_node") or "auto",
+            options.get("nproc_per_node") or "auto",
             nproc_default,
         ),
         rendezvous=RendezvousPlan(
@@ -41,7 +42,6 @@ def _torchrun_launcher_payload(stage: StageSpec, resources: ResourcePlan, option
             port=int(port),
         ),
         srun_args=tuple(str(item) for item in options.get("srun_args") or ()),
-        master_port=master_port,
     )
 
 

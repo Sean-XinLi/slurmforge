@@ -4,6 +4,7 @@ from typing import Any
 
 
 def flag(name: str) -> str:
+    """Return the configured CLI flag name, adding ``--`` only when omitted."""
     return name if name.startswith("-") else f"--{name}"
 
 
@@ -13,7 +14,7 @@ def args_to_argv(args: dict[str, Any]) -> list[str]:
         value = args[key]
         if value is None:
             continue
-        item_flag = flag(str(key).replace("_", "-"))
+        item_flag = flag(str(key))
         if isinstance(value, bool):
             argv.append(item_flag)
             if not value:

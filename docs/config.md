@@ -9,139 +9,389 @@ project, experiment, storage, hardware, environments, runtime, sizing,
 artifact_store, notifications, runs, stages, dispatch, orchestration
 ```
 
-## Shape
+## Starter Shape
 
+<!-- CONFIG_STARTER_EXAMPLE_START -->
 ```yaml
-project: "demo_project"
-experiment: "finetune_v2"
+# Starter template: train-eval
+# Edit the values below, then run `sforge validate --config <file>`.
+# Full field reference: docs/config.md
+
+# Names the project namespace used in generated storage paths.
+project: demo
+# Names this experiment inside the project namespace.
+experiment: baseline
 
 storage:
-  root: "./runs"
-
-hardware:
-  gpu_types:
-    a100_80gb:
-      memory_gb: 80
-      usable_memory_fraction: 0.90
-      max_gpus_per_node: 8
-      slurm:
-        constraint: "a100"
+  # Root directory for plans, logs, status records, and managed artifacts.
+  root: ./runs
 
 environments:
-  cluster_env:
-    modules:
-      - "cuda/12.1"
-    source:
-      - path: "/shared/miniconda/bin/activate"
-        args: ["myenv"]
-    env:
-      HF_HOME: "/shared/hf"
+  default:
+    # Module names loaded before executor and user scripts run.
+    modules: []
+    # Shell files or setup commands sourced before execution.
+    source: []
+    # Static environment variables added to Slurm job environments.
+    env: {}
 
 runtime:
   executor:
     python:
-      bin: "python3.11"
-      min_version: "3.10"
-    module: "slurmforge.executor.stage"
+      # Python used by the SlurmForge executor wrapper on compute nodes.
+      bin: python3
+      min_version: "3.10"  # Minimum Python version required for the SlurmForge executor.
+    # Python module used as the SlurmForge stage executor entrypoint.
+    module: slurmforge.executor.stage
   user:
     default:
       python:
-        bin: "python3.11"
-        min_version: "3.10"
+        # Python used to run generated train/eval scripts.
+        bin: python3
+        min_version: "3.10"  # Minimum Python version required for user stage scripts.
+      # Environment variables visible to user stage scripts.
+      env: {}
 
+artifact_store:
+  # Options: copy, hardlink, symlink, register_only. Controls how declared outputs are placed in the managed run store.
+  strategy: copy
+  # Options: null, copy, hardlink, symlink, register_only. Fallback behavior when the primary artifact storage strategy fails.
+  fallback_strategy: null
+  # Verifies managed output digests after artifact storage.
+  verify_digest: true
+  # Fails the run when artifact verification cannot prove integrity.
+  fail_on_verify_error: true
+
+notifications:
+  email:
+    # Enables email summary notifications for terminal workflow events.
+    enabled: false
+    # Recipients for email notifications when email is enabled.
+    to: []
+    # Options: batch_finished, train_eval_pipeline_finished. Terminal workflow events that trigger email summaries.
+    "on":
+      - batch_finished
+    # Options: summary. Controls email content shape.
+    mode: summary
+    # Sender address used by email delivery.
+    from: "slurmforge@localhost"
+    # Local sendmail-compatible binary used to deliver email.
+    sendmail: /usr/sbin/sendmail
+    # Prefix added to SlurmForge notification email subjects.
+    subject_prefix: SlurmForge
+
+runs:
+  # Options: single, grid, cases, matrix. Controls whether the config plans one run or expands a sweep.
+  type: single
+
+dispatch:
+  # GPU budget used to serialize Slurm array groups when a plan exceeds available GPUs.
+  max_available_gpus: 1
+  # Options: serialize_groups, error, best_effort. Controls planner behavior when run groups exceed the declared GPU budget.
+  overflow_policy: serialize_groups
+
+orchestration:
+  controller:
+    # Slurm partition for the lightweight train/eval controller job.
+    partition: gpu
+    # CPU count requested by the lightweight workflow controller job.
+    cpus: 1
+    # Memory requested by the lightweight workflow controller job.
+    mem: 2G
+    # Slurm time limit requested by the lightweight workflow controller job.
+    time_limit: "01:00:00"
+    # Environment profile loaded before the lightweight workflow controller runs.
+    environment: default
+
+stages:
+  train:
+    # Stage role used by starter workflows and command selection.
+    kind: train
+    # Controls whether the stage participates in planning.
+    enabled: true
+    # Environment profile used before the stage runs.
+    environment: default
+    # User runtime profile used to execute the stage script.
+    runtime: default
+    entry:
+      # Options: python_script, command. Controls how the stage command is interpreted.
+      type: python_script
+      # Script path resolved relative to the config file directory.
+      script: train.py
+      # Working directory used when launching the stage command.
+      workdir: .
+      # Mapping passed to each stage script; each YAML key maps exactly to the CLI flag name, with `--` added only when no dash prefix is present.
+      args:
+        epochs: 1
+        lr: 0.001
+    launcher:
+      # Options: single, python, torchrun, srun, mpirun, command. Chooses how a stage process is launched.
+      type: single
+    resources:
+      # Slurm partition or queue for each stage task.
+      partition: gpu
+      # Number of nodes requested by each stage task.
+      nodes: 1
+      # GPU count per node, or auto when GPU sizing is configured.
+      gpus_per_node: 1
+      # CPU count requested for each stage task.
+      cpus_per_task: 4
+      # Memory requested for each stage task.
+      mem: 16G
+      # Slurm time limit requested for each stage task.
+      time_limit: "01:00:00"
+    outputs:
+      checkpoint:
+        # Options: file, files, metric, manifest. Declares the shape of a managed stage output.
+        kind: file
+        required: true
+        discover:
+          # Glob patterns evaluated under the stage run directory.
+          globs:
+            - checkpoints/**/*.pt
+          # Options: latest_step, first, last. Selects one path from discovered output glob matches.
+          select: latest_step
+
+  eval:
+    # Stage role used by starter workflows and command selection.
+    kind: eval
+    # Controls whether the stage participates in planning.
+    enabled: true
+    # Environment profile used before the stage runs.
+    environment: default
+    # User runtime profile used to execute the stage script.
+    runtime: default
+    entry:
+      # Options: python_script, command. Controls how the stage command is interpreted.
+      type: python_script
+      # Script path resolved relative to the config file directory.
+      script: eval.py
+      # Working directory used when launching the stage command.
+      workdir: .
+      # Mapping passed to each stage script; each YAML key maps exactly to the CLI flag name, with `--` added only when no dash prefix is present.
+      args:
+        split: validation
+    launcher:
+      # Options: single, python, torchrun, srun, mpirun, command. Chooses how a stage process is launched.
+      type: single
+    resources:
+      # Slurm partition or queue for each stage task.
+      partition: gpu
+      # Number of nodes requested by each stage task.
+      nodes: 1
+      # GPU count per node, or auto when GPU sizing is configured.
+      gpus_per_node: 1
+      # CPU count requested for each stage task.
+      cpus_per_task: 2
+      # Memory requested for each stage task.
+      mem: 8G
+      # Slurm time limit requested for each stage task.
+      time_limit: "01:00:00"
+    outputs:
+      accuracy:
+        # Options: file, files, metric, manifest. Declares the shape of a managed stage output.
+        kind: metric
+        required: true
+        # JSON file produced by the stage and read by output discovery.
+        file: eval/metrics.json
+        # JSONPath used to read a metric value from the output file.
+        json_path: $.accuracy
+    # Upstream stage names that must complete before this stage is selected.
+    depends_on:
+      - train
+    inputs:
+      checkpoint:
+        source:
+          # Options: upstream_output, external_path. Controls where a stage input is resolved from.
+          kind: upstream_output
+          # Producer stage name for an upstream output input.
+          stage: train
+          # Producer output name resolved from the upstream stage.
+          output: checkpoint
+        # Options: path, manifest, value. Declares the resolved input shape expected by the consuming stage.
+        expects: path
+        required: true
+        inject:
+          # CLI flag name used to pass the resolved input; the value maps exactly to the flag name, with `--` added only when no dash prefix is present.
+          flag: checkpoint_path
+          # Environment variable used to pass the resolved input to the stage process.
+          env: SFORGE_INPUT_CHECKPOINT
+          # Options: path, value, json. Controls how a resolved input is injected into the stage process.
+          mode: path
+```
+<!-- CONFIG_STARTER_EXAMPLE_END -->
+
+## Advanced Shape
+
+<!-- CONFIG_ADVANCED_EXAMPLE_START -->
+```yaml
+project: resnet
+experiment: ablation_matrix
+storage:
+  root: /shared/runs
+hardware:
+  gpu_types:
+    a100_80gb:
+      memory_gb: 80
+      usable_memory_fraction: 0.9
+      max_gpus_per_node: 8
+      slurm:
+        constraint: a100
+environments:
+  default:
+    modules:
+      - cuda/12.1
+    source:
+      - path: /shared/envs/slurmforge.sh
+        args:
+          - train
+    env:
+      HF_HOME: /shared/cache/huggingface
+runtime:
+  executor:
+    python:
+      bin: python3
+      min_version: '3.10'
+    module: slurmforge.executor.stage
+  user:
+    default:
+      python:
+        bin: /shared/envs/train/bin/python
+        min_version: '3.10'
+      env:
+        TOKENIZERS_PARALLELISM: 'false'
 sizing:
   gpu:
     defaults:
       safety_factor: 1.15
       round_to: 1
-
 artifact_store:
-  strategy: "copy"
-  fallback_strategy: null
+  strategy: hardlink
+  fallback_strategy: copy
   verify_digest: true
   fail_on_verify_error: true
-
 notifications:
   email:
-    enabled: false
-    to: []
-    "on":
-      - "batch_finished"
-      - "train_eval_pipeline_finished"
-    mode: "summary"
-    from: "slurmforge@localhost"
-    sendmail: "/usr/sbin/sendmail"
-    subject_prefix: "SlurmForge"
-
+    enabled: true
+    to:
+      - ml-team@example.com
+    'on':
+      - train_eval_pipeline_finished
+    mode: summary
+    from: slurmforge@example.com
+    sendmail: /usr/sbin/sendmail
+    subject_prefix: SlurmForge
 runs:
-  type: "matrix"
+  type: matrix
   cases:
-    - name: "small_model"
+    - name: small
       set:
-        train.entry.args.model: "small"
-        train.entry.args.batch_size: 16
+        train.entry.args.model: resnet18
       axes:
-        train.entry.args.lr: [1e-4, 5e-5]
-        train.entry.args.seed: [1, 2]
-    - name: "large_model"
+        train.entry.args.lr:
+          - 0.001
+          - 0.0005
+        train.entry.args.seed:
+          - 1
+          - 2
+    - name: large
       set:
-        train.entry.args.model: "large"
-        train.entry.args.batch_size: 8
+        train.entry.args.model: resnet50
+        train.resources.gpu_type: a100_80gb
       axes:
-        train.entry.args.lr: [5e-5, 1e-5]
-        train.entry.args.seed: [1, 2]
-
+        train.entry.args.lr:
+          - 0.0005
+        train.entry.args.seed:
+          - 1
+          - 2
+dispatch:
+  max_available_gpus: 16
+  overflow_policy: serialize_groups
+orchestration:
+  controller:
+    partition: gpu
+    cpus: 1
+    mem: 2G
+    time_limit: '12:00:00'
+    environment: default
 stages:
   train:
+    kind: train
     enabled: true
-    environment: cluster_env
+    environment: default
+    runtime: default
+    before:
+      - name: prepare_cache
+        run: mkdir -p "$HF_HOME"
     entry:
       type: python_script
-      script: "train.py"
-      workdir: "."
+      script: train.py
+      workdir: .
       args:
-        epochs: 3
+        epochs: 5
+        batch_size: 64
     launcher:
       type: torchrun
-      mode: single_node
-      nnodes: 1
+      mode: multi_node
+      nnodes: auto
       nproc_per_node: auto
       rendezvous:
         backend: c10d
         endpoint: auto
         port: 29500
+      srun_args:
+        - --cpu-bind=cores
     resources:
-      partition: "gpu"
-      nodes: 1
-      gpu_type: "a100_80gb"
-      gpus_per_node: "auto"
-      cpus_per_task: 12
-      mem: "256G"
+      partition: gpu
+      account: research
+      qos: normal
+      time_limit: 06:00:00
+      gpu_type: a100_80gb
+      nodes: 2
+      gpus_per_node: auto
+      cpus_per_task: 16
+      mem: 128G
+      constraint: a100
+      extra_sbatch_args:
+        - --exclusive
     gpu_sizing:
-      estimator: "heuristic"
-      target_memory_gb: 192
-      min_gpus_per_job: 4
-      max_gpus_per_job: 4
+      estimator: heuristic
+      target_memory_gb: 120
+      min_gpus_per_job: 2
+      max_gpus_per_job: 16
+      safety_factor: 1.2
+      round_to: 2
     outputs:
       checkpoint:
         kind: file
         required: true
         discover:
-          globs: ["checkpoints/**/*.pt"]
-          select: "latest_step"
-
+          globs:
+            - checkpoints/**/*.pt
+          select: latest_step
   eval:
+    kind: eval
     enabled: true
-    environment: cluster_env
-    depends_on: ["train"]
+    depends_on:
+      - train
+    environment: default
+    runtime: default
     entry:
       type: python_script
-      script: "eval.py"
-      workdir: "."
+      script: eval.py
+      workdir: .
       args:
-        split: "test"
+        split: validation
     launcher:
       type: single
+    resources:
+      partition: gpu
+      time_limit: 01:00:00
+      gpu_type: a100_80gb
+      nodes: 1
+      gpus_per_node: 1
+      cpus_per_task: 4
+      mem: 32G
     inputs:
       checkpoint:
         source:
@@ -151,35 +401,17 @@ stages:
         expects: path
         required: true
         inject:
-          flag: "checkpoint_path"
-          env: "SFORGE_INPUT_CHECKPOINT"
-          mode: "path"
-    resources:
-      partition: "gpu"
-      nodes: 1
-      gpu_type: "a100_80gb"
-      gpus_per_node: 1
-      cpus_per_task: 8
-      mem: "32G"
+          flag: checkpoint_path
+          env: SFORGE_INPUT_CHECKPOINT
+          mode: path
     outputs:
       accuracy:
         kind: metric
-        file: "eval/metrics.json"
-        json_path: "$.accuracy"
         required: true
-
-dispatch:
-  max_available_gpus: 32
-  overflow_policy: "serialize_groups"
-
-orchestration:
-  controller:
-    partition: "cpu"
-    cpus: 1
-    mem: "2G"
-    time_limit: "01:00:00"
-    environment: "cluster_env"
+        file: eval/metrics.json
+        json_path: $.accuracy
 ```
+<!-- CONFIG_ADVANCED_EXAMPLE_END -->
 
 ## Runs
 
@@ -245,26 +477,123 @@ sforge validate --config experiment.yaml --set train.entry.args.lr=0.001
 sforge validate --config experiment.yaml --set stages.train.entry.args.lr=0.001
 ```
 
-## Field Options
+## Field Reference
 
-This table is generated from `slurmforge.field_options.FieldCatalog`.
+This table is generated from `slurmforge.config_schema.ConfigField`. Starter READMEs intentionally do not duplicate this full reference; `sforge init` writes a template-scoped `CONFIG.sforge.md` instead.
 
-| Field | Options | Meaning |
-| --- | --- | --- |
-| `artifact_store.fallback_strategy` | `null`, `copy`, `hardlink`, `symlink`, `register_only` | `null`: Disable fallback handling.<br>`copy`: Copy artifacts when the primary strategy fails.<br>`hardlink`: Hardlink artifacts when supported.<br>`symlink`: Symlink artifacts when supported.<br>`register_only`: Record artifacts without copying files. |
-| `artifact_store.strategy` | `copy`, `hardlink`, `symlink`, `register_only` | `copy`: Copy managed artifacts into the run store.<br>`hardlink`: Hardlink managed artifacts into the run store.<br>`symlink`: Symlink managed artifacts into the run store.<br>`register_only`: Track artifact paths without copying files. |
-| `dispatch.overflow_policy` | `serialize_groups`, `error`, `best_effort` | `serialize_groups`: Queue array groups within GPU budget.<br>`error`: Reject plans that exceed the GPU budget.<br>`best_effort`: Submit groups without strict serialization. |
-| `notifications.email.mode` | `summary` | `summary`: Send a compact workflow summary. |
-| `notifications.email.on` | `batch_finished`, `train_eval_pipeline_finished` | `batch_finished`: Send after a stage batch reaches terminal state.<br>`train_eval_pipeline_finished`: Send after a train/eval pipeline reaches terminal state. |
-| `runs.type` | `single`, `grid`, `cases`, `matrix` | `single`: Plan one run.<br>`grid`: Plan every combination from top-level axes.<br>`cases`: Plan named hand-authored run variants.<br>`matrix`: Plan named cases, each with its own grid. |
-| `stages.*.entry.type` | `python_script`, `command` | `python_script`: Run a Python file.<br>`command`: Run a shell command. |
-| `stages.*.inputs.*.expects` | `path`, `manifest`, `value` | `path`: Inject a filesystem path.<br>`manifest`: Inject a manifest payload.<br>`value`: Inject a scalar value. |
-| `stages.*.inputs.*.inject.mode` | `path`, `value`, `json` | `path`: Pass the resolved input path.<br>`value`: Pass the resolved input value.<br>`json`: Pass the resolved input encoded as JSON. |
-| `stages.*.inputs.*.source.kind` | `upstream_output`, `external_path` | `upstream_output`: Read an output from a previous stage.<br>`external_path`: Read an explicit user-provided path. |
-| `stages.*.launcher.mode` | `single_node`, `multi_node` | `single_node`: Launch on one node.<br>`multi_node`: Launch across multiple nodes. |
-| `stages.*.launcher.type` | `single`, `python`, `torchrun`, `srun`, `mpirun`, `command` | `single`: Run one process directly.<br>`python`: Launch through Python.<br>`torchrun`: Launch distributed PyTorch.<br>`srun`: Launch through Slurm srun.<br>`mpirun`: Launch through MPI.<br>`command`: Launch a raw command. |
-| `stages.*.outputs.*.discover.select` | `latest_step`, `first`, `last` | `latest_step`: Pick the path with the highest step number.<br>`first`: Pick the first sorted match.<br>`last`: Pick the last sorted match. |
-| `stages.*.outputs.*.kind` | `file`, `files`, `metric`, `manifest` | `file`: One managed file.<br>`files`: Multiple discovered files.<br>`metric`: A metric value read from JSON.<br>`manifest`: A manifest JSON file. |
+<!-- CONFIG_SCHEMA_REFERENCE_START -->
+| Field | Type | Required | Level | Default | Options | Meaning | When To Change |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `experiment` | value | yes | common | baseline |  | Names this experiment inside the project namespace. | Change this for each baseline, ablation, sweep, or production run family. |
+| `project` | value | yes | common | demo |  | Names the project namespace used in generated storage paths. | Change this before the first real submit so runs land under your project name. |
+| `artifact_store.fail_on_verify_error` | value | no | advanced | true |  | Fails the run when artifact verification cannot prove integrity. | Disable only when incomplete verification should be recorded as a warning instead of failing the run. |
+| `artifact_store.fallback_strategy` | enum | no | advanced | null | `null`, `copy`, `hardlink`, `symlink`, `register_only` | Fallback behavior when the primary artifact storage strategy fails. | Use this only when the primary strategy depends on filesystem features that may be unavailable. |
+| `artifact_store.strategy` | enum | no | advanced | copy | `copy`, `hardlink`, `symlink`, `register_only` | Controls how declared outputs are placed in the managed run store. | Keep copy for the starter; change only after validating filesystem support and retention policy. |
+| `artifact_store.verify_digest` | value | no | advanced | true |  | Verifies managed output digests after artifact storage. | Keep enabled unless artifact verification is too expensive for the target filesystem. |
+| `storage.root` | value | yes | common | ./runs |  | Root directory for plans, logs, status records, and managed artifacts. | Change this when runs should be written to a shared filesystem or scratch mount. |
+| `hardware.gpu_types` | mapping | no | advanced | {} |  | Named GPU profiles available to workflow stages. | Define this when GPU sizing or stage placement should reason about accelerator memory and Slurm constraints. |
+| `hardware.gpu_types.*.max_gpus_per_node` | integer | no | advanced | null |  | Maximum number of GPUs available per node for this GPU type. | Set this when automatic GPU sizing must respect per-node accelerator capacity. |
+| `hardware.gpu_types.*.memory_gb` | float | no | advanced | 0 |  | Nominal memory in GB for one GPU of this type. | Set this to let GPU sizing estimate the number of GPUs needed for a stage. |
+| `hardware.gpu_types.*.slurm.constraint` | value | no | advanced | null |  | Slurm constraint associated with this GPU type. | Set this when choosing a gpu_type should imply a cluster-specific node constraint. |
+| `hardware.gpu_types.*.usable_memory_fraction` | float | no | advanced | 0 |  | Fraction of nominal GPU memory treated as available to jobs. | Lower this when framework overhead, fragmentation, or site policy means full GPU memory is not usable. |
+| `environments.*.env` | value | no | intermediate | {} |  | Static environment variables added to Slurm job environments. | Add paths, tokens, offline cache settings, or framework environment knobs required by scripts. |
+| `environments.*.modules` | value | no | intermediate | [] |  | Module names loaded before executor and user scripts run. | Add cluster modules such as CUDA, compiler, MPI, or Python stacks required by your jobs. |
+| `environments.*.source` | value | no | intermediate | [] |  | Shell files or setup commands sourced before execution. | Use this for virtualenv, conda, or site-specific setup that must run inside Slurm jobs. |
+| `environments.*.source[].args` | list | no | advanced | [] |  | Arguments passed to the sourced setup file. | Use this when a setup script accepts mode, environment, or module arguments. |
+| `environments.*.source[].path` | path | yes | intermediate | template-specific |  | Shell file sourced before execution. | Use this for conda activation, virtualenv activation, or site setup scripts. |
+| `runtime.executor.module` | python-module | no | advanced | slurmforge.executor.stage |  | Python module used as the SlurmForge stage executor entrypoint. | Most workflows should keep the packaged executor module. |
+| `runtime.executor.python.bin` | value | yes | common | python3 |  | Python used by the SlurmForge executor wrapper on compute nodes. | Change this when compute nodes need a different Python command to import slurmforge. |
+| `runtime.executor.python.min_version` | version | no | advanced | 3.10 |  | Minimum Python version required for the SlurmForge executor. | Change only when the executor runtime contract changes. |
+| `runtime.user.*.env` | mapping | no | intermediate | {} |  | Environment variables visible to user stage scripts. | Use this for variables that should apply to all scripts using the default user runtime. |
+| `runtime.user.*.python.bin` | value | yes | common | python3 |  | Python used to run generated train/eval scripts. | Change this to the Python environment that contains your model dependencies. |
+| `runtime.user.*.python.min_version` | version | no | advanced | 3.10 |  | Minimum Python version required for user stage scripts. | Change this when your user runtime intentionally targets another Python version. |
+| `sizing.gpu.defaults` | mapping | no | advanced | safety_factor=1.0, round_to=1 |  | Default safety and rounding policy for automatic GPU sizing. | Define this when stages use gpu_sizing and should share conservative sizing behavior. |
+| `sizing.gpu.defaults.round_to` | integer | no | advanced | 1 |  | GPU count granularity used after automatic sizing. | Use this to round GPU counts to scheduler or launcher-friendly sizes. |
+| `sizing.gpu.defaults.safety_factor` | float | no | advanced | 1.0 |  | Multiplier applied to estimated GPU memory before converting to GPU count. | Increase this when estimates are optimistic or workloads have variable peak memory. |
+| `runs.axes` | mapping | contextual | intermediate | contextual |  | Top-level grid sweep axes for runs.type=grid. | Use this when every combination of selected values should become a run. |
+| `runs.cases` | list | contextual | intermediate | contextual |  | Named run variants for runs.type=cases or runs.type=matrix. | Use this when runs need stable names or case-specific overrides. |
+| `runs.cases[].axes` | mapping | contextual | advanced | contextual |  | Case-local grid axes for runs.type=matrix. | Use this when each named scenario needs its own sweep dimensions. |
+| `runs.cases[].name` | value | yes | intermediate | required for cases and matrix |  | Stable identifier used in expanded run ids. | Set this to a short, filesystem-safe name for each case. |
+| `runs.cases[].set` | mapping | no | intermediate | {} |  | Dot-path overrides applied to a named run case. | Use this for hand-authored run variants with explicit settings. |
+| `runs.type` | enum | no | common | single | `single`, `grid`, `cases`, `matrix` | Controls whether the config plans one run or expands a sweep. | Keep single for the starter; switch to grid, cases, or matrix when you need run expansion. |
+| `dispatch.max_available_gpus` | value | no | intermediate | 1 |  | GPU budget used to serialize Slurm array groups when a plan exceeds available GPUs. | Set this to the practical cluster budget you want this workflow to consume. |
+| `dispatch.overflow_policy` | enum | no | intermediate | serialize_groups | `serialize_groups`, `error`, `best_effort` | Controls planner behavior when run groups exceed the declared GPU budget. | Use error for strict admission control, or best_effort when the scheduler should absorb overflow. |
+| `orchestration.controller` | value | no | advanced | partition=gpu, cpus=1, mem=2G, time_limit=01:00:00 |  | Slurm resources for the lightweight workflow controller job. | Change this when the controller needs a different partition, time limit, or environment. |
+| `orchestration.controller.cpus` | integer | no | advanced | 1 |  | CPU count requested by the lightweight workflow controller job. | Increase this only if controller scheduling or planning overhead requires it. |
+| `orchestration.controller.environment` | value | no | advanced | default |  | Environment profile loaded before the lightweight workflow controller runs. | Change this when controller jobs need cluster modules or setup scripts. |
+| `orchestration.controller.mem` | value | no | advanced | 2G |  | Memory requested by the lightweight workflow controller job. | Increase this when controller planning or notification work needs more memory. |
+| `orchestration.controller.partition` | value | no | advanced | gpu |  | Slurm partition for the lightweight train/eval controller job. | Change this when controller jobs need a different queue from stage jobs. |
+| `orchestration.controller.time_limit` | duration | no | advanced | 01:00:00 |  | Slurm time limit requested by the lightweight workflow controller job. | Increase this when the controller must wait for long train/eval pipeline stages. |
+| `stages.*.resources` | value | no | common | template-specific |  | Slurm partition, CPU, GPU, memory, and time settings for each stage. | Set these before real cluster runs so train and eval request the right resources. |
+| `stages.*.resources.account` | value | no | intermediate | null |  | Slurm account charged for each stage task. | Set this when your cluster requires an account for GPU or partition access. |
+| `stages.*.resources.constraint` | value | no | advanced | null |  | Raw Slurm constraint requested for each stage task. | Use this for cluster-specific node feature constraints that are not covered by gpu_type. |
+| `stages.*.resources.cpus_per_task` | integer | no | common | 1 |  | CPU count requested for each stage task. | Set this to match dataloader, preprocessing, or evaluation CPU needs. |
+| `stages.*.resources.extra_sbatch_args` | list | no | advanced | [] |  | Additional raw sbatch arguments appended to each stage task script. | Use this for site-specific Slurm flags that do not have a first-class config field. |
+| `stages.*.resources.gpu_type` | value | no | intermediate |  |  | Named GPU type from hardware.gpu_types used for GPU sizing and Slurm constraints. | Set this when a stage must target a specific accelerator family. |
+| `stages.*.resources.gpus_per_node` | integer-or-auto | no | common | 1 |  | GPU count per node, or auto when GPU sizing is configured. | Set this to match the model memory and launcher requirements. |
+| `stages.*.resources.mem` | value | no | common | template-specific |  | Memory requested for each stage task. | Set this to the memory required by model loading, training, or evaluation. |
+| `stages.*.resources.nodes` | integer | no | intermediate | 1 |  | Number of nodes requested by each stage task. | Increase for multi-node launchers and distributed workloads. |
+| `stages.*.resources.partition` | value | no | common | gpu |  | Slurm partition or queue for each stage task. | Set this to the queue appropriate for the stage workload. |
+| `stages.*.resources.qos` | value | no | intermediate | null |  | Slurm QoS requested for each stage task. | Set this when your cluster uses QoS for priority, limits, or preemption policy. |
+| `stages.*.resources.time_limit` | duration | no | common | 01:00:00 |  | Slurm time limit requested for each stage task. | Set this to the expected wall time plus a practical safety margin. |
+| `stages.*.before` | list | no | advanced | [] |  | Commands run before the main stage entrypoint inside the stage task. | Use this for lightweight per-task setup that belongs with a stage rather than a reusable environment. |
+| `stages.*.before[].name` | value | no | advanced |  |  | Optional label for a pre-entry setup command. | Set this when setup logs need a recognizable step name. |
+| `stages.*.before[].run` | command | yes | advanced | required when before[] is present |  | Shell command executed before the main stage entrypoint. | Use this for stage-local setup such as cache warmup or one-off file preparation. |
+| `stages.*.enabled` | boolean | no | intermediate | true |  | Controls whether the stage participates in planning. | Disable a stage only when intentionally excluding it from this config. |
+| `stages.*.entry.args` | value | no | common | template-specific |  | Mapping passed to each stage script; each YAML key maps exactly to the CLI flag name, with `--` added only when no dash prefix is present. | Write the flag spelling your script accepts: max_length becomes --max_length, max-length becomes --max-length, and --raw.flag stays --raw.flag. |
+| `stages.*.entry.command` | command | contextual | intermediate | contextual |  | Shell command or argv list used when entry.type is command. | Use this for non-Python stages or wrappers that should run as a raw command. |
+| `stages.*.entry.script` | path | contextual | common | template-specific |  | Script path resolved relative to the config file directory. | Point this at your real stage entrypoint. |
+| `stages.*.entry.type` | enum | no | intermediate | python_script | `python_script`, `command` | Controls how the stage command is interpreted. | Use command when the entrypoint is a shell command instead of a Python script. |
+| `stages.*.entry.workdir` | path | no | intermediate | . |  | Working directory used when launching the stage command. | Change this when scripts should run from a directory other than the config directory. |
+| `stages.*.environment` | value | no | intermediate | default |  | Environment profile used before the stage runs. | Change this when a stage needs a different module/source/env setup. |
+| `stages.*.kind` | value | no | advanced | template-specific |  | Stage role used by starter workflows and command selection. | Change only when defining a new stage role supported by the orchestration path. |
+| `stages.*.runtime` | value | no | intermediate | default |  | User runtime profile used to execute the stage script. | Change this when a stage needs a different Python runtime or script environment. |
+| `stages.eval.entry.script` | value | yes | common | eval.py |  | Python script used for the eval stage. | Point this at your real evaluation entrypoint after replacing the generated demo code. |
+| `stages.train.entry.script` | value | yes | common | train.py |  | Python script used for the train stage. | Point this at your real training entrypoint after replacing the generated demo code. |
+| `stages.*.launcher.args` | list | no | advanced | [] |  | Raw arguments passed to srun or mpirun launchers. | Use this for launcher-specific flags that are not modeled as first-class fields. |
+| `stages.*.launcher.mode` | enum | no | advanced | single_node | `single_node`, `multi_node` | Declares whether launch happens on one node or across multiple nodes. | Use multi_node only when the selected launcher and resources are configured for multi-node jobs. |
+| `stages.*.launcher.nnodes` | integer-or-auto | no | advanced | auto |  | Node count passed to distributed launchers, or auto from resources.nodes. | Set this explicitly when a launcher requires a concrete node count. |
+| `stages.*.launcher.nproc_per_node` | integer-or-auto | no | advanced | auto |  | Process count per node passed to distributed launchers, or auto from resolved GPUs per node. | Set this when process count should differ from the resolved GPU count. |
+| `stages.*.launcher.rendezvous` | mapping | no | advanced | backend=c10d, endpoint=auto, port=29500 |  | Distributed rendezvous settings for torchrun launchers. | Set this for multi-node torchrun jobs that need an explicit backend, endpoint, or port. |
+| `stages.*.launcher.rendezvous.backend` | value | no | advanced | c10d |  | Rendezvous backend passed to torchrun. | Change this only when your distributed runtime requires a non-default backend. |
+| `stages.*.launcher.rendezvous.endpoint` | value | no | advanced | auto |  | Rendezvous endpoint passed to torchrun. | Use auto for Slurm-managed multi-node jobs; set a value only for custom rendezvous wiring. |
+| `stages.*.launcher.rendezvous.port` | port | no | advanced | 29500 |  | TCP port used by torchrun rendezvous. | Change this when the default port conflicts with site policy or another service. |
+| `stages.*.launcher.srun_args` | list | no | advanced | [] |  | Raw srun arguments used by multi-node torchrun launch. | Use this for Slurm flags required by the torchrun bootstrap step. |
+| `stages.*.launcher.type` | enum | no | advanced | single | `single`, `python`, `torchrun`, `srun`, `mpirun`, `command` | Chooses how a stage process is launched. | Keep single for normal scripts; use torchrun, srun, mpirun, or command for distributed/custom launch. |
+| `stages.*.gpu_sizing` | mapping | no | advanced | null |  | Automatic GPU count sizing policy for a stage. | Use this when stages should derive GPU count from estimated memory instead of hard-coding gpus_per_node. |
+| `stages.*.gpu_sizing.estimator` | enum | contextual | advanced | required when gpu_sizing is present | `heuristic` | Estimator name used to size a stage's GPU request. | Set this to the estimator implementation that knows how to estimate your stage workload. |
+| `stages.*.gpu_sizing.max_gpus_per_job` | integer | no | advanced | null |  | Upper bound applied to automatic GPU sizing. | Set this to cap GPU use for cost, quota, or launcher limits. |
+| `stages.*.gpu_sizing.min_gpus_per_job` | integer | no | advanced | 1 |  | Lower bound applied to automatic GPU sizing. | Increase this when launchers or workloads require a minimum GPU count. |
+| `stages.*.gpu_sizing.round_to` | integer | no | advanced | null |  | Stage-specific GPU count granularity overriding sizing.gpu.defaults.round_to. | Use this when one stage needs a different GPU rounding policy. |
+| `stages.*.gpu_sizing.safety_factor` | float | no | advanced | null |  | Stage-specific multiplier overriding sizing.gpu.defaults.safety_factor. | Use this when one stage needs a different memory safety margin. |
+| `stages.*.gpu_sizing.target_memory_gb` | float | contextual | advanced | required when gpu_sizing is present |  | Estimated target memory in GB for a stage. | Set this to the stage's estimated peak GPU memory requirement. |
+| `stages.*.depends_on` | list | no | intermediate | template-specific |  | Upstream stage names that must complete before this stage is selected. | Set this when a stage consumes outputs from earlier stages. |
+| `stages.*.inputs.*.expects` | enum | no | intermediate | path | `path`, `manifest`, `value` | Declares the resolved input shape expected by the consuming stage. | Change this when passing a manifest payload or scalar value instead of a filesystem path. |
+| `stages.*.inputs.*.inject.env` | value | no | intermediate | template-specific |  | Environment variable used to pass the resolved input to the stage process. | Change this when the script expects a different environment variable name. |
+| `stages.*.inputs.*.inject.flag` | value | no | common | template-specific |  | CLI flag name used to pass the resolved input; the value maps exactly to the flag name, with `--` added only when no dash prefix is present. | Use the exact spelling accepted by your script, matching the same flag rule as stages.*.entry.args. |
+| `stages.*.inputs.*.inject.mode` | enum | no | intermediate | path | `path`, `value`, `json` | Controls how a resolved input is injected into the stage process. | Use json for structured payloads or value for scalar values. |
+| `stages.*.inputs.*.required` | boolean | no | intermediate | false |  | Controls whether a missing resolved input fails the stage plan. | Enable this for inputs that are mandatory for correct stage execution. |
+| `stages.*.inputs.*.source.kind` | enum | yes | intermediate | template-specific | `upstream_output`, `external_path` | Controls where a stage input is resolved from. | Use upstream_output for pipeline dependencies and external_path for user-provided files. |
+| `stages.*.inputs.*.source.output` | value | contextual | intermediate | template-specific |  | Producer output name resolved from the upstream stage. | Change this when the producer stage exposes a different output contract. |
+| `stages.*.inputs.*.source.path` | path | contextual | common | checkpoint.pt |  | Explicit user-provided input path resolved relative to the config directory. | Replace the starter sample path with the real artifact path before submit. |
+| `stages.*.inputs.*.source.stage` | value | contextual | intermediate | train |  | Producer stage name for an upstream output input. | Change this when the input should consume a different upstream producer. |
+| `stages.*.outputs.*.discover.globs` | list | no | common | template-specific |  | Glob patterns evaluated under the stage run directory. | Change these when the stage writes artifacts under a different directory or filename pattern. |
+| `stages.*.outputs.*.discover.select` | enum | no | intermediate | latest_step | `latest_step`, `first`, `last` | Selects one path from discovered output glob matches. | Use first or last when lexicographic ordering is the desired selection rule. |
+| `stages.*.outputs.*.file` | path | no | common | template-specific |  | JSON file produced by the stage and read by output discovery. | Change this when the stage writes metrics or manifests to a different path. |
+| `stages.*.outputs.*.json_path` | value | no | common | template-specific |  | JSONPath used to read a metric value from the output file. | Change this when the metric lives under a different JSON key. |
+| `stages.*.outputs.*.kind` | enum | yes | intermediate | template-specific | `file`, `files`, `metric`, `manifest` | Declares the shape of a managed stage output. | Use file/files for artifacts, metric for JSON scalar metrics, and manifest for manifest files. |
+| `stages.*.outputs.*.required` | boolean | no | intermediate | false |  | Controls whether missing output discovery fails the stage result. | Enable this for artifacts or metrics required by downstream stages or run acceptance. |
+| `stages.eval.inputs.checkpoint` | value | no | common | template-specific |  | Checkpoint input consumed by the eval stage. | For train-eval keep upstream_output; for eval-checkpoint replace the sample external path. |
+| `stages.eval.outputs.accuracy` | value | no | common | eval/metrics.json $.accuracy |  | Declared accuracy metric read from eval/metrics.json. | Change this if evaluation writes a different metric file or JSON path. |
+| `stages.train.outputs.checkpoint` | value | no | common | checkpoints/**/*.pt |  | Declared checkpoint contract produced by the train stage. | Change the discovery glob if your training code writes checkpoints somewhere else. |
+| `notifications.email.enabled` | value | no | advanced | false |  | Enables email summary notifications for terminal workflow events. | Enable after sendmail works on the cluster and recipient addresses are configured. |
+| `notifications.email.from` | value | no | advanced | slurmforge@localhost |  | Sender address used by email delivery. | Change this to the approved sender identity for your cluster. |
+| `notifications.email.mode` | enum | no | advanced | summary | `summary` | Controls email content shape. | Keep summary unless a future notification mode is added. |
+| `notifications.email.on` | enum | no | advanced | batch_finished | `batch_finished`, `train_eval_pipeline_finished` | Terminal workflow events that trigger email summaries. | Use batch_finished for stage batches and train_eval_pipeline_finished for controller pipelines. |
+| `notifications.email.sendmail` | path | no | advanced | /usr/sbin/sendmail |  | Local sendmail-compatible binary used to deliver email. | Change this if the cluster exposes sendmail at a non-default path. |
+| `notifications.email.subject_prefix` | value | no | advanced | SlurmForge |  | Prefix added to SlurmForge notification email subjects. | Change this to identify a project, team, or cluster in inboxes. |
+| `notifications.email.to` | value | no | advanced | [] |  | Recipients for email notifications when email is enabled. | Set this before enabling notifications. |
+<!-- CONFIG_SCHEMA_REFERENCE_END -->
 
 ## Runtime
 

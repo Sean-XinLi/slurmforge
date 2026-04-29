@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_comments import option_comment
+from ...config_comments import comment_for, option_comment
 from ..scalar import scalar
 
 
@@ -12,10 +12,11 @@ def render_entry(lines: list[str], entry: dict[str, Any]) -> None:
             "    entry:",
             option_comment("stages.*.entry.type", indent=6),
             f"      type: {scalar(entry['type'])}",
-            "      # Script path is resolved relative to this YAML file's directory.",
+            comment_for("stages.*.entry.script", indent=6),
             f"      script: {scalar(entry['script'])}",
+            comment_for("stages.*.entry.workdir", indent=6),
             f"      workdir: {scalar(entry['workdir'])}",
-            "      # Each key is passed to the script as a CLI flag.",
+            comment_for("stages.*.entry.args", indent=6),
             "      args:",
         ]
     )
@@ -27,7 +28,6 @@ def render_launcher(lines: list[str], launcher: dict[str, Any]) -> None:
         [
             "    launcher:",
             option_comment("stages.*.launcher.type", indent=6),
-            "      # single is best for normal one-process Python scripts.",
             f"      type: {scalar(launcher['type'])}",
         ]
     )

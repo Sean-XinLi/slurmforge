@@ -11,7 +11,9 @@ from .handlers.manifest import discover_manifest_output
 from .handlers.metric import discover_metric_output
 from .models import OutputDiscoveryItem
 
-OutputDiscoveryHandler = Callable[[str, Any, OutputDiscoveryContext], OutputDiscoveryItem]
+OutputDiscoveryHandler = Callable[
+    [str, Any, OutputDiscoveryContext], OutputDiscoveryItem
+]
 
 _HANDLERS: dict[str, OutputDiscoveryHandler] = {
     "file": discover_file_output,

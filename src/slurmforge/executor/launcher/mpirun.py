@@ -5,7 +5,9 @@ import shlex
 from ...plans.launcher import LauncherPlan
 
 
-def mpirun_list_command(base: list[str], launcher: LauncherPlan) -> tuple[list[str], bool]:
+def mpirun_list_command(
+    base: list[str], launcher: LauncherPlan
+) -> tuple[list[str], bool]:
     return ["mpirun", *[str(item) for item in launcher.args], *base], False
 
 

@@ -50,7 +50,9 @@ def _stage_batch_unresolved_inputs(batch: StageBatchPlan) -> list[dict[str, Any]
     unresolved: list[dict[str, Any]] = []
     for instance in batch.stage_instances:
         for binding in instance.input_bindings:
-            if not binding.inject.get("required") or binding_is_ready_for_injection(binding):
+            if not binding.inject.get("required") or binding_is_ready_for_injection(
+                binding
+            ):
                 continue
             resolution = dict(binding.resolution or {})
             unresolved.append(
@@ -62,14 +64,17 @@ def _stage_batch_unresolved_inputs(batch: StageBatchPlan) -> list[dict[str, Any]
                     "source": to_jsonable(binding.source),
                     "expects": binding.expects,
                     "resolution": resolution,
-                    "deferred": resolution.get("state") in {"awaiting_upstream_output", "unresolved"}
+                    "deferred": resolution.get("state")
+                    in {"awaiting_upstream_output", "unresolved"}
                     and binding.source.kind == "upstream_output",
                 }
             )
     return unresolved
 
 
-def _stage_batch_verification(batch: StageBatchPlan, *, full: bool) -> list[dict[str, Any]]:
+def _stage_batch_verification(
+    batch: StageBatchPlan, *, full: bool
+) -> list[dict[str, Any]]:
     if not full:
         return []
     return [
@@ -84,7 +89,9 @@ def _stage_batch_verification(batch: StageBatchPlan, *, full: bool) -> list[dict
     ]
 
 
-def _runtime_contracts_for_stage_batch(batch: StageBatchPlan, *, full: bool) -> list[dict[str, Any]]:
+def _runtime_contracts_for_stage_batch(
+    batch: StageBatchPlan, *, full: bool
+) -> list[dict[str, Any]]:
     if not full:
         return []
     seen: set[str] = set()
@@ -116,9 +123,13 @@ def _stage_batch_payload(batch: StageBatchPlan, *, full: bool) -> dict[str, Any]
             if (stage_instance_id, item.get("input_name")) in deferred_keys:
                 continue
             failures.append(item)
-    runtime_failures = [item for item in runtime_contracts if item.get("state") == "failed"]
+    runtime_failures = [
+        item for item in runtime_contracts if item.get("state") == "failed"
+    ]
     blocking_unresolved = [item for item in unresolved if not item["deferred"]]
-    state = "invalid" if failures or runtime_failures or blocking_unresolved else "valid"
+    state = (
+        "invalid" if failures or runtime_failures or blocking_unresolved else "valid"
+    )
     return {
         "state": state,
         "batch_id": batch.batch_id,
@@ -148,13 +159,19 @@ def build_dry_run_audit(
             plan_kind="stage_batch",
             plan=to_jsonable(plan),
             validation=validation,
-            resource_estimate=to_jsonable(build_resource_estimate(plan)) if full else {},
+            resource_estimate=to_jsonable(build_resource_estimate(plan))
+            if full
+            else {},
         )
     stages = {
         stage_name: _stage_batch_payload(batch, full=full)
         for stage_name, batch in plan.stage_batches.items()
     }
-    state = "invalid" if any(stage["state"] == "invalid" for stage in stages.values()) else "valid"
+    state = (
+        "invalid"
+        if any(stage["state"] == "invalid" for stage in stages.values())
+        else "valid"
+    )
     return DryRunAudit(
         command=command,
         state=state,

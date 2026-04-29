@@ -9,7 +9,10 @@ from pathlib import Path
 class GeneratedYamlTests(StageBatchSystemTestCase):
     def test_generated_yaml_includes_inline_option_hints(self) -> None:
         from slurmforge.starter import InitRequest, create_starter_project
-        from slurmforge.starter.config_comments import option_comment
+        from slurmforge.starter.config_comments import (
+            inline_comment_for,
+            option_comment,
+        )
 
         for template in ("train-eval", "train-only", "eval-checkpoint"):
             with self.subTest(template=template), tempfile.TemporaryDirectory() as tmp:
@@ -42,11 +45,11 @@ class GeneratedYamlTests(StageBatchSystemTestCase):
                     text,
                 )
                 self.assertIn(
-                    'min_version: "3.10"  # Minimum version required for the executor.',
+                    f'min_version: "3.10"  # {inline_comment_for("runtime.executor.python.min_version")}',
                     text,
                 )
                 self.assertIn(
-                    'min_version: "3.10"  # Minimum version required for user scripts.',
+                    f'min_version: "3.10"  # {inline_comment_for("runtime.user.*.python.min_version")}',
                     text,
                 )
                 if template == "eval-checkpoint":

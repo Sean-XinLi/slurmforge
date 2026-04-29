@@ -32,14 +32,25 @@ def run_stage_user_command(attempt: ExecutionAttempt) -> StageUserCommandResult:
         raise
     write_json(attempt.attempt_dir / "runtime_probe.json", runtime_report)
     bindings = bindings_from_file(attempt.run_dir)
-    verify_and_write_stage_instance_inputs(instance, bindings, phase="executor", run_dir=attempt.run_dir)
-    env = build_execution_env(instance, bindings, run_dir=attempt.run_dir, attempt_dir=attempt.attempt_dir)
+    verify_and_write_stage_instance_inputs(
+        instance, bindings, phase="executor", run_dir=attempt.run_dir
+    )
+    env = build_execution_env(
+        instance, bindings, run_dir=attempt.run_dir, attempt_dir=attempt.attempt_dir
+    )
     workdir = Path(instance.entry.workdir)
     shell_script = build_shell_script(instance, bindings)
-    with attempt.stdout_path.open("w", encoding="utf-8") as stdout, attempt.stderr_path.open(
-        "w", encoding="utf-8"
-    ) as stderr:
-        proc = subprocess.run(["bash", "-lc", shell_script], cwd=workdir, env=env, stdout=stdout, stderr=stderr)
+    with (
+        attempt.stdout_path.open("w", encoding="utf-8") as stdout,
+        attempt.stderr_path.open("w", encoding="utf-8") as stderr,
+    ):
+        proc = subprocess.run(
+            ["bash", "-lc", shell_script],
+            cwd=workdir,
+            env=env,
+            stdout=stdout,
+            stderr=stderr,
+        )
     exit_code = int(proc.returncode)
     return StageUserCommandResult(
         exit_code=exit_code,

@@ -61,7 +61,9 @@ def manage_file(
     except OSError:
         if not fallback_strategy:
             raise
-        managed_path, is_managed = _store_file(source, managed, strategy=str(fallback_strategy))
+        managed_path, is_managed = _store_file(
+            source, managed, strategy=str(fallback_strategy)
+        )
         strategy_applied = str(fallback_strategy)
     managed_digest = source_digest
     verified = None
@@ -74,8 +76,13 @@ def manage_file(
             verified = False
             verify_error = str(exc)
         if verified is False and fail_on_verify_error:
-            detail = verify_error or f"source_digest={source_digest} managed_digest={managed_digest}"
-            raise ArtifactIntegrityError(f"artifact digest verification failed for {managed_path}: {detail}")
+            detail = (
+                verify_error
+                or f"source_digest={source_digest} managed_digest={managed_digest}"
+            )
+            raise ArtifactIntegrityError(
+                f"artifact digest verification failed for {managed_path}: {detail}"
+            )
     return ArtifactRef(
         name=output_name or source.name,
         kind=kind,
