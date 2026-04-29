@@ -4,7 +4,7 @@ import copy
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..field_options import options_for, options_sentence
+from ..config_schema import options_for, options_sentence
 from .models import RunVariantSpec, RunsSpec
 from .parse_common import optional_mapping, reject_unknown_keys, require_mapping
 

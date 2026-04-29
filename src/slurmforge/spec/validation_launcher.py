@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ..errors import ConfigContractError
 from ..sizing.models import GpuSizingResolution
-from ..field_options import options_for, options_sentence
+from ..config_schema import options_for, options_sentence
 from .models import StageSpec
 from .validation_common import explicit_int, require_port
 

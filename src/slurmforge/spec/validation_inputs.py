@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ..errors import ConfigContractError
 from ..contracts import inject_mode_matches_expectation, resolved_kind_for_output_kind
-from ..field_options import options_for, options_sentence
+from ..config_schema import options_for, options_sentence
 from .models import ExperimentSpec, StageSpec
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ...defaults import DEFAULT_PYTHON_BIN
 from ...plans.notifications import FinalizerPlan
 from ...plans.resources import ControlResourcesPlan
 from ...plans.runtime import EnvironmentPlan
@@ -29,7 +30,7 @@ def _finalizer_environment(batch: StageBatchPlan) -> EnvironmentPlan:
 def _finalizer_python_bin(batch: StageBatchPlan) -> str:
     runtime_plan = _finalizer_plan(batch).runtime_plan
     if runtime_plan is None:
-        return "python3"
+        return DEFAULT_PYTHON_BIN
     return runtime_plan.executor.python.bin
 
 

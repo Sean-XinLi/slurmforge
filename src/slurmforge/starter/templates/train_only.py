@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
-from ..defaults import DEFAULT_CONFIG_FILENAME, TEMPLATE_TRAIN_ONLY
+from ...defaults import DEFAULT_CONFIG_FILENAME, TEMPLATE_TRAIN_ONLY
 from .base import base_config
 from .readme import starter_readme_plan
 from .scripts import train_script
@@ -21,15 +21,6 @@ def build_readme(request: InitRequest) -> StarterReadmePlan:
         request,
         dry_run_command=f"sforge train --config {DEFAULT_CONFIG_FILENAME} --dry-run=full",
         submit_command=f"sforge train --config {DEFAULT_CONFIG_FILENAME}",
-        editable_fields=(
-            "project",
-            "experiment",
-            "storage.root",
-            "stages.train.entry.script",
-            "stages.train.resources.partition",
-            "runtime.executor.python.bin",
-            "runtime.user.default.python.bin",
-        ),
     )
 
 

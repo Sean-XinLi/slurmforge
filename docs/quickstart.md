@@ -23,7 +23,7 @@ Template choices:
 - `train-only`: train produces a checkpoint and stops.
 - `eval-checkpoint`: eval consumes an explicit checkpoint path. The starter writes `checkpoint.pt` as sample input.
 
-`sforge init` is intentionally narrow. It only selects the template, chooses the project output directory, and confirms overwrite behavior. The generated config is always named `experiment.yaml` inside that directory.
+`sforge init` is intentionally narrow. It only selects the template, chooses the project output directory, and confirms overwrite behavior. The generated config is always named `experiment.yaml` inside that directory. `README.sforge.md` gives the workflow path, while `CONFIG.sforge.md` explains only the fields used by the selected starter.
 
 ## Connect Your Model
 

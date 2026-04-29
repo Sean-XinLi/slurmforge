@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..field_options import options_for, options_sentence
+from ..config_schema import options_for, options_sentence
 from ..io import SchemaVersion
 
 OUTPUT_KINDS = set(options_for("stages.*.outputs.*.kind"))

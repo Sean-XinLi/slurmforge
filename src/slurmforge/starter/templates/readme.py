@@ -1,8 +1,14 @@
 from __future__ import annotations
 
-from ..defaults import DEFAULT_CONFIG_FILENAME, DEFAULT_STORAGE_ROOT
+from ...config_schema import render_first_edit_list
+from ...defaults import (
+    DEFAULT_CONFIG_FILENAME,
+    DEFAULT_STORAGE_ROOT,
+    TEMPLATE_EVAL_CHECKPOINT,
+    TEMPLATE_TRAIN_EVAL,
+    TEMPLATE_TRAIN_ONLY,
+)
 from ..models import InitRequest, StarterCommandSet, StarterReadmePlan
-from ..config_comments import option_table
 
 
 def starter_readme_plan(
@@ -10,7 +16,6 @@ def starter_readme_plan(
     *,
     dry_run_command: str,
     submit_command: str,
-    editable_fields: tuple[str, ...],
     notes: tuple[str, ...] = (),
 ) -> StarterReadmePlan:
     return StarterReadmePlan(
@@ -20,7 +25,6 @@ def starter_readme_plan(
             dry_run=dry_run_command,
             submit=submit_command,
         ),
-        editable_fields=editable_fields,
         notes=notes,
     )
 
@@ -29,7 +33,7 @@ def render_starter_readme(plan: StarterReadmePlan) -> str:
     notes_text = "\n".join(f"- {note}" for note in plan.notes)
     if notes_text:
         notes_text = f"\nNotes:\n\n{notes_text}\n"
-    fields = "\n".join(f"- `{field}`" for field in plan.editable_fields)
+    first_edit_fields = render_first_edit_list(plan.template)
     return f"""# SlurmForge Starter
 
 Template: `{plan.template}`
@@ -42,6 +46,13 @@ Template: `{plan.template}`
 {plan.commands.submit}
 ```
 
+## Generated Files
+
+- `{DEFAULT_CONFIG_FILENAME}`: executable starter config.
+- `CONFIG.sforge.md`: config guide scoped to this starter template.
+- `README.sforge.md`: this workflow guide.
+- Stage scripts: replace demo model code while keeping the SlurmForge contract sections.
+
 ## Output Locations
 
 - Dry-run audits print to stdout unless you pass `--output`.
@@ -53,18 +64,41 @@ Template: `{plan.template}`
 Generated scripts are split into three sections:
 
 - `SECTION A - SlurmForge contract`: keep the injected args and environment contract; add your own CLI args here.
-- `SECTION B - Your model code`: replace the demo model, data loading, train, and eval functions.
+- `SECTION B - Your model code`: replace the demo model, data loading, and stage logic.
 - `SECTION C - Output contract`: keep the file shapes that the YAML declares.
 
-Training stages must leave a `.pt` checkpoint under `checkpoints/`. Eval stages receive the resolved checkpoint as `--checkpoint_path` and `SFORGE_INPUT_CHECKPOINT`, then write `eval/metrics.json` with a numeric `accuracy` field.
+{_stage_contract(plan.template)}
 
-## Common Fields To Edit
+## Edit These First
 
-{fields}
+{first_edit_fields}
 
-## Common Field Options
+## Config Reference
 
-{option_table()}
+- `CONFIG.sforge.md`: fields used by this starter.
+- `docs/config.md`: complete SlurmForge config reference.
 
 The starter values are deliberately small. Replace scripts, resources, runtime paths, and output contracts before using this for real work.
 """
+
+
+def _stage_contract(template: str) -> str:
+    if template == TEMPLATE_TRAIN_EVAL:
+        return (
+            "The train stage must leave a `.pt` checkpoint under `checkpoints/`. "
+            "The eval stage receives that checkpoint as `--checkpoint_path` and "
+            "`SFORGE_INPUT_CHECKPOINT`, then writes `eval/metrics.json` with a "
+            "numeric `accuracy` field."
+        )
+    if template == TEMPLATE_TRAIN_ONLY:
+        return (
+            "The train stage must leave a `.pt` checkpoint under `checkpoints/`. "
+            "That file shape is the output contract declared by `experiment.yaml`."
+        )
+    if template == TEMPLATE_EVAL_CHECKPOINT:
+        return (
+            "The eval stage receives the checkpoint selected by `--checkpoint` as "
+            "`--checkpoint_path` and `SFORGE_INPUT_CHECKPOINT`, then writes "
+            "`eval/metrics.json` with a numeric `accuracy` field."
+        )
+    return "Keep the file shapes declared by `experiment.yaml`."

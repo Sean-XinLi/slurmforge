@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
-from ..defaults import (
+from ...defaults import (
     DEFAULT_CHECKPOINT_PATH,
     DEFAULT_CONFIG_FILENAME,
     TEMPLATE_EVAL_CHECKPOINT,
@@ -30,15 +30,6 @@ def build_readme(request: InitRequest) -> StarterReadmePlan:
         submit_command=(
             f"sforge eval --config {DEFAULT_CONFIG_FILENAME} "
             f"--checkpoint {DEFAULT_CHECKPOINT_PATH}"
-        ),
-        editable_fields=(
-            "project",
-            "experiment",
-            "storage.root",
-            "stages.eval.entry.script",
-            "stages.eval.resources.partition",
-            "runtime.executor.python.bin",
-            "runtime.user.default.python.bin",
         ),
         notes=(
             f"`{DEFAULT_CHECKPOINT_PATH}` is a sample input file generated with this template.",

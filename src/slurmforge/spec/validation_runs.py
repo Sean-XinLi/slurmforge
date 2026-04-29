@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from ..errors import ConfigContractError
-from ..field_options import options_sentence
+from ..config_schema import options_sentence
 from .models import ExperimentSpec
 from .run_paths import normalize_run_override_path
 from .validation_common import path_exists_or_allowed_for_args

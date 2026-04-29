@@ -40,6 +40,15 @@ class RepositoryHygieneTests(StageBatchSystemTestCase):
                 violations.append(tracked)
         self.assertEqual(violations, [])
 
+    def test_local_artifact_directories_are_ignored(self) -> None:
+        for path in ("src/slurmforge/__pycache__", "src/slurmforge/.claude"):
+            result = subprocess.run(
+                ["git", "check-ignore", path],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_import_linter_tooling_is_not_configured(self) -> None:
         checked_paths = [
             Path("pyproject.toml"),
@@ -62,12 +71,22 @@ class RepositoryHygieneTests(StageBatchSystemTestCase):
         self.assertEqual(workflow.count("python -m build"), 1)
         self.assertEqual(workflow.count("python -m twine check dist/*"), 1)
 
-    def test_release_metadata_is_stable_1_0(self) -> None:
+    def test_tools_directory_documents_repo_maintenance_contract(self) -> None:
+        text = Path("tools/README.md").read_text(encoding="utf-8")
+        self.assertIn("repository root", text)
+        self.assertIn("--check", text)
+        self.assertIn("must not write outside the repository", text)
+
+    def test_release_metadata_uses_identity_version(self) -> None:
         pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
         citation = Path("CITATION.cff").read_text(encoding="utf-8")
 
         from slurmforge.identity import __version__
 
-        self.assertEqual(__version__, "1.0.0")
-        self.assertIn('version: "1.0.0"', citation)
+        self.assertRegex(__version__, r"^\d+\.\d+\.\d+$")
+        self.assertIn(f'version: "{__version__}"', citation)
+        self.assertIn(
+            'version = {attr = "slurmforge.identity.__version__"}',
+            pyproject,
+        )
         self.assertIn("Development Status :: 5 - Production/Stable", pyproject)

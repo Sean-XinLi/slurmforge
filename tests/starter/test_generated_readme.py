@@ -33,8 +33,9 @@ class GeneratedReadmeTests(StageBatchSystemTestCase):
             )
             self.assertIn("`stages.eval.entry.script`", readme)
             self.assertNotIn("`stages.train.entry.script`", readme)
+            self.assertNotIn("The train stage must leave", readme)
 
-    def test_generated_readme_common_options_and_dry_run_command_stay_executable(
+    def test_generated_readme_is_workflow_scoped_and_dry_run_command_stays_executable(
         self,
     ) -> None:
         from slurmforge.launcher import main
@@ -46,23 +47,42 @@ class GeneratedReadmeTests(StageBatchSystemTestCase):
                 root = Path(tmp)
                 create_starter_project(InitRequest(template=template, output_dir=root))
                 readme = (root / "README.sforge.md").read_text(encoding="utf-8")
+                config_guide = (root / "CONFIG.sforge.md").read_text(encoding="utf-8")
                 self.assertIn("## Connect Your Model", readme)
                 self.assertIn("SECTION A - SlurmForge contract", readme)
                 self.assertIn("SECTION B - Your model code", readme)
                 self.assertIn("SECTION C - Output contract", readme)
-                self.assertIn("SFORGE_INPUT_CHECKPOINT", readme)
-                self.assertIn("eval/metrics.json", readme)
-                self.assertIn("## Common Field Options", readme)
-                self.assertIn("| Field | Options | Meaning |", readme)
-                self.assertIn("`matrix`: Plan named cases, each with its own grid.", readme)
+                self.assertIn("## Edit These First", readme)
+                self.assertIn("`CONFIG.sforge.md`: fields used by this starter.", readme)
+                self.assertNotIn("## Common Field Options", readme)
+                self.assertNotIn("| Field | Options | Meaning |", readme)
+                self.assertNotIn("`notifications.email.on`", readme)
+                self.assertIn("# Starter Config Guide", config_guide)
+                self.assertIn("Template: `" + template + "`", config_guide)
+                self.assertIn("`runs.type`", config_guide)
+                self.assertIn("`matrix`: Plan named cases, each with its own grid.", config_guide)
                 self.assertIn(
-                    "`notifications.email.on` | `batch_finished`, `train_eval_pipeline_finished`",
-                    readme,
+                    "`notifications.email.on`",
+                    config_guide,
                 )
                 self.assertIn(
-                    "`stages.*.inputs.*.source.kind` | `upstream_output`, `external_path`",
-                    readme,
+                    "`stages.*.outputs.*.kind`",
+                    config_guide,
                 )
+                if template == "train-only":
+                    self.assertIn("The train stage must leave", readme)
+                    self.assertNotIn("SFORGE_INPUT_CHECKPOINT", readme)
+                    self.assertNotIn("eval/metrics.json", readme)
+                    self.assertIn("`stages.train.entry.script`", config_guide)
+                    self.assertNotIn("`stages.eval.entry.script`", config_guide)
+                    self.assertNotIn("`stages.eval.inputs.checkpoint`", config_guide)
+                else:
+                    self.assertIn("SFORGE_INPUT_CHECKPOINT", readme)
+                    self.assertIn("eval/metrics.json", readme)
+                if template == "eval-checkpoint":
+                    self.assertIn("`stages.eval.entry.script`", config_guide)
+                    self.assertNotIn("`stages.train.entry.script`", config_guide)
+                    self.assertNotIn("`stages.train.outputs.checkpoint`", config_guide)
                 command = next(
                     line for line in readme.splitlines() if "--dry-run=full" in line
                 )

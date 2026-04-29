@@ -23,7 +23,11 @@ def scalar(value: Any) -> str:
     if isinstance(value, dict):
         if not value:
             return "{}"
-        return "{" + ", ".join(f"{key}: {scalar(item)}" for key, item in value.items()) + "}"
+        return (
+            "{"
+            + ", ".join(f"{key}: {scalar(item)}" for key, item in value.items())
+            + "}"
+        )
     text = str(value)
     if (
         _PLAIN_SCALAR.match(text)

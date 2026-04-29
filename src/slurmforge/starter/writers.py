@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .catalog import get_template
-from .defaults import DEFAULT_CONFIG_FILENAME
+from ..defaults import DEFAULT_CONFIG_FILENAME
 from .errors import StarterWriteError
 from .models import GeneratedFile, InitRequest, InitResult, StarterWritePlan
 from .render import render_starter_files

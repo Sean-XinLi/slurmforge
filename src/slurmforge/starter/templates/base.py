@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..defaults import (
+from ...defaults import (
     DEFAULT_EXPERIMENT,
     DEFAULT_PARTITION,
     DEFAULT_PROJECT,

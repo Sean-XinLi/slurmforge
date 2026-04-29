@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ...defaults import DEFAULT_PYTHON_BIN
 from .common import JsonObject
 
 
 @dataclass(frozen=True)
 class PythonRuntimeSpec:
-    bin: str = "python3"
+    bin: str = DEFAULT_PYTHON_BIN
     min_version: str = "3.10"
 
 

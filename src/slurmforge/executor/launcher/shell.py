@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import shlex
 
-from ...plans.stage import StageInstancePlan
 from ...contracts import InputBinding
+from ...defaults import DEFAULT_PYTHON_BIN
+from ...plans.stage import StageInstancePlan
 from ..bindings import binding_injected_value
 from .args import args_to_argv, flag
 from .command import command_entry_command, python_script_command
@@ -44,7 +45,7 @@ def _build_command(instance: StageInstancePlan, bindings: tuple[InputBinding, ..
     launcher = instance.launcher_plan
     launcher_type = launcher.type or "single"
     runtime_user = instance.runtime_plan.user
-    python_bin = runtime_user.python.bin if runtime_user is not None else "python3"
+    python_bin = runtime_user.python.bin if runtime_user is not None else DEFAULT_PYTHON_BIN
     if entry.type == "python_script":
         return python_script_command(
             python_bin=python_bin,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..errors import ConfigContractError
-from ..field_options import options_for, options_sentence
+from ..config_schema import options_for, options_sentence
 from .models import ExperimentSpec
 from .validation_notifications import validate_notifications_contract
 from .validation_resources import validate_hardware_contract, validate_sizing_contract

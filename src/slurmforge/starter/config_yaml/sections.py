@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config_comments import option_comment
+from ..config_comments import comment_for, inline_comment_for, option_comment
 from .scalar import scalar
 
 
 def render_project(lines: list[str], config: dict[str, Any]) -> None:
     lines.extend(
         [
-            "# Project identity. Used in output paths under storage.root.",
+            comment_for("project", indent=0),
             f"project: {scalar(config['project'])}",
+            comment_for("experiment", indent=0),
             f"experiment: {scalar(config['experiment'])}",
             "",
             "storage:",
-            "  # Root directory for generated plans, logs, status records, and artifacts.",
+            comment_for("storage.root", indent=2),
             f"  root: {scalar(config['storage']['root'])}",
             "",
         ]
@@ -27,11 +28,11 @@ def render_environments(lines: list[str], config: dict[str, Any]) -> None:
         [
             "environments:",
             "  default:",
-            "    # Optional environment modules to load before executor/user scripts.",
+            comment_for("environments.*.modules", indent=4),
             f"    modules: {scalar(env['modules'])}",
-            "    # Optional shell files or commands to source before execution.",
+            comment_for("environments.*.source", indent=4),
             f"    source: {scalar(env['source'])}",
-            "    # Environment variables added to the Slurm job environment.",
+            comment_for("environments.*.env", indent=4),
             f"    env: {scalar(env['env'])}",
             "",
         ]
@@ -48,18 +49,18 @@ def render_runtime(lines: list[str], config: dict[str, Any]) -> None:
             "runtime:",
             "  executor:",
             "    python:",
-            "      # Python used by slurmforge's executor wrapper on compute nodes.",
+            comment_for("runtime.executor.python.bin", indent=6),
             f"      bin: {scalar(executor_python['bin'])}",
-            f"      min_version: {scalar(executor_python['min_version'])}  # Minimum version required for the executor.",
-            "    # Executor module; most users should keep this default.",
+            f"      min_version: {scalar(executor_python['min_version'])}  # {inline_comment_for('runtime.executor.python.min_version')}",
+            comment_for("runtime.executor.module", indent=4),
             f"    module: {scalar(executor['module'])}",
             "  user:",
             "    default:",
             "      python:",
-            "        # Python used to run your stage scripts.",
+            comment_for("runtime.user.*.python.bin", indent=8),
             f"        bin: {scalar(user_python['bin'])}",
-            f"        min_version: {scalar(user_python['min_version'])}  # Minimum version required for user scripts.",
-            "      # Environment variables visible to user scripts.",
+            f"        min_version: {scalar(user_python['min_version'])}  # {inline_comment_for('runtime.user.*.python.min_version')}",
+            comment_for("runtime.user.*.env", indent=6),
             f"      env: {scalar(user_default['env'])}",
             "",
         ]
@@ -72,13 +73,12 @@ def render_artifact_store(lines: list[str], config: dict[str, Any]) -> None:
         [
             "artifact_store:",
             option_comment("artifact_store.strategy", indent=2),
-            "  # copy is safest because managed outputs remain available.",
             f"  strategy: {scalar(store['strategy'])}",
             option_comment("artifact_store.fallback_strategy", indent=2),
             f"  fallback_strategy: {scalar(store['fallback_strategy'])}",
-            "  # Verify managed output digests after artifact storage.",
+            comment_for("artifact_store.verify_digest", indent=2),
             f"  verify_digest: {scalar(store['verify_digest'])}",
-            "  # Fail the run if artifact verification cannot prove integrity.",
+            comment_for("artifact_store.fail_on_verify_error", indent=2),
             f"  fail_on_verify_error: {scalar(store['fail_on_verify_error'])}",
             "",
         ]
@@ -91,9 +91,9 @@ def render_notifications(lines: list[str], config: dict[str, Any]) -> None:
         [
             "notifications:",
             "  email:",
-            "    # Enable email summary notifications for terminal workflow events.",
+            comment_for("notifications.email.enabled", indent=4),
             f"    enabled: {scalar(email['enabled'])}",
-            "    # Required when enabled is true.",
+            comment_for("notifications.email.to", indent=4),
             f"    to: {scalar(email['to'])}",
             option_comment("notifications.email.on", indent=4),
             '    "on":',
@@ -105,9 +105,11 @@ def render_notifications(lines: list[str], config: dict[str, Any]) -> None:
         [
             option_comment("notifications.email.mode", indent=4),
             f"    mode: {scalar(email['mode'])}",
-            "    # Sender and local sendmail binary used by email delivery.",
+            comment_for("notifications.email.from", indent=4),
             f"    from: {scalar(email['from'])}",
+            comment_for("notifications.email.sendmail", indent=4),
             f"    sendmail: {scalar(email['sendmail'])}",
+            comment_for("notifications.email.subject_prefix", indent=4),
             f"    subject_prefix: {scalar(email['subject_prefix'])}",
             "",
         ]
@@ -120,7 +122,6 @@ def render_runs(lines: list[str], config: dict[str, Any]) -> None:
         [
             "runs:",
             option_comment("runs.type", indent=2),
-            "  # single is best for a starter; use grid/cases/matrix for sweeps.",
             f"  type: {scalar(runs['type'])}",
             "",
         ]
@@ -132,7 +133,7 @@ def render_dispatch(lines: list[str], config: dict[str, Any]) -> None:
     lines.extend(
         [
             "dispatch:",
-            "  # Global GPU budget used to serialize Slurm array groups if needed.",
+            comment_for("dispatch.max_available_gpus", indent=2),
             f"  max_available_gpus: {scalar(dispatch['max_available_gpus'])}",
             option_comment("dispatch.overflow_policy", indent=2),
             f"  overflow_policy: {scalar(dispatch['overflow_policy'])}",
@@ -147,12 +148,15 @@ def render_orchestration(lines: list[str], config: dict[str, Any]) -> None:
         [
             "orchestration:",
             "  controller:",
-            "    # Slurm resources for the lightweight train/eval controller job.",
+            comment_for("orchestration.controller.partition", indent=4),
             f"    partition: {scalar(controller['partition'])}",
+            comment_for("orchestration.controller.cpus", indent=4),
             f"    cpus: {scalar(controller['cpus'])}",
+            comment_for("orchestration.controller.mem", indent=4),
             f"    mem: {scalar(controller['mem'])}",
+            comment_for("orchestration.controller.time_limit", indent=4),
             f"    time_limit: {scalar(controller['time_limit'])}",
-            "    # Must reference a key under environments.",
+            comment_for("orchestration.controller.environment", indent=4),
             f"    environment: {scalar(controller['environment'])}",
             "",
         ]

@@ -3,9 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from .config_yaml import render_starter_config
-from .defaults import DEFAULT_CONFIG_FILENAME
+from ..defaults import DEFAULT_CONFIG_FILENAME
 from .errors import StarterTemplateError
 from .models import InitRequest, RenderedFile, StarterTemplate
+from .templates.config_guide import render_starter_config_guide
 from .templates.readme import render_starter_readme
 
 
@@ -25,6 +26,11 @@ def render_starter_files(request: InitRequest, template: StarterTemplate) -> tup
             path=root / "README.sforge.md",
             content=render_starter_readme(template.readme_builder(request)),
             role="guide",
+        ),
+        RenderedFile(
+            path=root / "CONFIG.sforge.md",
+            content=render_starter_config_guide(template.name),
+            role="config-guide",
         ),
     ]
     for builder in template.file_builders:

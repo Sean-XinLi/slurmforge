@@ -37,6 +37,7 @@ class StarterTests(StageBatchSystemTestCase):
                 self.assertEqual(result.config_path, cfg_path.resolve())
                 self.assertTrue(cfg_path.exists())
                 self.assertTrue((root / "README.sforge.md").exists())
+                self.assertTrue((root / "CONFIG.sforge.md").exists())
                 spec = load_experiment_spec(cfg_path)
                 self.assertEqual(spec.stage_order(), expected_orders[template])
 

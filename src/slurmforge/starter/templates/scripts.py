@@ -3,7 +3,7 @@ from __future__ import annotations
 from importlib.resources import files
 from pathlib import Path
 
-from ..defaults import DEFAULT_CHECKPOINT_PATH, DEFAULT_EVAL_SCRIPT, DEFAULT_TRAIN_SCRIPT
+from ...defaults import DEFAULT_CHECKPOINT_PATH, DEFAULT_EVAL_SCRIPT, DEFAULT_TRAIN_SCRIPT
 from ..models import FilePayload, InitRequest
 
 

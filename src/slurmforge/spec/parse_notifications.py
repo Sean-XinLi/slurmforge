@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..field_options import options_for, options_sentence
+from ..config_schema import options_for, options_sentence
 from .models import EmailNotificationSpec, NotificationsSpec
 from .parse_common import optional_mapping, reject_unknown_keys
 

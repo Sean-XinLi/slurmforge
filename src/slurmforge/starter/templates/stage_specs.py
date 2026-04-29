@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..defaults import DEFAULT_CHECKPOINT_PATH, DEFAULT_EVAL_SCRIPT, DEFAULT_TRAIN_SCRIPT
+from ...defaults import DEFAULT_CHECKPOINT_PATH, DEFAULT_EVAL_SCRIPT, DEFAULT_TRAIN_SCRIPT
 from .resources import stage_resources
 
 

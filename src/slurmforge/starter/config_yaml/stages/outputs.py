@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_comments import option_comment
+from ...config_comments import comment_for, option_comment
 from ..scalar import scalar
 
 
@@ -22,14 +22,14 @@ def render_outputs(lines: list[str], outputs: dict[str, Any]) -> None:
         if output["kind"] in {"metric", "manifest"}:
             lines.extend(
                 [
-                    "        # JSON file produced by the stage.",
+                    comment_for("stages.*.outputs.*.file", indent=8),
                     f"        file: {scalar(output['file'])}",
                 ]
             )
         if output["kind"] == "metric":
             lines.extend(
                 [
-                    "        # JSONPath for the metric value inside file.",
+                    comment_for("stages.*.outputs.*.json_path", indent=8),
                     f"        json_path: {scalar(output['json_path'])}",
                 ]
             )
@@ -39,7 +39,7 @@ def _render_discovery(lines: list[str], discover: dict[str, Any]) -> None:
     lines.extend(
         [
             "        discover:",
-            "          # Glob patterns are evaluated under the stage run directory.",
+            comment_for("stages.*.outputs.*.discover.globs", indent=10),
             "          globs:",
         ]
     )

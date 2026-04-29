@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..defaults import DEFAULT_PARTITION
+from ...defaults import DEFAULT_PARTITION
 
 
 def stage_resources(*, cpus: int, mem: str) -> dict[str, Any]:

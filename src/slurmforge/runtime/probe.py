@@ -6,6 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
+from ..defaults import DEFAULT_PYTHON_BIN
 from ..errors import RuntimeContractError
 from ..io import SchemaVersion
 
@@ -126,7 +127,10 @@ def probe_runtime_plan(runtime_plan: Any) -> tuple[RuntimeProbeRecord, ...]:
     if executor_python:
         probes.append(
             probe_python_runtime(
-                str(_field(executor_python, "bin", "python3") or "python3"),
+                str(
+                    _field(executor_python, "bin", DEFAULT_PYTHON_BIN)
+                    or DEFAULT_PYTHON_BIN
+                ),
                 min_version=str(_field(executor_python, "min_version", "3.10") or "3.10"),
                 runtime_role="executor",
             )
@@ -136,7 +140,10 @@ def probe_runtime_plan(runtime_plan: Any) -> tuple[RuntimeProbeRecord, ...]:
     if user_python:
         probes.append(
             probe_python_runtime(
-                str(_field(user_python, "bin", "python3") or "python3"),
+                str(
+                    _field(user_python, "bin", DEFAULT_PYTHON_BIN)
+                    or DEFAULT_PYTHON_BIN
+                ),
                 min_version=str(_field(user_python, "min_version", "3.10") or "3.10"),
                 runtime_role="user",
                 runtime_name=str(_field(user_plan, "name", "default") or "default"),

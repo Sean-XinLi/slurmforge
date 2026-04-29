@@ -4,11 +4,18 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Callable
 
+from slurmforge.defaults import (
+    DEFAULT_CHECKPOINT_PATH,
+    DEFAULT_CONFIG_FILENAME,
+    TEMPLATE_TRAIN_EVAL,
+    TEMPLATE_TRAIN_ONLY,
+)
+
 
 def init_args(
     root: Path,
     *,
-    template: str = "train-eval",
+    template: str = TEMPLATE_TRAIN_EVAL,
     force: bool = False,
 ) -> Namespace:
     return Namespace(
@@ -29,11 +36,11 @@ def interactive_init_args() -> Namespace:
 
 
 def dry_run_command_for_template(template: str) -> list[str]:
-    if template == "train-eval":
+    if template == TEMPLATE_TRAIN_EVAL:
         return ["run"]
-    if template == "train-only":
+    if template == TEMPLATE_TRAIN_ONLY:
         return ["train"]
-    return ["eval", "--checkpoint", "checkpoint.pt"]
+    return ["eval", "--checkpoint", DEFAULT_CHECKPOINT_PATH]
 
 
 def bad_template(file_builder: Callable):
@@ -51,11 +58,10 @@ def bad_template(file_builder: Callable):
         readme_builder=lambda request: StarterReadmePlan(
             template=request.template,
             commands=StarterCommandSet(
-                validate="sforge validate --config experiment.yaml",
-                dry_run="sforge run --config experiment.yaml --dry-run=full",
-                submit="sforge run --config experiment.yaml",
+                validate=f"sforge validate --config {DEFAULT_CONFIG_FILENAME}",
+                dry_run=f"sforge run --config {DEFAULT_CONFIG_FILENAME} --dry-run=full",
+                submit=f"sforge run --config {DEFAULT_CONFIG_FILENAME}",
             ),
-            editable_fields=(),
         ),
         file_builders=(file_builder,),
     )

@@ -4,7 +4,7 @@ from typing import Any
 
 from ...contracts import InputInjection, InputSource
 from ...errors import ConfigContractError
-from ...field_options import options_for, options_sentence
+from ...config_schema import options_for, options_sentence
 from ..models import StageInputSpec
 from ..parse_common import optional_mapping, require_mapping
 

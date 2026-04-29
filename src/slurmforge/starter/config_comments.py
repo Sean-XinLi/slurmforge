@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from ..field_options import option_table as field_option_table
-from ..field_options import options_comment
+from ..config_schema import comment_for as schema_comment_for
+from ..config_schema import option_comment as schema_option_comment
+
+
+def comment_for(field: str, *, indent: int) -> str:
+    return f"{' ' * indent}# {schema_comment_for(field)}"
+
+
+def inline_comment_for(field: str) -> str:
+    return schema_comment_for(field)
 
 
 def option_comment(field: str, *, indent: int) -> str:
-    return options_comment(field, indent=indent)
-
-
-def option_table() -> str:
-    return field_option_table()
+    return schema_option_comment(field, indent=indent)

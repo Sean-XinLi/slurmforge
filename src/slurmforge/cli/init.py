@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from ..errors import UsageError
-from ..starter.defaults import DEFAULT_OUTPUT_DIR
+from ..defaults import DEFAULT_OUTPUT_DIR
 from ..starter import (
     InitRequest,
     StarterWriteError,
