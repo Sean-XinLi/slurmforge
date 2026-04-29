@@ -136,8 +136,8 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
         path="stages.*.entry.args",
         title="Stage arguments",
-        short_help="Mapping passed to each stage script as CLI flags.",
-        when_to_change="Edit this for training hyperparameters, eval split names, data paths, or model flags.",
+        short_help="Mapping passed to each stage script; each YAML key maps exactly to the CLI flag name, with `--` added only when no dash prefix is present.",
+        when_to_change="Write the flag spelling your script accepts: max_length becomes --max_length, max-length becomes --max-length, and --raw.flag stays --raw.flag.",
         section="Stages",
         level="common",
         templates=ALL_STARTER_TEMPLATES,

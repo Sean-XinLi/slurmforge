@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+CHECKPOINT_DIR = Path("__SFORGE_CHECKPOINT_DIR__")
+CHECKPOINT_SUFFIX = "__SFORGE_CHECKPOINT_SUFFIX__"
+
 
 @dataclass(frozen=True)
 class TrainContext:
@@ -24,7 +27,7 @@ class TrainContext:
             run_id=run_id,
             stage_name=os.environ.get("SFORGE_STAGE_NAME", "train"),
             attempt_dir=Path(os.environ.get("SFORGE_ATTEMPT_DIR", ".")).resolve(),
-            checkpoint_dir=Path("checkpoints") / run_id,
+            checkpoint_dir=CHECKPOINT_DIR / run_id,
             log_dir=Path("logs"),
         )
 
@@ -65,7 +68,9 @@ def train_one_run(
     context.checkpoint_dir.mkdir(parents=True, exist_ok=True)
     context.log_dir.mkdir(parents=True, exist_ok=True)
 
-    checkpoint = context.checkpoint_dir / f"step_{args.epochs:05d}.pt"
+    checkpoint = context.checkpoint_dir / (
+        f"step_{args.epochs:05d}{CHECKPOINT_SUFFIX}"
+    )
     checkpoint_payload = {
         "format": "slurmforge-demo-checkpoint",
         "run_id": context.run_id,
@@ -107,13 +112,17 @@ def write_train_summary(
     )
 
 
-# SECTION C - Output contract. SlurmForge discovers checkpoints/**/*.pt.
+# SECTION C - Output contract. SlurmForge discovers __SFORGE_CHECKPOINT_GLOB__.
 def require_checkpoint_contract(checkpoint: Path) -> None:
     if not checkpoint.exists():
         raise RuntimeError(f"training did not create checkpoint: {checkpoint}")
-    if "checkpoints" not in checkpoint.parts or checkpoint.suffix != ".pt":
+    if (
+        CHECKPOINT_DIR.name not in checkpoint.parts
+        or checkpoint.suffix != CHECKPOINT_SUFFIX
+    ):
         raise RuntimeError(
-            "training checkpoint must be a .pt file under checkpoints/ "
+            f"training checkpoint must be a {CHECKPOINT_SUFFIX} file "
+            f"under {CHECKPOINT_DIR}/ "
             "to match stages.train.outputs.checkpoint.discover.globs"
         )
 

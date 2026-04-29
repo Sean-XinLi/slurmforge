@@ -90,6 +90,8 @@ class StarterTests(StageBatchSystemTestCase):
             train_text = (root / "train.py").read_text(encoding="utf-8")
             eval_text = (root / "eval.py").read_text(encoding="utf-8")
 
+            self.assertNotIn("__SFORGE_", train_text)
+            self.assertNotIn("__SFORGE_", eval_text)
             for section in (
                 "SECTION A - SlurmForge contract",
                 "SECTION B - Your model code",
@@ -104,6 +106,22 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertIn("def evaluate", eval_text)
             self.assertIn("SFORGE_INPUT_CHECKPOINT", eval_text)
             self.assertIn("eval/metrics.json", eval_text)
+
+    def test_script_template_renderer_rejects_placeholder_drift(self) -> None:
+        from slurmforge.starter.errors import StarterTemplateError
+        from slurmforge.starter.templates.script_render import (
+            _render_asset,
+            _validate_placeholders,
+        )
+
+        with self.assertRaisesRegex(StarterTemplateError, "undeclared placeholders"):
+            _render_asset("train.py", {})
+        with self.assertRaisesRegex(StarterTemplateError, "unused placeholders"):
+            _validate_placeholders(
+                "asset.py",
+                "",
+                {"__SFORGE_UNUSED__": "value"},
+            )
 
     def test_all_templates_support_their_full_dry_run_command(self) -> None:
         from slurmforge.launcher import main

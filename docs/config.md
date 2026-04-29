@@ -120,7 +120,7 @@ stages:
       script: train.py
       # Working directory used when launching the stage command.
       workdir: .
-      # Mapping passed to each stage script as CLI flags.
+      # Mapping passed to each stage script; each YAML key maps exactly to the CLI flag name, with `--` added only when no dash prefix is present.
       args:
         epochs: 1
         lr: 0.001
@@ -168,7 +168,7 @@ stages:
       script: eval.py
       # Working directory used when launching the stage command.
       workdir: .
-      # Mapping passed to each stage script as CLI flags.
+      # Mapping passed to each stage script; each YAML key maps exactly to the CLI flag name, with `--` added only when no dash prefix is present.
       args:
         split: validation
     launcher:
@@ -212,7 +212,7 @@ stages:
         expects: path
         required: true
         inject:
-          # CLI flag name used to pass the resolved input to the stage process.
+          # CLI flag name used to pass the resolved input; the value maps exactly to the flag name, with `--` added only when no dash prefix is present.
           flag: checkpoint_path
           # Environment variable used to pass the resolved input to the stage process.
           env: SFORGE_INPUT_CHECKPOINT
@@ -227,10 +227,8 @@ stages:
 ```yaml
 project: resnet
 experiment: ablation_matrix
-
 storage:
   root: /shared/runs
-
 hardware:
   gpu_types:
     a100_80gb:
@@ -239,7 +237,6 @@ hardware:
       max_gpus_per_node: 8
       slurm:
         constraint: a100
-
 environments:
   default:
     modules:
@@ -250,45 +247,40 @@ environments:
           - train
     env:
       HF_HOME: /shared/cache/huggingface
-
 runtime:
   executor:
     python:
       bin: python3
-      min_version: "3.10"
+      min_version: '3.10'
     module: slurmforge.executor.stage
   user:
     default:
       python:
         bin: /shared/envs/train/bin/python
-        min_version: "3.10"
+        min_version: '3.10'
       env:
-        TOKENIZERS_PARALLELISM: "false"
-
+        TOKENIZERS_PARALLELISM: 'false'
 sizing:
   gpu:
     defaults:
       safety_factor: 1.15
       round_to: 1
-
 artifact_store:
   strategy: hardlink
   fallback_strategy: copy
   verify_digest: true
   fail_on_verify_error: true
-
 notifications:
   email:
     enabled: true
     to:
       - ml-team@example.com
-    "on":
+    'on':
       - train_eval_pipeline_finished
     mode: summary
     from: slurmforge@example.com
     sendmail: /usr/sbin/sendmail
     subject_prefix: SlurmForge
-
 runs:
   type: matrix
   cases:
@@ -296,28 +288,32 @@ runs:
       set:
         train.entry.args.model: resnet18
       axes:
-        train.entry.args.lr: [0.001, 0.0005]
-        train.entry.args.seed: [1, 2]
+        train.entry.args.lr:
+          - 0.001
+          - 0.0005
+        train.entry.args.seed:
+          - 1
+          - 2
     - name: large
       set:
         train.entry.args.model: resnet50
         train.resources.gpu_type: a100_80gb
       axes:
-        train.entry.args.lr: [0.0005]
-        train.entry.args.seed: [1, 2]
-
+        train.entry.args.lr:
+          - 0.0005
+        train.entry.args.seed:
+          - 1
+          - 2
 dispatch:
   max_available_gpus: 16
   overflow_policy: serialize_groups
-
 orchestration:
   controller:
     partition: gpu
     cpus: 1
     mem: 2G
-    time_limit: "12:00:00"
+    time_limit: '12:00:00'
     environment: default
-
 stages:
   train:
     kind: train
@@ -349,7 +345,7 @@ stages:
       partition: gpu
       account: research
       qos: normal
-      time_limit: "06:00:00"
+      time_limit: 06:00:00
       gpu_type: a100_80gb
       nodes: 2
       gpus_per_node: auto
@@ -373,7 +369,6 @@ stages:
           globs:
             - checkpoints/**/*.pt
           select: latest_step
-
   eval:
     kind: eval
     enabled: true
@@ -391,7 +386,7 @@ stages:
       type: single
     resources:
       partition: gpu
-      time_limit: "01:00:00"
+      time_limit: 01:00:00
       gpu_type: a100_80gb
       nodes: 1
       gpus_per_node: 1
@@ -545,7 +540,7 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `stages.*.before[].name` | value | no | advanced |  |  | Optional label for a pre-entry setup command. | Set this when setup logs need a recognizable step name. |
 | `stages.*.before[].run` | command | yes | advanced | required when before[] is present |  | Shell command executed before the main stage entrypoint. | Use this for stage-local setup such as cache warmup or one-off file preparation. |
 | `stages.*.enabled` | boolean | no | intermediate | true |  | Controls whether the stage participates in planning. | Disable a stage only when intentionally excluding it from this config. |
-| `stages.*.entry.args` | value | no | common | template-specific |  | Mapping passed to each stage script as CLI flags. | Edit this for training hyperparameters, eval split names, data paths, or model flags. |
+| `stages.*.entry.args` | value | no | common | template-specific |  | Mapping passed to each stage script; each YAML key maps exactly to the CLI flag name, with `--` added only when no dash prefix is present. | Write the flag spelling your script accepts: max_length becomes --max_length, max-length becomes --max-length, and --raw.flag stays --raw.flag. |
 | `stages.*.entry.command` | command | contextual | intermediate | contextual |  | Shell command or argv list used when entry.type is command. | Use this for non-Python stages or wrappers that should run as a raw command. |
 | `stages.*.entry.script` | path | contextual | common | template-specific |  | Script path resolved relative to the config file directory. | Point this at your real stage entrypoint. |
 | `stages.*.entry.type` | enum | no | intermediate | python_script | `python_script`, `command` | Controls how the stage command is interpreted. | Use command when the entrypoint is a shell command instead of a Python script. |
@@ -574,18 +569,18 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `stages.*.gpu_sizing.target_memory_gb` | float | contextual | advanced | required when gpu_sizing is present |  | Estimated target memory in GB for a stage. | Set this to the stage's estimated peak GPU memory requirement. |
 | `stages.*.depends_on` | list | no | intermediate | template-specific |  | Upstream stage names that must complete before this stage is selected. | Set this when a stage consumes outputs from earlier stages. |
 | `stages.*.inputs.*.expects` | enum | no | intermediate | path | `path`, `manifest`, `value` | Declares the resolved input shape expected by the consuming stage. | Change this when passing a manifest payload or scalar value instead of a filesystem path. |
-| `stages.*.inputs.*.inject.env` | value | no | intermediate | SFORGE_INPUT_CHECKPOINT |  | Environment variable used to pass the resolved input to the stage process. | Change this when the script expects a different environment variable name. |
-| `stages.*.inputs.*.inject.flag` | value | no | common | checkpoint_path |  | CLI flag name used to pass the resolved input to the stage process. | Change this to match the argument name accepted by your script. |
+| `stages.*.inputs.*.inject.env` | value | no | intermediate | template-specific |  | Environment variable used to pass the resolved input to the stage process. | Change this when the script expects a different environment variable name. |
+| `stages.*.inputs.*.inject.flag` | value | no | common | template-specific |  | CLI flag name used to pass the resolved input; the value maps exactly to the flag name, with `--` added only when no dash prefix is present. | Use the exact spelling accepted by your script, matching the same flag rule as stages.*.entry.args. |
 | `stages.*.inputs.*.inject.mode` | enum | no | intermediate | path | `path`, `value`, `json` | Controls how a resolved input is injected into the stage process. | Use json for structured payloads or value for scalar values. |
 | `stages.*.inputs.*.required` | boolean | no | intermediate | false |  | Controls whether a missing resolved input fails the stage plan. | Enable this for inputs that are mandatory for correct stage execution. |
 | `stages.*.inputs.*.source.kind` | enum | yes | intermediate | template-specific | `upstream_output`, `external_path` | Controls where a stage input is resolved from. | Use upstream_output for pipeline dependencies and external_path for user-provided files. |
-| `stages.*.inputs.*.source.output` | value | contextual | intermediate | checkpoint |  | Producer output name resolved from the upstream stage. | Change this when the producer stage exposes a different output contract. |
+| `stages.*.inputs.*.source.output` | value | contextual | intermediate | template-specific |  | Producer output name resolved from the upstream stage. | Change this when the producer stage exposes a different output contract. |
 | `stages.*.inputs.*.source.path` | path | contextual | common | checkpoint.pt |  | Explicit user-provided input path resolved relative to the config directory. | Replace the starter sample path with the real artifact path before submit. |
 | `stages.*.inputs.*.source.stage` | value | contextual | intermediate | train |  | Producer stage name for an upstream output input. | Change this when the input should consume a different upstream producer. |
-| `stages.*.outputs.*.discover.globs` | list | no | common | checkpoints/**/*.pt |  | Glob patterns evaluated under the stage run directory. | Change these when the stage writes artifacts under a different directory or filename pattern. |
+| `stages.*.outputs.*.discover.globs` | list | no | common | template-specific |  | Glob patterns evaluated under the stage run directory. | Change these when the stage writes artifacts under a different directory or filename pattern. |
 | `stages.*.outputs.*.discover.select` | enum | no | intermediate | latest_step | `latest_step`, `first`, `last` | Selects one path from discovered output glob matches. | Use first or last when lexicographic ordering is the desired selection rule. |
-| `stages.*.outputs.*.file` | path | no | common | eval/metrics.json |  | JSON file produced by the stage and read by output discovery. | Change this when the stage writes metrics or manifests to a different path. |
-| `stages.*.outputs.*.json_path` | value | no | common | $.accuracy |  | JSONPath used to read a metric value from the output file. | Change this when the metric lives under a different JSON key. |
+| `stages.*.outputs.*.file` | path | no | common | template-specific |  | JSON file produced by the stage and read by output discovery. | Change this when the stage writes metrics or manifests to a different path. |
+| `stages.*.outputs.*.json_path` | value | no | common | template-specific |  | JSONPath used to read a metric value from the output file. | Change this when the metric lives under a different JSON key. |
 | `stages.*.outputs.*.kind` | enum | yes | intermediate | template-specific | `file`, `files`, `metric`, `manifest` | Declares the shape of a managed stage output. | Use file/files for artifacts, metric for JSON scalar metrics, and manifest for manifest files. |
 | `stages.*.outputs.*.required` | boolean | no | intermediate | false |  | Controls whether missing output discovery fails the stage result. | Enable this for artifacts or metrics required by downstream stages or run acceptance. |
 | `stages.eval.inputs.checkpoint` | value | no | common | template-specific |  | Checkpoint input consumed by the eval stage. | For train-eval keep upstream_output; for eval-checkpoint replace the sample external path. |

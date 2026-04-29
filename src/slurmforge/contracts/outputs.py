@@ -8,11 +8,10 @@ from ..config_contract.defaults import (
     DEFAULT_OUTPUT_JSON_PATH,
     DEFAULT_OUTPUT_REQUIRED,
 )
-from ..config_contract.options import OUTPUT_KIND_FILE, options_for, options_sentence
+from ..config_contract.options import OUTPUT_KIND_FILE
 from ..errors import ConfigContractError
 from ..io import SchemaVersion
-
-OUTPUT_SELECTORS = set(options_for("stages.*.outputs.*.discover.select"))
+from .output_selectors import normalize_output_selector
 
 
 @dataclass(frozen=True)
@@ -59,16 +58,6 @@ def _require_schema(
         )
 
 
-def _normalize_selector(value: Any) -> str:
-    selector = str(value or DEFAULT_OUTPUT_DISCOVER_SELECT)
-    if selector not in OUTPUT_SELECTORS:
-        raise ConfigContractError(
-            "output discover select must be "
-            f"{options_sentence('stages.*.outputs.*.discover.select')}"
-        )
-    return selector
-
-
 def output_discovery_rule_from_dict(
     payload: dict[str, Any],
     *,
@@ -83,7 +72,7 @@ def output_discovery_rule_from_dict(
             )
         return FileOutputDiscoveryRule(
             globs=globs,
-            select=_normalize_selector(payload.get("select")),
+            select=normalize_output_selector(payload.get("select")),
         )
     if allow_select:
         return FileOutputDiscoveryRule(globs=globs)

@@ -57,7 +57,7 @@ Every successful stage instance has `stage_outputs.json`:
     "accuracy": {
       "kind": "metric",
       "path": "/abs/path/attempts/0001/artifacts/files/abc123_metrics.json",
-      "source_path": "/abs/path/eval/metrics.json",
+      "source_path": "/abs/path/metrics/accuracy.json",
       "managed": true,
       "digest": "sha256...",
       "source_digest": "sha256...",

@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from ...config_contract.defaults import (
-    DEFAULT_OUTPUT_DISCOVER_SELECT,
     DEFAULT_OUTPUT_JSON_PATH,
     DEFAULT_OUTPUT_REQUIRED,
 )
 from ...config_contract.options import OUTPUT_KIND_FILE, options_for, options_sentence
 from ...config_schema import reject_unknown_config_keys
+from ...contracts.output_selectors import normalize_output_selector
 from ...contracts.outputs import (
     FileOutputDiscoveryRule,
     OutputDiscoveryRule,
@@ -18,7 +18,6 @@ from ...contracts.outputs import (
 from ...errors import ConfigContractError
 
 OUTPUT_KINDS = set(options_for("stages.*.outputs.*.kind"))
-OUTPUT_SELECTORS = set(options_for("stages.*.outputs.*.discover.select"))
 
 
 def parse_stage_output_config(raw: Any, *, stage_name: str) -> StageOutputContract:
@@ -73,7 +72,7 @@ def _parse_discovery(
                 f"`{name}.select` is only supported for file outputs"
             )
         return FileOutputDiscoveryRule(
-            globs=globs, select=_normalize_selector(data.get("select"))
+            globs=globs, select=normalize_output_selector(data.get("select"))
         )
     if allow_select:
         return FileOutputDiscoveryRule(globs=globs)
@@ -98,13 +97,3 @@ def _string_tuple(value: Any, *, name: str) -> tuple[str, ...]:
     if not all(isinstance(item, str) and item for item in items):
         raise ConfigContractError(f"`{name}` must contain non-empty strings")
     return tuple(str(item) for item in items)
-
-
-def _normalize_selector(value: Any) -> str:
-    selector = str(value or DEFAULT_OUTPUT_DISCOVER_SELECT)
-    if selector not in OUTPUT_SELECTORS:
-        raise ConfigContractError(
-            "output discover select must be "
-            f"{options_sentence('stages.*.outputs.*.discover.select')}"
-        )
-    return selector

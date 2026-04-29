@@ -22,6 +22,17 @@ from ...config_contract.options import (
     OUTPUT_KIND_FILE,
     OUTPUT_KIND_METRIC,
 )
+from ...config_contract.starter_io import (
+    ACCURACY_FILE,
+    ACCURACY_JSON_PATH,
+    ACCURACY_OUTPUT_NAME,
+    CHECKPOINT_ENV,
+    CHECKPOINT_FLAG,
+    CHECKPOINT_GLOB,
+    CHECKPOINT_INPUT_NAME,
+    CHECKPOINT_OUTPUT_NAME,
+    EVAL_SPLIT_DEFAULT,
+)
 from ...config_contract.workflows import STAGE_EVAL, STAGE_TRAIN
 from .resources import stage_resources
 
@@ -44,11 +55,11 @@ def train_stage() -> dict[str, Any]:
         "launcher": {"type": DEFAULT_STAGE_LAUNCHER_TYPE},
         "resources": stage_resources(cpus=4, mem="16G"),
         "outputs": {
-            "checkpoint": {
+            CHECKPOINT_OUTPUT_NAME: {
                 "kind": OUTPUT_KIND_FILE,
                 "required": True,
                 "discover": {
-                    "globs": ["checkpoints/**/*.pt"],
+                    "globs": [CHECKPOINT_GLOB],
                     "select": DEFAULT_OUTPUT_DISCOVER_SELECT,
                 },
             }
@@ -60,17 +71,17 @@ def eval_stage_from_train() -> dict[str, Any]:
     stage = eval_stage_base()
     stage["depends_on"] = [STAGE_TRAIN]
     stage["inputs"] = {
-        "checkpoint": {
+        CHECKPOINT_INPUT_NAME: {
             "source": {
                 "kind": INPUT_SOURCE_UPSTREAM_OUTPUT,
                 "stage": STAGE_TRAIN,
-                "output": "checkpoint",
+                "output": CHECKPOINT_OUTPUT_NAME,
             },
             "expects": DEFAULT_INPUT_EXPECTS,
             "required": True,
             "inject": {
-                "flag": "checkpoint_path",
-                "env": "SFORGE_INPUT_CHECKPOINT",
+                "flag": CHECKPOINT_FLAG,
+                "env": CHECKPOINT_ENV,
                 "mode": DEFAULT_INPUT_INJECT_MODE,
             },
         }
@@ -81,7 +92,7 @@ def eval_stage_from_train() -> dict[str, Any]:
 def eval_stage_external_checkpoint() -> dict[str, Any]:
     stage = eval_stage_base()
     stage["inputs"] = {
-        "checkpoint": {
+        CHECKPOINT_INPUT_NAME: {
             "source": {
                 "kind": INPUT_SOURCE_EXTERNAL_PATH,
                 "path": DEFAULT_CHECKPOINT_PATH,
@@ -89,8 +100,8 @@ def eval_stage_external_checkpoint() -> dict[str, Any]:
             "expects": DEFAULT_INPUT_EXPECTS,
             "required": True,
             "inject": {
-                "flag": "checkpoint_path",
-                "env": "SFORGE_INPUT_CHECKPOINT",
+                "flag": CHECKPOINT_FLAG,
+                "env": CHECKPOINT_ENV,
                 "mode": DEFAULT_INPUT_INJECT_MODE,
             },
         }
@@ -109,16 +120,16 @@ def eval_stage_base() -> dict[str, Any]:
             "script": DEFAULT_EVAL_SCRIPT,
             "workdir": DEFAULT_STAGE_ENTRY_WORKDIR,
             "args": {
-                "split": "validation",
+                "split": EVAL_SPLIT_DEFAULT,
             },
         },
         "launcher": {"type": DEFAULT_STAGE_LAUNCHER_TYPE},
         "resources": stage_resources(cpus=2, mem="8G"),
         "outputs": {
-            "accuracy": {
+            ACCURACY_OUTPUT_NAME: {
                 "kind": OUTPUT_KIND_METRIC,
-                "file": "eval/metrics.json",
-                "json_path": "$.accuracy",
+                "file": ACCURACY_FILE,
+                "json_path": ACCURACY_JSON_PATH,
                 "required": True,
             }
         },

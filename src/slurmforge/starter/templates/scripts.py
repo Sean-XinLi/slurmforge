@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from importlib.resources import files
 from pathlib import Path
 
 from ...config_contract.defaults import (
@@ -9,13 +8,14 @@ from ...config_contract.defaults import (
     DEFAULT_TRAIN_SCRIPT,
 )
 from ..models import FilePayload, InitRequest
+from .script_render import render_eval_asset, render_train_asset
 
 
 def train_script(_request: InitRequest) -> FilePayload:
     return FilePayload(
         relative_path=Path(DEFAULT_TRAIN_SCRIPT),
         role="script",
-        content=_asset_text("train.py"),
+        content=render_train_asset(),
     )
 
 
@@ -23,7 +23,7 @@ def eval_script(_request: InitRequest) -> FilePayload:
     return FilePayload(
         relative_path=Path(DEFAULT_EVAL_SCRIPT),
         role="script",
-        content=_asset_text("eval.py"),
+        content=render_eval_asset(),
     )
 
 
@@ -32,12 +32,4 @@ def checkpoint_file(_request: InitRequest) -> FilePayload:
         relative_path=Path(DEFAULT_CHECKPOINT_PATH),
         role="sample-input",
         content="sample checkpoint for sforge init\n",
-    )
-
-
-def _asset_text(name: str) -> str:
-    return (
-        files("slurmforge.starter.templates.assets")
-        .joinpath(name)
-        .read_text(encoding="utf-8")
     )

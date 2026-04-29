@@ -6,7 +6,8 @@ This document captures the internal contracts that keep planning, submission, ex
 
 - `spec.parse_sections` loads and assembles the top-level experiment spec; section parsers live under `spec.parse_*`.
 - `spec.validation` orchestrates validation; resources, runtime, runs, launcher, inputs, outputs, notifications, and topology have separate validators.
-- `config_schema` is the source for shared config field metadata used by starter comments, starter config guides, global config docs, contract parsing, and spec-facing validation messages.
+- `config_contract` is the source for config defaults, option values, workflow names, stage names, and shared contract helpers consumed by schema, spec parsing, starter templates, and validation.
+- `config_schema` owns field metadata, key registration, starter comments, starter config guides, and global config docs. Spec parsers use its key registry for unknown-key checks, but option/default values live in `config_contract`.
 - `spec.run_paths`, `spec.run_ids`, and `spec.run_expansion` own run override path normalization, run identity generation, and `single`/`grid`/`cases`/`matrix` expansion. `spec.queries` is kept for non-run spec lookup helpers.
 - `starter.config_yaml` is split by render concern: top-level orchestration, scalar quoting, top-level sections, and stage/input/output sections.
 - `planner` has no package facade; callers import role modules such as `planner.stage_batch`, `planner.train_eval_pipeline`, `planner.sources`, `planner.audit`, `planner.resource_estimate`, and `planner.summaries` directly.

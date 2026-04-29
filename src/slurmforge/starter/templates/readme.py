@@ -1,6 +1,14 @@
 from __future__ import annotations
 
 from ...config_contract.defaults import DEFAULT_CONFIG_FILENAME, DEFAULT_STORAGE_ROOT
+from ...config_contract.starter_io import (
+    ACCURACY_FIELD,
+    ACCURACY_FILE,
+    CHECKPOINT_DIR,
+    CHECKPOINT_ENV,
+    CHECKPOINT_FLAG,
+    CHECKPOINT_SUFFIX,
+)
 from ...config_contract.workflows import (
     TEMPLATE_EVAL_CHECKPOINT,
     TEMPLATE_TRAIN_EVAL,
@@ -66,6 +74,8 @@ Generated scripts are split into three sections:
 - `SECTION B - Your model code`: replace the demo model, data loading, and stage logic.
 - `SECTION C - Output contract`: keep the file shapes that the YAML declares.
 
+YAML argument keys become CLI flags exactly as written. SlurmForge only prepends `--` when the key has no dash prefix, so `max_length` becomes `--max_length`, `max-length` becomes `--max-length`, and `--raw.flag` stays `--raw.flag`.
+
 {_stage_contract(plan.template)}
 
 ## Edit These First
@@ -84,20 +94,22 @@ The starter values are deliberately small. Replace scripts, resources, runtime p
 def _stage_contract(template: str) -> str:
     if template == TEMPLATE_TRAIN_EVAL:
         return (
-            "The train stage must leave a `.pt` checkpoint under `checkpoints/`. "
-            "The eval stage receives that checkpoint as `--checkpoint_path` and "
-            "`SFORGE_INPUT_CHECKPOINT`, then writes `eval/metrics.json` with a "
-            "numeric `accuracy` field."
+            f"The train stage must leave a `{CHECKPOINT_SUFFIX}` checkpoint under "
+            f"`{CHECKPOINT_DIR}/`. "
+            f"The eval stage receives that checkpoint as `--{CHECKPOINT_FLAG}` and "
+            f"`{CHECKPOINT_ENV}`, then writes `{ACCURACY_FILE}` with a "
+            f"numeric `{ACCURACY_FIELD}` field."
         )
     if template == TEMPLATE_TRAIN_ONLY:
         return (
-            "The train stage must leave a `.pt` checkpoint under `checkpoints/`. "
+            f"The train stage must leave a `{CHECKPOINT_SUFFIX}` checkpoint under "
+            f"`{CHECKPOINT_DIR}/`. "
             "That file shape is the output contract declared by `experiment.yaml`."
         )
     if template == TEMPLATE_EVAL_CHECKPOINT:
         return (
             "The eval stage receives the checkpoint selected by `--checkpoint` as "
-            "`--checkpoint_path` and `SFORGE_INPUT_CHECKPOINT`, then writes "
-            "`eval/metrics.json` with a numeric `accuracy` field."
+            f"`--{CHECKPOINT_FLAG}` and `{CHECKPOINT_ENV}`, then writes "
+            f"`{ACCURACY_FILE}` with a numeric `{ACCURACY_FIELD}` field."
         )
     return "Keep the file shapes declared by `experiment.yaml`."
