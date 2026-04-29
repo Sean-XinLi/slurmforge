@@ -3,7 +3,11 @@ from __future__ import annotations
 from importlib.resources import files
 from pathlib import Path
 
-from ...defaults import DEFAULT_CHECKPOINT_PATH, DEFAULT_EVAL_SCRIPT, DEFAULT_TRAIN_SCRIPT
+from ...defaults import (
+    DEFAULT_CHECKPOINT_PATH,
+    DEFAULT_EVAL_SCRIPT,
+    DEFAULT_TRAIN_SCRIPT,
+)
 from ..models import FilePayload, InitRequest
 
 
@@ -32,4 +36,8 @@ def checkpoint_file(_request: InitRequest) -> FilePayload:
 
 
 def _asset_text(name: str) -> str:
-    return files("slurmforge.starter.templates.assets").joinpath(name).read_text(encoding="utf-8")
+    return (
+        files("slurmforge.starter.templates.assets")
+        .joinpath(name)
+        .read_text(encoding="utf-8")
+    )

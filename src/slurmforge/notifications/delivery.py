@@ -16,7 +16,11 @@ from .summary import build_notification_summary, render_summary_text
 
 def notification_subject(notification_plan, summary) -> str:
     prefix = notification_plan.email.subject_prefix or "SlurmForge"
-    noun = "train/eval pipeline" if summary.root_kind == "train_eval_pipeline" else "stage batch"
+    noun = (
+        "train/eval pipeline"
+        if summary.root_kind == "train_eval_pipeline"
+        else "stage batch"
+    )
     return f"{prefix} {noun} finished: {summary.project}/{summary.experiment} {summary.state}"
 
 
@@ -76,5 +80,7 @@ def deliver_notification(
         return record
     record = NotificationDeliveryRecord(**base, state="sent", sent_at=utc_now())
     write_notification_record(target, record)
-    append_notification_event(target, "notification_sent", notification_event=event, recipients=recipients)
+    append_notification_event(
+        target, "notification_sent", notification_event=event, recipients=recipients
+    )
     return record

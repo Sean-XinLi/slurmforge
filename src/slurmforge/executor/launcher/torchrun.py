@@ -28,9 +28,7 @@ def torchrun_python_script_command(
         "--nproc-per-node",
         str(launcher.nproc_per_node),
     ]
-    if launcher.master_port is not None:
-        torchrun.extend(["--master-port", str(launcher.master_port)])
-    elif launcher.rendezvous is not None and launcher.rendezvous.port is not None:
+    if launcher.rendezvous is not None and launcher.rendezvous.port is not None:
         torchrun.extend(["--master-port", str(launcher.rendezvous.port)])
     return [*torchrun, script, *script_args], False
 
@@ -45,7 +43,7 @@ def _torchrun_multi_node_command(
     rendezvous = launcher.rendezvous
     backend = "c10d" if rendezvous is None else rendezvous.backend
     endpoint = "auto" if rendezvous is None else rendezvous.endpoint
-    port = int((None if rendezvous is None else rendezvous.port) or launcher.master_port or 29500)
+    port = int((None if rendezvous is None else rendezvous.port) or 29500)
     nnodes = int(launcher.nnodes or 1)
     nproc_per_node = int(launcher.nproc_per_node or 1)
     if endpoint == "auto":

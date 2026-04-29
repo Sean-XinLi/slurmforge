@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..config_schema import options_for, options_sentence, reject_unknown_config_keys
 from ..errors import ConfigContractError
-from ..config_schema import options_for, options_sentence
 from .models import EmailNotificationSpec, NotificationsSpec
-from .parse_common import optional_mapping, reject_unknown_keys
+from .parse_common import optional_mapping
 
 
 def parse_email_recipients(raw: Any) -> tuple[str, ...]:
@@ -28,19 +28,17 @@ def parse_notification_events(raw: Any) -> tuple[str, ...]:
     invalid = sorted(set(events) - allowed)
     if invalid:
         joined = ", ".join(invalid)
-        raise ConfigContractError(f"`notifications.email.on` contains unsupported events: {joined}")
+        raise ConfigContractError(
+            f"`notifications.email.on` contains unsupported events: {joined}"
+        )
     return events
 
 
 def parse_notifications(raw: Any) -> NotificationsSpec:
     data = optional_mapping(raw, "notifications")
-    reject_unknown_keys(data, allowed={"email"}, name="notifications")
+    reject_unknown_config_keys(data, parent="notifications")
     email_data = optional_mapping(data.get("email"), "notifications.email")
-    reject_unknown_keys(
-        email_data,
-        allowed={"enabled", "to", "on", "mode", "from", "sendmail", "subject_prefix"},
-        name="notifications.email",
-    )
+    reject_unknown_config_keys(email_data, parent="notifications.email")
     mode = str(email_data.get("mode") or "summary")
     if mode not in options_for("notifications.email.mode"):
         raise ConfigContractError(

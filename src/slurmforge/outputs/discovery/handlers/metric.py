@@ -20,15 +20,29 @@ def discover_metric_output(
     if not metric_file.exists() or not metric_file.is_file():
         return OutputDiscoveryItem(
             output_name=output_name,
-            missing_required_reason=_missing_required(output_name) if output_cfg.required else "",
+            missing_required_reason=_missing_required(output_name)
+            if output_cfg.required
+            else "",
         )
 
     try:
         with metric_file.open("r", encoding="utf-8") as handle:
             value = json_path_value(json.load(handle), output_cfg.json_path)
-    except (OSError, ConfigContractError, ValueError, KeyError, json.JSONDecodeError) as exc:
-        reason = f"required output `{output_name}` did not resolve: {exc}" if output_cfg.required else ""
-        return OutputDiscoveryItem(output_name=output_name, missing_required_reason=reason)
+    except (
+        OSError,
+        ConfigContractError,
+        ValueError,
+        KeyError,
+        json.JSONDecodeError,
+    ) as exc:
+        reason = (
+            f"required output `{output_name}` did not resolve: {exc}"
+            if output_cfg.required
+            else ""
+        )
+        return OutputDiscoveryItem(
+            output_name=output_name, missing_required_reason=reason
+        )
 
     artifact = manage_file(
         str(metric_file),
@@ -55,7 +69,9 @@ def discover_metric_output(
         value=value,
         selection_reason=f"json_path:{output_cfg.json_path}",
     )
-    return OutputDiscoveryItem(output_name=output_name, output_ref=output_ref, artifacts=(artifact,))
+    return OutputDiscoveryItem(
+        output_name=output_name, output_ref=output_ref, artifacts=(artifact,)
+    )
 
 
 def _missing_required(output_name: str) -> str:

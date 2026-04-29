@@ -14,7 +14,12 @@ from ..lineage.query import find_bound_input, iter_lineage_source_roots
 from ..root_model.runs import iter_stage_run_dirs
 from ..outputs.records import load_stage_outputs
 from ..storage.plan_reader import plan_for_run_dir
-from .output_refs import output_ref, producer_root_from_run_dir, resolved_output, upstream_resolution
+from .output_refs import (
+    output_ref,
+    producer_root_from_run_dir,
+    resolved_output,
+    upstream_resolution,
+)
 
 
 def _output_resolution(
@@ -39,7 +44,9 @@ def _output_resolution(
     )
     resolution["searched_root"] = str(root.resolve())
     return {
-        "source": InputSource(kind="upstream_output", stage=producer_stage_name, output=output_name),
+        "source": InputSource(
+            kind="upstream_output", stage=producer_stage_name, output=output_name
+        ),
         "lineage_ref": lineage_ref,
         "resolved": resolved_output(output),
         "resolution": resolution,
@@ -80,14 +87,18 @@ def _record_resolution(root: Path, record: dict) -> dict | None:
     resolved = resolved_input_from_dict(record.get("resolved"))
     binding = InputBinding(
         input_name=str(record.get("input_name") or ""),
-        source=input_source_from_dict(dict(record.get("source") or {"kind": "upstream_output"})),
+        source=input_source_from_dict(
+            dict(record.get("source") or {"kind": "upstream_output"})
+        ),
         expects=str(record.get("expects") or resolved.kind),
         resolved=resolved,
     )
     if not resolved_payload_present(binding):
         return None
     resolution = dict(record.get("resolution") or {})
-    source = input_source_from_dict(dict(record.get("source") or {"kind": "upstream_output"}))
+    source = input_source_from_dict(
+        dict(record.get("source") or {"kind": "upstream_output"})
+    )
     resolution.setdefault("kind", source.kind or "bound_input")
     resolution["resolved_from_lineage_root"] = str(root.resolve())
     return {
@@ -104,15 +115,21 @@ def _find_bound_input_resolution(
     input_name: str,
     lineage_ref: str,
 ) -> dict | None:
-    exact = find_bound_input(root, run_id=run_id, input_name=input_name, lineage_ref=lineage_ref)
+    exact = find_bound_input(
+        root, run_id=run_id, input_name=input_name, lineage_ref=lineage_ref
+    )
     fallback = exact or find_bound_input(root, run_id=run_id, input_name=input_name)
     if fallback is not None:
         resolved = _record_resolution(root, fallback)
         if resolved is not None:
             return resolved
     for candidate in iter_lineage_source_roots(root):
-        exact = find_bound_input(candidate, run_id=run_id, input_name=input_name, lineage_ref=lineage_ref)
-        fallback = exact or find_bound_input(candidate, run_id=run_id, input_name=input_name)
+        exact = find_bound_input(
+            candidate, run_id=run_id, input_name=input_name, lineage_ref=lineage_ref
+        )
+        fallback = exact or find_bound_input(
+            candidate, run_id=run_id, input_name=input_name
+        )
         if fallback is None:
             continue
         resolved = _record_resolution(candidate, fallback)
@@ -121,11 +138,15 @@ def _find_bound_input_resolution(
     return None
 
 
-def find_upstream_output(root: Path, lineage_ref: str, *, run_id: str, input_name: str) -> dict | None:
+def find_upstream_output(
+    root: Path, lineage_ref: str, *, run_id: str, input_name: str
+) -> dict | None:
     direct = _find_upstream_output_direct(root, lineage_ref)
     if direct is not None:
         return direct
-    bound = _find_bound_input_resolution(root, run_id=run_id, input_name=input_name, lineage_ref=lineage_ref)
+    bound = _find_bound_input_resolution(
+        root, run_id=run_id, input_name=input_name, lineage_ref=lineage_ref
+    )
     if bound is not None:
         return bound
     for candidate in iter_lineage_source_roots(root):

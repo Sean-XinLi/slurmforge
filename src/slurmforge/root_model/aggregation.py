@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 from ..io import SchemaVersion
-from ..status.models import RunStatusRecord, StageStatusRecord, TERMINAL_STATES, TrainEvalPipelineStatusRecord
+from ..status.models import (
+    RunStatusRecord,
+    StageStatusRecord,
+    TERMINAL_STATES,
+    TrainEvalPipelineStatusRecord,
+)
 
 
-def aggregate_run_status(run_id: str, statuses: list[StageStatusRecord]) -> RunStatusRecord:
+def aggregate_run_status(
+    run_id: str, statuses: list[StageStatusRecord]
+) -> RunStatusRecord:
     stage_states = {status.stage_name: status.state for status in statuses}
     if not statuses:
         state = "missing"
@@ -28,11 +35,15 @@ def aggregate_run_status(run_id: str, statuses: list[StageStatusRecord]) -> RunS
     )
 
 
-def aggregate_run_statuses(statuses: list[StageStatusRecord]) -> tuple[RunStatusRecord, ...]:
+def aggregate_run_statuses(
+    statuses: list[StageStatusRecord],
+) -> tuple[RunStatusRecord, ...]:
     grouped: dict[str, list[StageStatusRecord]] = {}
     for status in statuses:
         grouped.setdefault(status.run_id, []).append(status)
-    return tuple(aggregate_run_status(run_id, grouped[run_id]) for run_id in sorted(grouped))
+    return tuple(
+        aggregate_run_status(run_id, grouped[run_id]) for run_id in sorted(grouped)
+    )
 
 
 def aggregate_train_eval_pipeline_status(

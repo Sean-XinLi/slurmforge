@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from ...plans.notifications import EmailNotificationPlan, FinalizerPlan, NotificationPlan
+from ...plans.notifications import (
+    EmailNotificationPlan,
+    FinalizerPlan,
+    NotificationPlan,
+)
 from ...plans.runtime import RuntimePlan
 from ...spec import ExperimentSpec
 from .resources import control_resources_payload

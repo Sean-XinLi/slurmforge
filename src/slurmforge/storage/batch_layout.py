@@ -1,4 +1,5 @@
 """Layout writers for stage batch roots."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -103,7 +104,9 @@ def persist_selected_stage_batch_layout(
         batch_root / "groups" / "selected_groups.json",
         {"schema_version": SchemaVersion.GROUPS, "groups": batch.group_plans},
     )
-    write_json(batch_root / "groups" / "selected_gpu_budget_plan.json", batch.budget_plan)
+    write_json(
+        batch_root / "groups" / "selected_gpu_budget_plan.json", batch.budget_plan
+    )
     write_json(
         batch_root / "blocked_runs.json",
         {

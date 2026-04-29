@@ -3,10 +3,11 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from ..errors import ConfigContractError
 from ..config_schema import options_for, options_sentence
+from ..config_schema import reject_unknown_config_keys
+from ..errors import ConfigContractError
 from .models import RunVariantSpec, RunsSpec
-from .parse_common import optional_mapping, reject_unknown_keys, require_mapping
+from .parse_common import optional_mapping, require_mapping
 
 
 def parse_run_axes(
@@ -31,8 +32,11 @@ def parse_run_cases(
     for index, item in enumerate(raw):
         name = f"runs.cases[{index}]"
         data = require_mapping(item, name)
-        allowed = {"name", "set", "axes"} if allow_axes else {"name", "set"}
-        reject_unknown_keys(data, allowed=allowed, name=name)
+        reject_unknown_config_keys(data, parent=name)
+        if not allow_axes and "axes" in data:
+            raise ConfigContractError(
+                "`runs.cases[].axes` is only supported for matrix runs"
+            )
         if data.get("name") in (None, ""):
             raise ConfigContractError(f"`{name}.name` is required")
         case_name = str(data["name"])
@@ -54,7 +58,7 @@ def parse_runs(raw: Any) -> RunsSpec:
     if raw is None:
         return RunsSpec(type="single")
     data = require_mapping(raw, "runs")
-    reject_unknown_keys(data, allowed={"type", "axes", "cases"}, name="runs")
+    reject_unknown_config_keys(data, parent="runs")
     run_type = str(data.get("type") or "")
     if run_type not in options_for("runs.type"):
         raise ConfigContractError(

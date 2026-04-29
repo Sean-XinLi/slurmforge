@@ -18,6 +18,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=ALL_STARTER_TEMPLATES,
         default=DEFAULT_STORAGE_ROOT,
+        required=True,
         first_edit=True,
     ),
     ConfigField(
@@ -29,6 +30,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
         default="copy",
+        required=False,
         options=(
             ConfigOption("copy", "Copy managed artifacts into the run store."),
             ConfigOption("hardlink", "Hardlink managed artifacts into the run store."),
@@ -47,6 +49,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
         default="null",
+        required=False,
         options=(
             ConfigOption("null", "Disable fallback handling."),
             ConfigOption("copy", "Copy artifacts when the primary strategy fails."),
@@ -64,6 +67,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
         default="true",
+        required=False,
     ),
     ConfigField(
         path="artifact_store.fail_on_verify_error",
@@ -74,5 +78,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
         default="true",
+        required=False,
     ),
 )

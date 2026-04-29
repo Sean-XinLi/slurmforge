@@ -28,18 +28,28 @@ def detect_root(root: Path) -> RootDescriptor:
         raise ConfigContractError(f"root does not exist: {target}")
     manifest = _read_manifest(target)
     if manifest is None:
-        raise ConfigContractError(f"not a stage batch or train/eval pipeline root: {target}")
+        raise ConfigContractError(
+            f"not a stage batch or train/eval pipeline root: {target}"
+        )
     kind = root_kind_from_manifest(manifest.get("kind"))
     if kind is None:
-        raise ConfigContractError(f"not a stage batch or train/eval pipeline root: {target}")
+        raise ConfigContractError(
+            f"not a stage batch or train/eval pipeline root: {target}"
+        )
     return RootDescriptor(root=target, kind=kind, manifest=manifest)
 
 
 def is_stage_batch_root(root: Path) -> bool:
     manifest = _read_manifest(Path(root))
-    return root_kind_from_manifest(None if manifest is None else manifest.get("kind")) == "stage_batch"
+    return (
+        root_kind_from_manifest(None if manifest is None else manifest.get("kind"))
+        == "stage_batch"
+    )
 
 
 def is_train_eval_pipeline_root(root: Path) -> bool:
     manifest = _read_manifest(Path(root))
-    return root_kind_from_manifest(None if manifest is None else manifest.get("kind")) == "train_eval_pipeline"
+    return (
+        root_kind_from_manifest(None if manifest is None else manifest.get("kind"))
+        == "train_eval_pipeline"
+    )

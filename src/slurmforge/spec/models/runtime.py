@@ -27,4 +27,6 @@ class UserRuntimeSpec:
 @dataclass(frozen=True)
 class RuntimeSpec:
     executor: ExecutorRuntimeSpec = field(default_factory=ExecutorRuntimeSpec)
-    user: dict[str, UserRuntimeSpec] = field(default_factory=lambda: {"default": UserRuntimeSpec()})
+    user: dict[str, UserRuntimeSpec] = field(
+        default_factory=lambda: {"default": UserRuntimeSpec()}
+    )

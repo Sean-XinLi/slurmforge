@@ -103,17 +103,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         default="29500",
     ),
     ConfigField(
-        path="stages.*.launcher.master_port",
-        title="Torchrun master port",
-        short_help="Legacy torchrun master port override.",
-        when_to_change="Prefer launcher.rendezvous.port for new configs; use this only for torchrun compatibility.",
-        section="Launcher",
-        level="advanced",
-        value_type="port",
-        templates=ALL_STARTER_TEMPLATES,
-        default="null",
-    ),
-    ConfigField(
         path="stages.*.launcher.args",
         title="Launcher arguments",
         short_help="Raw arguments passed to srun or mpirun launchers.",

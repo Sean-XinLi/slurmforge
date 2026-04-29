@@ -18,7 +18,9 @@ def validate_stage_outputs_contract(stage: StageSpec) -> None:
                 raise ConfigContractError(f"`{output_path}.file` is required")
             reject_newline(output.file, field=f"{output_path}.file")
             if not output.json_path.startswith("$"):
-                raise ConfigContractError(f"`{output_path}.json_path` must start with `$`")
+                raise ConfigContractError(
+                    f"`{output_path}.json_path` must start with `$`"
+                )
         elif output.kind == "manifest":
             if not output.file:
                 raise ConfigContractError(f"`{output_path}.file` is required")

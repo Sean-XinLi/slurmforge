@@ -44,12 +44,16 @@ def upstream_resolution(
         "producer_stage_name": stage_name,
         "output_name": output_name,
         "output_path": str(output["path"]),
-        "output_digest": str(output.get("digest") or output.get("managed_digest") or ""),
+        "output_digest": str(
+            output.get("digest") or output.get("managed_digest") or ""
+        ),
         "selection_reason": str(output.get("selection_reason") or ""),
     }
 
 
-def producer_output_for_input(input_spec: StageInputSpec, *, producer_stage_name: str) -> tuple[str, str]:
+def producer_output_for_input(
+    input_spec: StageInputSpec, *, producer_stage_name: str
+) -> tuple[str, str]:
     if input_spec.source.kind == "upstream_output":
         upstream_stage = input_spec.source.stage
         output_name = input_spec.source.output

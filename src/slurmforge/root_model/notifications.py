@@ -3,7 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ..contracts import NotificationRunStatusInput, NotificationStageStatusInput, NotificationSummaryInput
+from ..contracts import (
+    NotificationRunStatusInput,
+    NotificationStageStatusInput,
+    NotificationSummaryInput,
+)
 from ..storage.plan_reader import (
     load_execution_stage_batch_plan,
     load_train_eval_pipeline_plan,
@@ -24,7 +28,9 @@ def notification_plan_for_root(root: Path) -> Any:
     return load_execution_stage_batch_plan(descriptor.root).notification_plan
 
 
-def load_root_notification_snapshot(root: Path, *, event: str) -> RootNotificationSnapshot:
+def load_root_notification_snapshot(
+    root: Path, *, event: str
+) -> RootNotificationSnapshot:
     status = load_root_status_snapshot(root)
     notification_plan = notification_plan_for_root(status.root)
     return RootNotificationSnapshot(
@@ -36,17 +42,23 @@ def load_root_notification_snapshot(root: Path, *, event: str) -> RootNotificati
     )
 
 
-def load_notification_summary_input(root: Path, *, event: str) -> NotificationSummaryInput:
+def load_notification_summary_input(
+    root: Path, *, event: str
+) -> NotificationSummaryInput:
     return load_root_notification_snapshot(root, event=event).summary_input
 
 
-def _summary_input(status: RootStatusSnapshot, *, event: str) -> NotificationSummaryInput:
+def _summary_input(
+    status: RootStatusSnapshot, *, event: str
+) -> NotificationSummaryInput:
     if status.kind == "train_eval_pipeline":
         return _train_eval_pipeline_summary_input(status, event=event)
     return _stage_batch_summary_input(status, event=event)
 
 
-def _train_eval_pipeline_summary_input(status: RootStatusSnapshot, *, event: str) -> NotificationSummaryInput:
+def _train_eval_pipeline_summary_input(
+    status: RootStatusSnapshot, *, event: str
+) -> NotificationSummaryInput:
     plan = load_train_eval_pipeline_plan(status.root)
     first_batch = next(iter(plan.stage_batches.values()))
     pipeline_status = status.pipeline_status
@@ -63,7 +75,9 @@ def _train_eval_pipeline_summary_input(status: RootStatusSnapshot, *, event: str
     )
 
 
-def _stage_batch_summary_input(status: RootStatusSnapshot, *, event: str) -> NotificationSummaryInput:
+def _stage_batch_summary_input(
+    status: RootStatusSnapshot, *, event: str
+) -> NotificationSummaryInput:
     batch = load_execution_stage_batch_plan(status.root)
     return NotificationSummaryInput(
         event=event,
@@ -78,11 +92,18 @@ def _stage_batch_summary_input(status: RootStatusSnapshot, *, event: str) -> Not
     )
 
 
-def _run_status_inputs(status: RootStatusSnapshot) -> tuple[NotificationRunStatusInput, ...]:
-    return tuple(NotificationRunStatusInput(run_id=item.run_id, state=item.state) for item in status.run_statuses)
+def _run_status_inputs(
+    status: RootStatusSnapshot,
+) -> tuple[NotificationRunStatusInput, ...]:
+    return tuple(
+        NotificationRunStatusInput(run_id=item.run_id, state=item.state)
+        for item in status.run_statuses
+    )
 
 
-def _stage_status_inputs(status: RootStatusSnapshot) -> tuple[NotificationStageStatusInput, ...]:
+def _stage_status_inputs(
+    status: RootStatusSnapshot,
+) -> tuple[NotificationStageStatusInput, ...]:
     return tuple(
         NotificationStageStatusInput(
             run_id=item.run_id,

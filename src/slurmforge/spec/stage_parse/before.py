@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...config_schema import reject_unknown_config_keys
 from ...errors import ConfigContractError
 from ..models import BeforeStepSpec
-from ..parse_common import reject_unknown_keys, require_mapping
+from ..parse_common import require_mapping
 
 
 def parse_before(raw: Any, *, stage_name: str) -> tuple[BeforeStepSpec, ...]:
@@ -16,7 +17,7 @@ def parse_before(raw: Any, *, stage_name: str) -> tuple[BeforeStepSpec, ...]:
     for index, item in enumerate(raw):
         name = f"stages.{stage_name}.before[{index}]"
         data = require_mapping(item, name)
-        reject_unknown_keys(data, allowed={"name", "run"}, name=name)
+        reject_unknown_config_keys(data, parent=name)
         if data.get("run") in (None, ""):
             raise ConfigContractError(f"`{name}.run` is required")
         steps.append(

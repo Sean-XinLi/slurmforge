@@ -5,15 +5,26 @@ from pathlib import Path
 from ..errors import ConfigContractError
 from ..plans.runtime import RuntimePlan
 from ..plans.stage import StageBatchPlan
-from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalControllerPlan, TrainEvalPipelinePlan
+from ..plans.train_eval import (
+    TRAIN_EVAL_PIPELINE_KIND,
+    TrainEvalControllerPlan,
+    TrainEvalPipelinePlan,
+)
 from ..spec import ExperimentSpec
 from ..spec.run_expansion import expand_run_definitions
 from .identifiers import train_eval_pipeline_id
-from .payloads import control_resources_payload, environment_payload, executor_runtime_payload, notification_payload
+from .payloads import (
+    control_resources_payload,
+    environment_payload,
+    executor_runtime_payload,
+    notification_payload,
+)
 from .stage_batch import compile_stage_batch
 
 
-def compile_train_eval_pipeline_plan(spec: ExperimentSpec, *, submission_root: Path | None = None) -> TrainEvalPipelinePlan:
+def compile_train_eval_pipeline_plan(
+    spec: ExperimentSpec, *, submission_root: Path | None = None
+) -> TrainEvalPipelinePlan:
     runs = expand_run_definitions(spec)
     stage_order = spec.stage_order()
     if stage_order != ("train", "eval"):
@@ -21,7 +32,10 @@ def compile_train_eval_pipeline_plan(spec: ExperimentSpec, *, submission_root: P
             "Train/eval pipeline runs require enabled `stages.train` and `stages.eval` in train -> eval order"
         )
     pipeline_id = train_eval_pipeline_id(spec, runs, stage_order)
-    root = (submission_root or spec.storage_root / spec.project / spec.experiment / pipeline_id).resolve()
+    root = (
+        submission_root
+        or spec.storage_root / spec.project / spec.experiment / pipeline_id
+    ).resolve()
     stage_batches: dict[str, StageBatchPlan] = {}
     for stage_name in stage_order:
         stage_root = root / "stage_batches" / stage_name

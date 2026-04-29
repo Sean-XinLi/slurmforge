@@ -29,7 +29,11 @@ def default_stage_input_bindings(
             }
         elif source.kind == "external_path":
             source_path = Path(source.path).expanduser()
-            resolved = source_path if source_path.is_absolute() else spec.project_root / source_path
+            resolved = (
+                source_path
+                if source_path.is_absolute()
+                else spec.project_root / source_path
+            )
             path_text = str(resolved.resolve())
             resolved_payload = ResolvedInput(kind=input_spec.expects, path=path_text)
             resolution = {

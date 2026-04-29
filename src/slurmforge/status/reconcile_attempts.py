@@ -18,7 +18,9 @@ def _next_attempt_id(run_dir: Path) -> str:
     if not root.exists():
         return "0001"
     existing = [
-        int(path.name) for path in root.iterdir() if path.is_dir() and path.name.isdigit()
+        int(path.name)
+        for path in root.iterdir()
+        if path.is_dir() and path.name.isdigit()
     ]
     return f"{(max(existing) + 1) if existing else 1:04d}"
 

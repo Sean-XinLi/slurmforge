@@ -19,6 +19,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=ALL_STARTER_TEMPLATES,
         default=DEFAULT_PROJECT,
+        required=True,
         first_edit=True,
     ),
     ConfigField(
@@ -30,6 +31,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=ALL_STARTER_TEMPLATES,
         default=DEFAULT_EXPERIMENT,
+        required=True,
         first_edit=True,
     ),
 )

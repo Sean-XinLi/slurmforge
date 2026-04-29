@@ -94,8 +94,6 @@ def _render_field_block(field: ConfigField) -> list[str]:
         lines.extend(["- Options:"])
         for option in field.options:
             lines.append(f"  - `{option.value}`: {option.description}")
-    if field.example:
-        lines.extend(["", "Example:", "", "```yaml", field.example, "```"])
     lines.append("")
     return lines
 

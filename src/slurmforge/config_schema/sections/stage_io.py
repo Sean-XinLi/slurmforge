@@ -22,6 +22,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="list",
         templates=(TEMPLATE_TRAIN_EVAL,),
         default="template-specific",
+        required=False,
     ),
     ConfigField(
         path="stages.train.outputs.checkpoint",
@@ -69,6 +70,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
             ConfigOption("upstream_output", "Read an output from a previous stage."),
             ConfigOption("external_path", "Read an explicit user-provided path."),
         ),
+        required=True,
     ),
     ConfigField(
         path="stages.*.inputs.*.source.stage",
@@ -79,6 +81,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=(TEMPLATE_TRAIN_EVAL,),
         default="train",
+        required=None,
     ),
     ConfigField(
         path="stages.*.inputs.*.source.output",
@@ -89,6 +92,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=(TEMPLATE_TRAIN_EVAL,),
         default="checkpoint",
+        required=None,
     ),
     ConfigField(
         path="stages.*.inputs.*.source.path",
@@ -100,6 +104,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="path",
         templates=EVAL_TEMPLATES,
         default=DEFAULT_CHECKPOINT_PATH,
+        required=None,
     ),
     ConfigField(
         path="stages.*.inputs.*.expects",
@@ -115,6 +120,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
             ConfigOption("manifest", "Inject a manifest payload."),
             ConfigOption("value", "Inject a scalar value."),
         ),
+        required=False,
     ),
     ConfigField(
         path="stages.*.inputs.*.required",
@@ -126,6 +132,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="boolean",
         templates=EVAL_TEMPLATES,
         default="false",
+        required=False,
     ),
     ConfigField(
         path="stages.*.inputs.*.inject.mode",
@@ -141,6 +148,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
             ConfigOption("value", "Pass the resolved input value."),
             ConfigOption("json", "Pass the resolved input encoded as JSON."),
         ),
+        required=False,
     ),
     ConfigField(
         path="stages.*.inputs.*.inject.flag",
@@ -151,6 +159,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=EVAL_TEMPLATES,
         default="checkpoint_path",
+        required=False,
     ),
     ConfigField(
         path="stages.*.inputs.*.inject.env",
@@ -161,6 +170,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=EVAL_TEMPLATES,
         default="SFORGE_INPUT_CHECKPOINT",
+        required=False,
     ),
     ConfigField(
         path="stages.*.outputs.*.kind",
@@ -177,6 +187,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
             ConfigOption("metric", "A metric value read from JSON."),
             ConfigOption("manifest", "A manifest JSON file."),
         ),
+        required=True,
     ),
     ConfigField(
         path="stages.*.outputs.*.required",
@@ -188,6 +199,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="boolean",
         templates=ALL_STARTER_TEMPLATES,
         default="false",
+        required=False,
     ),
     ConfigField(
         path="stages.*.outputs.*.file",
@@ -199,6 +211,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="path",
         templates=EVAL_TEMPLATES,
         default="eval/metrics.json",
+        required=False,
     ),
     ConfigField(
         path="stages.*.outputs.*.json_path",
@@ -209,6 +222,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=EVAL_TEMPLATES,
         default="$.accuracy",
+        required=False,
     ),
     ConfigField(
         path="stages.*.outputs.*.discover.globs",
@@ -220,6 +234,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="list",
         templates=TRAIN_TEMPLATES,
         default="checkpoints/**/*.pt",
+        required=False,
     ),
     ConfigField(
         path="stages.*.outputs.*.discover.select",
@@ -235,5 +250,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
             ConfigOption("first", "Pick the first sorted match."),
             ConfigOption("last", "Pick the last sorted match."),
         ),
+        required=False,
     ),
 )

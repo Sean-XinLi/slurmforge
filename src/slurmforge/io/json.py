@@ -21,7 +21,9 @@ def to_jsonable(value: Any) -> Any:
 
 
 def stable_json(payload: Any) -> str:
-    return json.dumps(to_jsonable(payload), sort_keys=True, separators=(",", ":"), default=str)
+    return json.dumps(
+        to_jsonable(payload), sort_keys=True, separators=(",", ":"), default=str
+    )
 
 
 def content_digest(payload: Any, *, prefix: int | None = None) -> str:
@@ -32,7 +34,10 @@ def content_digest(payload: Any, *, prefix: int | None = None) -> str:
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
-    tmp.write_text(json.dumps(to_jsonable(payload), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.write_text(
+        json.dumps(to_jsonable(payload), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     tmp.replace(path)
 
 

@@ -75,16 +75,22 @@ def artifact_ref_from_dict(payload: dict[str, Any]) -> ArtifactRef:
         digest=str(payload["digest"]),
         source_digest=str(payload.get("source_digest") or payload["digest"]),
         managed_digest=str(payload.get("managed_digest") or payload["digest"]),
-        verified=None if payload.get("verified") is None else bool(payload.get("verified")),
+        verified=None
+        if payload.get("verified") is None
+        else bool(payload.get("verified")),
         size_bytes=int(payload["size_bytes"]),
         optional=bool(payload.get("optional", False)),
     )
 
 
-def artifact_manifest_record_from_dict(payload: dict[str, Any]) -> ArtifactManifestRecord:
+def artifact_manifest_record_from_dict(
+    payload: dict[str, Any],
+) -> ArtifactManifestRecord:
     _require_output_schema(payload, name="artifact_manifest")
     return ArtifactManifestRecord(
         stage_instance_id=str(payload["stage_instance_id"]),
         attempt_id=str(payload["attempt_id"]),
-        artifacts=tuple(artifact_ref_from_dict(dict(item)) for item in payload.get("artifacts", ())),
+        artifacts=tuple(
+            artifact_ref_from_dict(dict(item)) for item in payload.get("artifacts", ())
+        ),
     )

@@ -27,10 +27,16 @@ def stage_instance_plan_from_dict(payload: dict[str, Any]) -> StageInstancePlan:
         runtime_plan=runtime_plan_from_dict(payload["runtime_plan"]),
         environment_name=str(payload["environment_name"]),
         environment_plan=environment_plan_from_dict(payload["environment_plan"]),
-        before_steps=tuple(before_step_plan_from_dict(item) for item in payload["before_steps"]),
+        before_steps=tuple(
+            before_step_plan_from_dict(item) for item in payload["before_steps"]
+        ),
         launcher_plan=launcher_plan_from_dict(payload["launcher_plan"]),
-        artifact_store_plan=artifact_store_plan_from_dict(payload["artifact_store_plan"]),
-        input_bindings=tuple(input_binding_from_dict(item) for item in payload["input_bindings"]),
+        artifact_store_plan=artifact_store_plan_from_dict(
+            payload["artifact_store_plan"]
+        ),
+        input_bindings=tuple(
+            input_binding_from_dict(item) for item in payload["input_bindings"]
+        ),
         output_contract=stage_output_contract_from_dict(payload["output_contract"]),
         lineage=dict(payload["lineage"]),
         run_overrides=dict(payload["run_overrides"]),
@@ -79,8 +85,12 @@ def stage_batch_plan_from_dict(payload: dict[str, Any]) -> StageBatchPlan:
         project=str(payload["project"]),
         experiment=str(payload["experiment"]),
         selected_runs=tuple(str(item) for item in payload["selected_runs"]),
-        stage_instances=tuple(stage_instance_plan_from_dict(item) for item in payload["stage_instances"]),
-        group_plans=tuple(group_plan_from_dict(item) for item in payload["group_plans"]),
+        stage_instances=tuple(
+            stage_instance_plan_from_dict(item) for item in payload["stage_instances"]
+        ),
+        group_plans=tuple(
+            group_plan_from_dict(item) for item in payload["group_plans"]
+        ),
         submission_root=str(payload["submission_root"]),
         source_ref=str(payload["source_ref"]),
         spec_snapshot_digest=str(payload["spec_snapshot_digest"]),

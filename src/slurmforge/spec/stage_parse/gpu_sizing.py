@@ -2,31 +2,25 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...config_schema import reject_unknown_config_keys
 from ...errors import ConfigContractError
 from ..models import StageGpuSizingSpec
-from ..parse_common import reject_unknown_keys, require_mapping
+from ..parse_common import require_mapping
 
 
 def parse_stage_gpu_sizing(raw: Any, *, stage_name: str) -> StageGpuSizingSpec | None:
     if raw in (None, ""):
         return None
     data = require_mapping(raw, f"stages.{stage_name}.gpu_sizing")
-    reject_unknown_keys(
-        data,
-        allowed={
-            "estimator",
-            "target_memory_gb",
-            "min_gpus_per_job",
-            "max_gpus_per_job",
-            "safety_factor",
-            "round_to",
-        },
-        name=f"stages.{stage_name}.gpu_sizing",
-    )
+    reject_unknown_config_keys(data, parent=f"stages.{stage_name}.gpu_sizing")
     if data.get("estimator") in (None, ""):
-        raise ConfigContractError(f"`stages.{stage_name}.gpu_sizing.estimator` is required")
+        raise ConfigContractError(
+            f"`stages.{stage_name}.gpu_sizing.estimator` is required"
+        )
     if data.get("target_memory_gb") in (None, ""):
-        raise ConfigContractError(f"`stages.{stage_name}.gpu_sizing.target_memory_gb` is required")
+        raise ConfigContractError(
+            f"`stages.{stage_name}.gpu_sizing.target_memory_gb` is required"
+        )
     max_gpus = data.get("max_gpus_per_job")
     safety_factor = data.get("safety_factor")
     round_to = data.get("round_to")

@@ -28,7 +28,9 @@ def create_starter_project(request: InitRequest) -> InitResult:
     plan = plan_starter_write(request)
     if plan.existing_paths and not request.force:
         joined = ", ".join(str(path) for path in plan.existing_paths)
-        raise StarterWriteError(f"Refusing to overwrite existing files: {joined}. Use --force to replace them.")
+        raise StarterWriteError(
+            f"Refusing to overwrite existing files: {joined}. Use --force to replace them."
+        )
     for file in plan.files:
         file.path.parent.mkdir(parents=True, exist_ok=True)
         file.path.write_text(file.content, encoding="utf-8")
@@ -36,7 +38,9 @@ def create_starter_project(request: InitRequest) -> InitResult:
         template=request.template,
         output_dir=output_dir,
         config_path=config_path,
-        files=tuple(GeneratedFile(path=file.path, role=file.role) for file in plan.files),
+        files=tuple(
+            GeneratedFile(path=file.path, role=file.role) for file in plan.files
+        ),
     )
 
 

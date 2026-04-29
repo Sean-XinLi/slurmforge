@@ -57,8 +57,13 @@ def compile_stage_batch(
         raise ConfigContractError("Stage batch requires at least one run")
     if stage_name not in spec.enabled_stages:
         raise ConfigContractError(f"Stage `{stage_name}` is not enabled")
-    actual_batch_id = batch_id or make_batch_id(stage_name, selected_runs, source_ref, spec.spec_snapshot_digest)
-    root = submission_root or spec.storage_root / spec.project / spec.experiment / actual_batch_id
+    actual_batch_id = batch_id or make_batch_id(
+        stage_name, selected_runs, source_ref, spec.spec_snapshot_digest
+    )
+    root = (
+        submission_root
+        or spec.storage_root / spec.project / spec.experiment / actual_batch_id
+    )
     stage_instances = _compile_stage_instances(
         spec,
         stage_name=stage_name,
@@ -176,7 +181,9 @@ def _input_bindings_for_run(
         )
     bindings = input_bindings_by_run[run.run_id]
     for binding in bindings:
-        if binding.inject.get("required") and not binding_is_ready_for_injection(binding):
+        if binding.inject.get("required") and not binding_is_ready_for_injection(
+            binding
+        ):
             raise ConfigContractError(
                 f"Required input `{binding.input_name}` for run `{run.run_id}` is not ready for injection"
             )

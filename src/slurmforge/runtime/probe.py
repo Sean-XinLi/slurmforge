@@ -50,7 +50,9 @@ def probe_python_runtime(
     runtime_role: str = "python",
     runtime_name: str = "",
 ) -> RuntimeProbeRecord:
-    resolved = shutil.which(python_bin) if not python_bin.startswith("/") else python_bin
+    resolved = (
+        shutil.which(python_bin) if not python_bin.startswith("/") else python_bin
+    )
     if not resolved:
         return RuntimeProbeRecord(
             runtime_role=runtime_role,
@@ -94,8 +96,16 @@ def probe_python_runtime(
         )
     payload = json.loads(proc.stdout)
     version = str(payload["version"])
-    state = "verified" if _version_tuple(version) >= _version_tuple(min_version) else "failed"
-    reason = "verified" if state == "verified" else f"python {version} is below required {min_version}"
+    state = (
+        "verified"
+        if _version_tuple(version) >= _version_tuple(min_version)
+        else "failed"
+    )
+    reason = (
+        "verified"
+        if state == "verified"
+        else f"python {version} is below required {min_version}"
+    )
     return RuntimeProbeRecord(
         runtime_role=runtime_role,
         python_bin=python_bin,
@@ -131,7 +141,9 @@ def probe_runtime_plan(runtime_plan: Any) -> tuple[RuntimeProbeRecord, ...]:
                     _field(executor_python, "bin", DEFAULT_PYTHON_BIN)
                     or DEFAULT_PYTHON_BIN
                 ),
-                min_version=str(_field(executor_python, "min_version", "3.10") or "3.10"),
+                min_version=str(
+                    _field(executor_python, "min_version", "3.10") or "3.10"
+                ),
                 runtime_role="executor",
             )
         )
@@ -141,8 +153,7 @@ def probe_runtime_plan(runtime_plan: Any) -> tuple[RuntimeProbeRecord, ...]:
         probes.append(
             probe_python_runtime(
                 str(
-                    _field(user_python, "bin", DEFAULT_PYTHON_BIN)
-                    or DEFAULT_PYTHON_BIN
+                    _field(user_python, "bin", DEFAULT_PYTHON_BIN) or DEFAULT_PYTHON_BIN
                 ),
                 min_version=str(_field(user_python, "min_version", "3.10") or "3.10"),
                 runtime_role="user",
@@ -152,7 +163,9 @@ def probe_runtime_plan(runtime_plan: Any) -> tuple[RuntimeProbeRecord, ...]:
     return tuple(probes)
 
 
-def _runtime_probe_failures(probes: tuple[RuntimeProbeRecord, ...]) -> tuple[RuntimeProbeRecord, ...]:
+def _runtime_probe_failures(
+    probes: tuple[RuntimeProbeRecord, ...],
+) -> tuple[RuntimeProbeRecord, ...]:
     return tuple(probe for probe in probes if probe.state != "verified")
 
 
@@ -162,7 +175,11 @@ def _runtime_contract_failure_reason(probes: tuple[RuntimeProbeRecord, ...]) -> 
         return ""
     details = []
     for probe in failures:
-        name = f"{probe.runtime_role}:{probe.runtime_name}" if probe.runtime_name else probe.runtime_role
+        name = (
+            f"{probe.runtime_role}:{probe.runtime_name}"
+            if probe.runtime_name
+            else probe.runtime_role
+        )
         details.append(f"{name} python `{probe.python_bin}`: {probe.reason}")
     return "runtime contract failed: " + "; ".join(details)
 

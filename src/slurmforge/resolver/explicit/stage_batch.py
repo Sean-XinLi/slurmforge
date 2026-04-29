@@ -14,7 +14,12 @@ from ...storage.plan_reader import (
     run_definitions_from_stage_batch,
 )
 from ..binding_builders import input_inject, path_binding_for_input
-from ..output_refs import output_ref, producer_output_for_input, resolved_output, upstream_resolution
+from ..output_refs import (
+    output_ref,
+    producer_output_for_input,
+    resolved_output,
+    upstream_resolution,
+)
 
 
 def upstream_bindings_from_stage_batch(
@@ -26,12 +31,20 @@ def upstream_bindings_from_stage_batch(
 ) -> tuple[tuple[RunDefinition, ...], dict[str, tuple[InputBinding, ...]]]:
     batch = load_stage_batch_plan(producer_batch_root)
     consumer_stage = consumer_stage_name or stage_name_for_kind(spec, "eval")
-    selected_input = input_name or stage_source_input_name(spec, stage_name=consumer_stage)
+    selected_input = input_name or stage_source_input_name(
+        spec, stage_name=consumer_stage
+    )
     input_spec = spec.enabled_stages[consumer_stage].inputs.get(selected_input)
     if input_spec is None:
-        raise ConfigContractError(f"`stages.{consumer_stage}.inputs.{selected_input}` is required")
-    _producer_stage, output_name = producer_output_for_input(input_spec, producer_stage_name=batch.stage_name)
-    run_defs_by_id = {run.run_id: run for run in run_definitions_from_stage_batch(batch)}
+        raise ConfigContractError(
+            f"`stages.{consumer_stage}.inputs.{selected_input}` is required"
+        )
+    _producer_stage, output_name = producer_output_for_input(
+        input_spec, producer_stage_name=batch.stage_name
+    )
+    run_defs_by_id = {
+        run.run_id: run for run in run_definitions_from_stage_batch(batch)
+    }
     inject = input_inject(spec, stage_name=consumer_stage, input_name=selected_input)
     selected_runs: list[RunDefinition] = []
     bindings: dict[str, tuple[InputBinding, ...]] = {}
@@ -52,7 +65,11 @@ def upstream_bindings_from_stage_batch(
             path_binding_for_input(
                 input_name=selected_input,
                 inject=inject,
-                source=InputSource(kind="upstream_output", stage=instance.stage_name, output=output_name),
+                source=InputSource(
+                    kind="upstream_output",
+                    stage=instance.stage_name,
+                    output=output_name,
+                ),
                 expects=input_spec.expects,
                 resolved=resolved_output(output),
                 resolution=upstream_resolution(
@@ -67,7 +84,9 @@ def upstream_bindings_from_stage_batch(
             ),
         )
     if not selected_runs:
-        raise ConfigContractError(f"No `{output_name}` outputs found under {producer_batch_root}")
+        raise ConfigContractError(
+            f"No `{output_name}` outputs found under {producer_batch_root}"
+        )
     return tuple(selected_runs), bindings
 
 
@@ -77,4 +96,6 @@ def upstream_bindings_from_train_batch(
     *,
     input_name: str | None = None,
 ) -> tuple[tuple[RunDefinition, ...], dict[str, tuple[InputBinding, ...]]]:
-    return upstream_bindings_from_stage_batch(spec, train_batch_root, input_name=input_name)
+    return upstream_bindings_from_stage_batch(
+        spec, train_batch_root, input_name=input_name
+    )

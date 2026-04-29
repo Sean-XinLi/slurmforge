@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Final
 
 from ...defaults import ALL_STARTER_TEMPLATES
-from ..models import ConfigField
+from ..models import ConfigField, ConfigOption
 
 FIELDS: Final[tuple[ConfigField, ...]] = (
     ConfigField(
@@ -16,6 +16,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
         default="null",
+        required=False,
     ),
     ConfigField(
         path="stages.*.gpu_sizing.estimator",
@@ -26,6 +27,13 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
         default="required when gpu_sizing is present",
+        required=None,
+        options=(
+            ConfigOption(
+                "heuristic",
+                "Estimate GPU count from target memory and hardware profile.",
+            ),
+        ),
     ),
     ConfigField(
         path="stages.*.gpu_sizing.target_memory_gb",
@@ -37,6 +45,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="float",
         templates=ALL_STARTER_TEMPLATES,
         default="required when gpu_sizing is present",
+        required=None,
     ),
     ConfigField(
         path="stages.*.gpu_sizing.min_gpus_per_job",
@@ -48,6 +57,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
         default="1",
+        required=False,
     ),
     ConfigField(
         path="stages.*.gpu_sizing.max_gpus_per_job",
@@ -59,6 +69,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
         default="null",
+        required=False,
     ),
     ConfigField(
         path="stages.*.gpu_sizing.safety_factor",
@@ -70,6 +81,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="float",
         templates=ALL_STARTER_TEMPLATES,
         default="null",
+        required=False,
     ),
     ConfigField(
         path="stages.*.gpu_sizing.round_to",
@@ -81,5 +93,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
         default="null",
+        required=False,
     ),
 )

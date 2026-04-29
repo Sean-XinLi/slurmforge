@@ -19,7 +19,9 @@ def discover_file_output(
     if not selected:
         return OutputDiscoveryItem(
             output_name=output_name,
-            missing_required_reason=_missing_required(output_name) if output_cfg.required else "",
+            missing_required_reason=_missing_required(output_name)
+            if output_cfg.required
+            else "",
         )
 
     artifact = manage_file(
@@ -37,7 +39,9 @@ def discover_file_output(
         producer_attempt_id=context.attempt_id,
         selection_reason=reason,
     )
-    return OutputDiscoveryItem(output_name=output_name, output_ref=output_ref, artifacts=(artifact,))
+    return OutputDiscoveryItem(
+        output_name=output_name, output_ref=output_ref, artifacts=(artifact,)
+    )
 
 
 def _missing_required(output_name: str) -> str:

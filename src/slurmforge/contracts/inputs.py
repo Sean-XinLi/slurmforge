@@ -1,4 +1,5 @@
 """Input contract dataclasses shared by spec, planner, resolver, and executor."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -52,7 +53,9 @@ def input_source_from_dict(payload: JsonObject | InputSource) -> InputSource:
         return payload
     values = dict(payload)
     if "schema_version" in values:
-        require_schema(values, name="input_source", version=SchemaVersion.INPUT_CONTRACT)
+        require_schema(
+            values, name="input_source", version=SchemaVersion.INPUT_CONTRACT
+        )
     return InputSource(
         kind=str(values["kind"]),
         stage=str(values.get("stage") or ""),
@@ -61,12 +64,16 @@ def input_source_from_dict(payload: JsonObject | InputSource) -> InputSource:
     )
 
 
-def resolved_input_from_dict(payload: JsonObject | ResolvedInput | None) -> ResolvedInput:
+def resolved_input_from_dict(
+    payload: JsonObject | ResolvedInput | None,
+) -> ResolvedInput:
     if isinstance(payload, ResolvedInput):
         return payload
     values = dict(payload or {})
     if values and "schema_version" in values:
-        require_schema(values, name="resolved_input", version=SchemaVersion.INPUT_CONTRACT)
+        require_schema(
+            values, name="resolved_input", version=SchemaVersion.INPUT_CONTRACT
+        )
     return ResolvedInput(
         kind=str(values.get("kind") or "unresolved"),
         path=str(values.get("path") or ""),
@@ -122,7 +129,11 @@ def input_injection_value(binding: InputBinding) -> str | None:
     resolved = binding.resolved
     mode = str(binding.inject.get("mode") or "path")
     if mode == "path":
-        return resolved.path if resolved.kind in {"path", "manifest"} and resolved.path else None
+        return (
+            resolved.path
+            if resolved.kind in {"path", "manifest"} and resolved.path
+            else None
+        )
     if mode == "value":
         return None if resolved.kind != "value" else str(resolved.value)
     if mode == "json":
@@ -148,7 +159,12 @@ def resolved_input_from_output_ref(output: Any) -> ResolvedInput:
         output_name = str(values.get("output_name") or "")
         output_kind = str(values.get("kind") or "file")
         path = str(values.get("path") or "")
-        digest = str(values.get("digest") or values.get("managed_digest") or values.get("source_digest") or "")
+        digest = str(
+            values.get("digest")
+            or values.get("managed_digest")
+            or values.get("source_digest")
+            or ""
+        )
         value = values.get("value")
         cardinality = str(values.get("cardinality") or "one")
         producer = str(values.get("producer_stage_instance_id") or "")

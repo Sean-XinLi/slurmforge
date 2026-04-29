@@ -18,7 +18,9 @@ def summarize_stage_batch(batch: StageBatchPlan) -> list[str]:
         )
     for dep in batch.budget_plan.dependencies:
         from_text = ",".join(str(item) for item in dep.from_groups if item)
-        lines.append(f"[PLAN] dependency {dep.to_group} after {from_text} type={dep.type}")
+        lines.append(
+            f"[PLAN] dependency {dep.to_group} after {from_text} type={dep.type}"
+        )
     for warning in batch.budget_plan.warnings:
         lines.append(f"[WARN] {warning}")
     return lines

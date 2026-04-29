@@ -23,7 +23,11 @@ def resolve_script(spec: ExperimentSpec, stage: StageSpec) -> Path:
 def path_exists_or_allowed_for_args(raw: dict[str, Any], path: str) -> bool:
     normalized = normalize_run_override_path(raw, path)
     parts = normalized.split(".")
-    if len(parts) >= 5 and parts[:2] == ["stages", parts[1]] and parts[2:4] == ["entry", "args"]:
+    if (
+        len(parts) >= 5
+        and parts[:2] == ["stages", parts[1]]
+        and parts[2:4] == ["entry", "args"]
+    ):
         return parts[1] in {"train", "eval"}
     cursor: Any = raw
     for part in parts:

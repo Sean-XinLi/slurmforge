@@ -6,6 +6,11 @@ from typing import Any
 
 import yaml
 
+from ..config_schema import (
+    allowed_stage_keys,
+    allowed_top_level_keys,
+    reject_unknown_config_keys,
+)
 from ..errors import ConfigContractError
 from ..io import content_digest
 from ..overrides import deep_set, parse_override
@@ -21,24 +26,9 @@ from .run_paths import normalize_cli_override_path
 from .stage_parse import parse_stage
 
 
-_ALLOWED_TOP_LEVEL_KEYS = {
-    "project",
-    "experiment",
-    "storage",
-    "hardware",
-    "environments",
-    "sizing",
-    "runs",
-    "notifications",
-    "runtime",
-    "artifact_store",
-    "stages",
-    "dispatch",
-    "orchestration",
-}
-
-
-def load_raw_config(config_path: Path, cli_overrides: tuple[str, ...] = ()) -> dict[str, Any]:
+def load_raw_config(
+    config_path: Path, cli_overrides: tuple[str, ...] = ()
+) -> dict[str, Any]:
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise ConfigContractError(f"Config must be a YAML mapping: {config_path}")
@@ -58,7 +48,7 @@ def parse_experiment_spec(
 ) -> ExperimentSpec:
     if "stages" not in raw:
         raise ConfigContractError("Configs must use top-level `stages`")
-    unknown_top_level = sorted(set(raw) - _ALLOWED_TOP_LEVEL_KEYS)
+    unknown_top_level = sorted(set(raw) - allowed_top_level_keys())
     if unknown_top_level:
         joined = ", ".join(str(item) for item in unknown_top_level)
         raise ConfigContractError(f"Unsupported top-level keys: {joined}")
@@ -69,24 +59,34 @@ def parse_experiment_spec(
     if experiment in (None, ""):
         raise ConfigContractError("`experiment` is required")
     storage = require_mapping(raw.get("storage"), "storage")
+    reject_unknown_config_keys(storage, parent="storage")
     storage_root = storage.get("root")
     if storage_root in (None, ""):
         raise ConfigContractError("`storage.root` is required")
     stages_raw = require_mapping(raw.get("stages"), "stages")
-    unknown_stages = sorted(set(stages_raw) - {"train", "eval"})
+    unknown_stages = sorted(set(stages_raw) - allowed_stage_keys())
     if unknown_stages:
         joined = ", ".join(str(item) for item in unknown_stages)
-        raise ConfigContractError(f"Unsupported stage keys: {joined}. Stage-batch v1 only supports train and eval")
-    stages = {str(name): parse_stage(str(name), stage_raw) for name, stage_raw in stages_raw.items()}
+        raise ConfigContractError(
+            f"Unsupported stage keys: {joined}. Stage-batch v1 only supports train and eval"
+        )
+    stages = {
+        str(name): parse_stage(str(name), stage_raw)
+        for name, stage_raw in stages_raw.items()
+    }
     enabled = {name: stage for name, stage in stages.items() if stage.enabled}
     if not enabled:
         raise ConfigContractError("At least one stage must be enabled")
     if "eval" in enabled and "train" not in enabled and enabled["eval"].depends_on:
-        raise ConfigContractError("`stages.eval.depends_on` requires enabled `stages.train`")
+        raise ConfigContractError(
+            "`stages.eval.depends_on` requires enabled `stages.train`"
+        )
     for name, stage in enabled.items():
         for dep in stage.depends_on:
             if dep not in enabled:
-                raise ConfigContractError(f"`stages.{name}.depends_on` references disabled or unknown stage `{dep}`")
+                raise ConfigContractError(
+                    f"`stages.{name}.depends_on` references disabled or unknown stage `{dep}`"
+                )
     spec = ExperimentSpec(
         project=str(project),
         experiment=str(experiment),

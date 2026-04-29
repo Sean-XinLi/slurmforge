@@ -39,8 +39,12 @@ def budget_plan_from_dict(payload: dict[str, Any]) -> BudgetPlan:
                 group_id=str(group["group_id"]),
                 gpus_per_task=int(group["gpus_per_task"]),
                 array_size=int(group["array_size"]),
-                array_throttle=None if group["array_throttle"] in (None, "") else int(group["array_throttle"]),
-                budgeted_gpus=None if group["budgeted_gpus"] in (None, "") else int(group["budgeted_gpus"]),
+                array_throttle=None
+                if group["array_throttle"] in (None, "")
+                else int(group["array_throttle"]),
+                budgeted_gpus=None
+                if group["budgeted_gpus"] in (None, "")
+                else int(group["budgeted_gpus"]),
             )
             for group in payload["groups"]
         ),

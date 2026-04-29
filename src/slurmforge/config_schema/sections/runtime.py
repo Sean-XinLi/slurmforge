@@ -18,6 +18,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
         default="[]",
+        required=False,
     ),
     ConfigField(
         path="environments.*.source",
@@ -28,6 +29,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
         default="[]",
+        required=False,
     ),
     ConfigField(
         path="environments.*.source[].path",
@@ -39,6 +41,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="path",
         templates=ALL_STARTER_TEMPLATES,
         default="template-specific",
+        required=True,
     ),
     ConfigField(
         path="environments.*.source[].args",
@@ -50,6 +53,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
         default="[]",
+        required=False,
     ),
     ConfigField(
         path="environments.*.env",
@@ -60,6 +64,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
         default="{}",
+        required=False,
     ),
     ConfigField(
         path="runtime.executor.python.bin",
@@ -70,6 +75,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=ALL_STARTER_TEMPLATES,
         default=DEFAULT_PYTHON_BIN,
+        required=True,
         first_edit=True,
     ),
     ConfigField(
@@ -82,6 +88,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="version",
         templates=ALL_STARTER_TEMPLATES,
         default="3.10",
+        required=False,
     ),
     ConfigField(
         path="runtime.executor.module",
@@ -93,6 +100,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="python-module",
         templates=ALL_STARTER_TEMPLATES,
         default="slurmforge.executor.stage",
+        required=False,
     ),
     ConfigField(
         path="runtime.user.*.python.bin",
@@ -103,6 +111,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=ALL_STARTER_TEMPLATES,
         default=DEFAULT_PYTHON_BIN,
+        required=True,
         first_edit=True,
     ),
     ConfigField(
@@ -115,6 +124,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="version",
         templates=ALL_STARTER_TEMPLATES,
         default="3.10",
+        required=False,
     ),
     ConfigField(
         path="runtime.user.*.env",
@@ -126,5 +136,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
         default="{}",
+        required=False,
     ),
 )

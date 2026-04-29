@@ -27,7 +27,9 @@ def execute_stage_instance(run_dir: Path) -> int:
         failure_class = command_result.failure_class
         reason = command_result.reason
         if exit_code == 0:
-            output_result = finalize_successful_stage_outputs(attempt, command_result.workdir)
+            output_result = finalize_successful_stage_outputs(
+                attempt, command_result.workdir
+            )
             artifact_paths = output_result.artifact_paths
             if output_result.failure_class is not None:
                 failure_class = output_result.failure_class
@@ -50,7 +52,9 @@ def execute_stage_task(batch_root: Path, group_index: int, task_index: int) -> i
     instance = find_stage_instance(batch_root, group_index, task_index)
     result = execute_stage_instance(batch_root / instance.run_dir_rel)
     refresh_stage_batch_status(batch_root)
-    pipeline_root = batch_root.parent.parent if batch_root.parent.name == "stage_batches" else None
+    pipeline_root = (
+        batch_root.parent.parent if batch_root.parent.name == "stage_batches" else None
+    )
     if pipeline_root is not None and (pipeline_root / "manifest.json").exists():
         refresh_train_eval_pipeline_status(pipeline_root)
     return result
@@ -64,7 +68,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--group-index", required=True, type=int)
     parser.add_argument("--task-index", required=True, type=int)
     args = parser.parse_args(argv)
-    raise SystemExit(execute_stage_task(Path(args.batch_root), args.group_index, args.task_index))
+    raise SystemExit(
+        execute_stage_task(Path(args.batch_root), args.group_index, args.task_index)
+    )
 
 
 if __name__ == "__main__":

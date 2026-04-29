@@ -1,4 +1,5 @@
 """Lineage payload builders."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,7 +11,9 @@ from ..plans.train_eval import TrainEvalPipelinePlan
 from ..contracts import InputBinding
 
 
-def _binding_record(instance: StageInstancePlan, binding: InputBinding) -> dict[str, Any]:
+def _binding_record(
+    instance: StageInstancePlan, binding: InputBinding
+) -> dict[str, Any]:
     return {
         "stage_instance_id": instance.stage_instance_id,
         "run_id": instance.run_id,

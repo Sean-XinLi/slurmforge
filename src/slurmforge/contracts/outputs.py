@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..config_schema import options_for, options_sentence
+from ..config_schema import options_for, options_sentence, reject_unknown_config_keys
 from ..io import SchemaVersion
 
 OUTPUT_KINDS = set(options_for("stages.*.outputs.*.kind"))
@@ -29,7 +29,9 @@ class StageOutputSpec:
     name: str
     kind: str
     required: bool = False
-    discover: OutputDiscoveryRule | FileOutputDiscoveryRule = field(default_factory=OutputDiscoveryRule)
+    discover: OutputDiscoveryRule | FileOutputDiscoveryRule = field(
+        default_factory=OutputDiscoveryRule
+    )
     file: str = ""
     json_path: str = "$"
     schema_version: int = SchemaVersion.OUTPUT_CONTRACT
@@ -41,12 +43,16 @@ class StageOutputContract:
     schema_version: int = SchemaVersion.OUTPUT_CONTRACT
 
 
-def _require_schema(payload: dict[str, Any], *, name: str, require_present: bool = False) -> None:
+def _require_schema(
+    payload: dict[str, Any], *, name: str, require_present: bool = False
+) -> None:
     if require_present and "schema_version" not in payload:
         raise ConfigContractError(f"`{name}.schema_version` is required")
     version = int(payload.get("schema_version", SchemaVersion.OUTPUT_CONTRACT))
     if version != SchemaVersion.OUTPUT_CONTRACT:
-        raise ConfigContractError(f"`{name}.schema_version` is not supported: {version}")
+        raise ConfigContractError(
+            f"`{name}.schema_version` is not supported: {version}"
+        )
 
 
 def _require_mapping(value: Any, name: str) -> dict[str, Any]:
@@ -79,29 +85,41 @@ def _normalize_selector(value: Any) -> str:
     return selector
 
 
-def _parse_discovery(raw: Any, *, name: str, allow_select: bool) -> OutputDiscoveryRule | FileOutputDiscoveryRule:
+def _parse_discovery(
+    raw: Any, *, name: str, allow_select: bool
+) -> OutputDiscoveryRule | FileOutputDiscoveryRule:
     data = {} if raw in (None, "") else _require_mapping(raw, name)
+    reject_unknown_config_keys(data, parent=name)
     _require_schema(data, name=name)
     globs = _string_tuple(data.get("globs"), name=f"{name}.globs")
     if "select" in data:
         if not allow_select:
-            raise ConfigContractError(f"`{name}.select` is only supported for file outputs")
-        return FileOutputDiscoveryRule(globs=globs, select=_normalize_selector(data.get("select")))
+            raise ConfigContractError(
+                f"`{name}.select` is only supported for file outputs"
+            )
+        return FileOutputDiscoveryRule(
+            globs=globs, select=_normalize_selector(data.get("select"))
+        )
     if allow_select:
         return FileOutputDiscoveryRule(globs=globs)
     return OutputDiscoveryRule(globs=globs)
 
 
-def _parse_output_spec(output_name: str, raw: Any, *, stage_name: str) -> StageOutputSpec:
+def _parse_output_spec(
+    output_name: str, raw: Any, *, stage_name: str
+) -> StageOutputSpec:
     name = f"stages.{stage_name}.outputs.{output_name}"
     data = _require_mapping(raw, name)
+    reject_unknown_config_keys(data, parent=name)
     _require_schema(data, name=name)
     kind = str(data.get("kind") or "")
     if kind not in OUTPUT_KINDS:
         raise ConfigContractError(
             f"`{name}.kind` must be {options_sentence('stages.*.outputs.*.kind')}"
         )
-    discover = _parse_discovery(data.get("discover"), name=f"{name}.discover", allow_select=kind == "file")
+    discover = _parse_discovery(
+        data.get("discover"), name=f"{name}.discover", allow_select=kind == "file"
+    )
     file_value = data.get("file")
     json_path = str(data.get("json_path") or "$")
     return StageOutputSpec(
@@ -120,7 +138,9 @@ def parse_stage_output_contract(raw: Any, *, stage_name: str) -> StageOutputCont
     data = _require_mapping(raw, f"stages.{stage_name}.outputs")
     _require_schema(data, name=f"stages.{stage_name}.outputs")
     outputs = {
-        str(output_name): _parse_output_spec(str(output_name), output_raw, stage_name=stage_name)
+        str(output_name): _parse_output_spec(
+            str(output_name), output_raw, stage_name=stage_name
+        )
         for output_name, output_raw in sorted(data.items())
         if output_name != "schema_version"
     }
@@ -136,7 +156,9 @@ def output_discovery_rule_from_dict(
     globs = tuple(str(item) for item in payload.get("globs", ()))
     if "select" in payload:
         if not allow_select:
-            raise ConfigContractError("output discover select is only supported for file outputs")
+            raise ConfigContractError(
+                "output discover select is only supported for file outputs"
+            )
         return FileOutputDiscoveryRule(
             globs=globs,
             select=_normalize_selector(payload.get("select")),
@@ -153,13 +175,17 @@ def stage_output_spec_from_dict(payload: dict[str, Any]) -> StageOutputSpec:
         name=str(payload["name"]),
         kind=kind,
         required=bool(payload.get("required", False)),
-        discover=output_discovery_rule_from_dict(dict(payload.get("discover") or {}), allow_select=kind == "file"),
+        discover=output_discovery_rule_from_dict(
+            dict(payload.get("discover") or {}), allow_select=kind == "file"
+        ),
         file=str(payload.get("file") or ""),
         json_path=str(payload.get("json_path") or "$"),
     )
 
 
-def stage_output_contract_from_dict(payload: dict[str, Any] | StageOutputContract | None) -> StageOutputContract:
+def stage_output_contract_from_dict(
+    payload: dict[str, Any] | StageOutputContract | None,
+) -> StageOutputContract:
     if isinstance(payload, StageOutputContract):
         return payload
     if payload is None:

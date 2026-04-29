@@ -1,133 +1,13 @@
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 from tests.support.case import StageBatchSystemTestCase
 
 
-EXPECTED_SUPPORTED_FIELDS = (
-    "project",
-    "experiment",
-    "storage.root",
-    "artifact_store.strategy",
-    "artifact_store.fallback_strategy",
-    "artifact_store.verify_digest",
-    "artifact_store.fail_on_verify_error",
-    "hardware.gpu_types",
-    "hardware.gpu_types.*.memory_gb",
-    "hardware.gpu_types.*.usable_memory_fraction",
-    "hardware.gpu_types.*.max_gpus_per_node",
-    "hardware.gpu_types.*.slurm.constraint",
-    "environments.*.modules",
-    "environments.*.source",
-    "environments.*.source[].path",
-    "environments.*.source[].args",
-    "environments.*.env",
-    "runtime.executor.python.bin",
-    "runtime.executor.python.min_version",
-    "runtime.executor.module",
-    "runtime.user.*.python.bin",
-    "runtime.user.*.python.min_version",
-    "runtime.user.*.env",
-    "sizing.gpu.defaults",
-    "sizing.gpu.defaults.safety_factor",
-    "sizing.gpu.defaults.round_to",
-    "notifications.email.enabled",
-    "notifications.email.to",
-    "notifications.email.on",
-    "notifications.email.mode",
-    "notifications.email.from",
-    "notifications.email.sendmail",
-    "notifications.email.subject_prefix",
-    "runs.type",
-    "runs.axes",
-    "runs.cases",
-    "runs.cases[].name",
-    "runs.cases[].set",
-    "runs.cases[].axes",
-    "dispatch.max_available_gpus",
-    "dispatch.overflow_policy",
-    "orchestration.controller",
-    "orchestration.controller.partition",
-    "orchestration.controller.cpus",
-    "orchestration.controller.mem",
-    "orchestration.controller.time_limit",
-    "orchestration.controller.environment",
-    "stages.train.entry.script",
-    "stages.eval.entry.script",
-    "stages.*.kind",
-    "stages.*.enabled",
-    "stages.*.environment",
-    "stages.*.runtime",
-    "stages.*.entry.type",
-    "stages.*.entry.script",
-    "stages.*.entry.command",
-    "stages.*.entry.workdir",
-    "stages.*.entry.args",
-    "stages.*.before",
-    "stages.*.before[].name",
-    "stages.*.before[].run",
-    "stages.*.resources",
-    "stages.*.resources.partition",
-    "stages.*.resources.account",
-    "stages.*.resources.qos",
-    "stages.*.resources.time_limit",
-    "stages.*.resources.gpu_type",
-    "stages.*.resources.nodes",
-    "stages.*.resources.gpus_per_node",
-    "stages.*.resources.cpus_per_task",
-    "stages.*.resources.mem",
-    "stages.*.resources.constraint",
-    "stages.*.resources.extra_sbatch_args",
-    "stages.*.launcher.type",
-    "stages.*.launcher.mode",
-    "stages.*.launcher.nnodes",
-    "stages.*.launcher.nproc_per_node",
-    "stages.*.launcher.rendezvous",
-    "stages.*.launcher.rendezvous.backend",
-    "stages.*.launcher.rendezvous.endpoint",
-    "stages.*.launcher.rendezvous.port",
-    "stages.*.launcher.master_port",
-    "stages.*.launcher.args",
-    "stages.*.launcher.srun_args",
-    "stages.*.gpu_sizing",
-    "stages.*.gpu_sizing.estimator",
-    "stages.*.gpu_sizing.target_memory_gb",
-    "stages.*.gpu_sizing.min_gpus_per_job",
-    "stages.*.gpu_sizing.max_gpus_per_job",
-    "stages.*.gpu_sizing.safety_factor",
-    "stages.*.gpu_sizing.round_to",
-    "stages.*.depends_on",
-    "stages.train.outputs.checkpoint",
-    "stages.eval.inputs.checkpoint",
-    "stages.eval.outputs.accuracy",
-    "stages.*.inputs.*.source.kind",
-    "stages.*.inputs.*.source.stage",
-    "stages.*.inputs.*.source.output",
-    "stages.*.inputs.*.source.path",
-    "stages.*.inputs.*.expects",
-    "stages.*.inputs.*.required",
-    "stages.*.inputs.*.inject.mode",
-    "stages.*.inputs.*.inject.flag",
-    "stages.*.inputs.*.inject.env",
-    "stages.*.outputs.*.kind",
-    "stages.*.outputs.*.required",
-    "stages.*.outputs.*.file",
-    "stages.*.outputs.*.json_path",
-    "stages.*.outputs.*.discover.globs",
-    "stages.*.outputs.*.discover.select",
-)
-
-
 class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
-    def test_schema_covers_current_user_visible_config_surface(self) -> None:
-        from slurmforge.config_schema import all_fields
-
-        actual = {field.path for field in all_fields()}
-        missing = sorted(set(EXPECTED_SUPPORTED_FIELDS) - actual)
-        self.assertEqual(missing, [])
-
-    def test_schema_has_no_duplicate_or_legacy_paths(self) -> None:
+    def test_schema_has_no_duplicate_or_removed_paths(self) -> None:
         from slurmforge.config_schema import all_fields
 
         paths = [field.path for field in all_fields()]
@@ -136,6 +16,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         self.assertNotIn("orchestration.controller.resources", paths)
         self.assertNotIn("runtime.user.default.python.bin", paths)
         self.assertNotIn("environments.default.modules", paths)
+        self.assertNotIn("stages.*.launcher.master_port", paths)
 
     def test_generated_config_reference_lists_every_schema_field(self) -> None:
         from slurmforge.config_schema import all_fields
@@ -145,3 +26,95 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
             field.path for field in all_fields() if f"`{field.path}`" not in config_doc
         ]
         self.assertEqual(missing, [])
+
+    def test_schema_carries_required_and_enum_contracts(self) -> None:
+        from slurmforge.config_schema import all_fields
+
+        by_path = {field.path: field for field in all_fields()}
+        required_counts = Counter(field.required for field in all_fields())
+
+        self.assertGreater(required_counts[True], 0)
+        self.assertGreater(required_counts[False], 0)
+        self.assertLess(required_counts[None], len(by_path) // 3)
+        self.assertTrue(by_path["project"].required)
+        self.assertTrue(by_path["storage.root"].required)
+        self.assertTrue(by_path["stages.*.outputs.*.kind"].required)
+        self.assertIsNone(by_path["runs.axes"].required)
+        self.assertIsNone(by_path["stages.*.entry.script"].required)
+        self.assertEqual(
+            [option.value for option in by_path["runs.type"].options],
+            ["single", "grid", "cases", "matrix"],
+        )
+        self.assertEqual(
+            [option.value for option in by_path["stages.*.launcher.type"].options],
+            ["single", "python", "torchrun", "srun", "mpirun", "command"],
+        )
+
+    def test_key_registry_exposes_current_config_surface(self) -> None:
+        from slurmforge.config_schema import (
+            allowed_keys,
+            allowed_stage_keys,
+            allowed_top_level_keys,
+            is_dynamic_parent,
+        )
+
+        self.assertEqual(
+            allowed_top_level_keys(),
+            {
+                "artifact_store",
+                "dispatch",
+                "environments",
+                "experiment",
+                "hardware",
+                "notifications",
+                "orchestration",
+                "project",
+                "runs",
+                "runtime",
+                "sizing",
+                "stages",
+                "storage",
+            },
+        )
+        self.assertEqual(allowed_stage_keys(), {"train", "eval"})
+        self.assertEqual(allowed_keys("storage"), {"root"})
+        self.assertEqual(
+            allowed_keys("artifact_store"),
+            {"strategy", "fallback_strategy", "verify_digest", "fail_on_verify_error"},
+        )
+        self.assertEqual(
+            allowed_keys("stages.train.launcher"),
+            {
+                "type",
+                "mode",
+                "nnodes",
+                "nproc_per_node",
+                "rendezvous",
+                "args",
+                "srun_args",
+            },
+        )
+        self.assertEqual(
+            allowed_keys("stages.train.launcher.rendezvous"),
+            {"backend", "endpoint", "port"},
+        )
+        self.assertEqual(
+            allowed_keys("stages.train.inputs.checkpoint"),
+            {"source", "expects", "required", "inject"},
+        )
+        self.assertEqual(
+            allowed_keys("stages.train.outputs.checkpoint"),
+            {"schema_version", "kind", "required", "discover", "file", "json_path"},
+        )
+        self.assertEqual(
+            allowed_keys("stages.train.outputs.checkpoint.discover"),
+            {"schema_version", "globs", "select"},
+        )
+        self.assertTrue(is_dynamic_parent("runs.axes"))
+        self.assertTrue(is_dynamic_parent("stages.train.entry.args"))
+
+    def test_key_registry_has_no_raw_list_item_children(self) -> None:
+        from slurmforge.config_schema import allowed_keys
+
+        self.assertNotIn("before[]", allowed_keys("stages.train"))
+        self.assertNotIn("cases[]", allowed_keys("runs"))

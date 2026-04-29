@@ -27,7 +27,9 @@ def write_files_output_manifest(
         "producer_attempt_id": context.attempt_id,
         "refs": [artifact_payload(item) for item in artifacts],
     }
-    manifest_path = context.attempt_dir / "artifacts" / "output_manifests" / f"{output_name}.json"
+    manifest_path = (
+        context.attempt_dir / "artifacts" / "output_manifests" / f"{output_name}.json"
+    )
     write_json(manifest_path, payload)
     digest = file_digest(manifest_path)
     return OutputRef(
@@ -48,6 +50,8 @@ def write_files_output_manifest(
     )
 
 
-def write_stage_outputs_record(record: StageOutputsRecord, *, run_dir: Path, attempt_dir: Path) -> None:
+def write_stage_outputs_record(
+    record: StageOutputsRecord, *, run_dir: Path, attempt_dir: Path
+) -> None:
     write_json(_stage_outputs_path(run_dir), record)
     write_json(attempt_dir / "outputs" / "stage_outputs.json", record)

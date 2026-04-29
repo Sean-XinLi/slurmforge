@@ -13,7 +13,9 @@ from ..runtime import (
 
 
 def python_runtime_plan_from_dict(payload: dict[str, Any]) -> PythonRuntimePlan:
-    return PythonRuntimePlan(bin=str(payload["bin"]), min_version=str(payload["min_version"]))
+    return PythonRuntimePlan(
+        bin=str(payload["bin"]), min_version=str(payload["min_version"])
+    )
 
 
 def executor_runtime_plan_from_dict(payload: dict[str, Any]) -> ExecutorRuntimePlan:
@@ -23,7 +25,9 @@ def executor_runtime_plan_from_dict(payload: dict[str, Any]) -> ExecutorRuntimeP
     )
 
 
-def user_runtime_plan_from_dict(payload: dict[str, Any] | None) -> UserRuntimePlan | None:
+def user_runtime_plan_from_dict(
+    payload: dict[str, Any] | None,
+) -> UserRuntimePlan | None:
     if payload is None:
         return None
     return UserRuntimePlan(
@@ -45,7 +49,9 @@ def environment_plan_from_dict(payload: dict[str, Any]) -> EnvironmentPlan:
         name=str(payload["name"]),
         modules=tuple(str(item) for item in payload["modules"]),
         source=tuple(
-            EnvironmentSourcePlan(path=str(item["path"]), args=tuple(str(arg) for arg in item["args"]))
+            EnvironmentSourcePlan(
+                path=str(item["path"]), args=tuple(str(arg) for arg in item["args"])
+            )
             for item in payload["source"]
         ),
         env=dict(payload["env"]),

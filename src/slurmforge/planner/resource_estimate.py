@@ -13,7 +13,9 @@ from ..sizing.models import (
 def build_stage_batch_resource_estimate(batch: StageBatchPlan) -> StageResourceEstimate:
     groups = batch.group_plans
     budget_plan = batch.budget_plan
-    total_requested = sum(int(group.gpus_per_task) * int(group.array_size) for group in groups)
+    total_requested = sum(
+        int(group.gpus_per_task) * int(group.array_size) for group in groups
+    )
     waves = budget_plan.waves
     if waves:
         peak = max(int(wave.total_wave_gpus or 0) for wave in waves)
@@ -56,7 +58,9 @@ def build_stage_batch_resource_estimate(batch: StageBatchPlan) -> StageResourceE
     )
 
 
-def build_train_eval_pipeline_resource_estimate(plan: TrainEvalPipelinePlan) -> ExperimentResourceEstimate:
+def build_train_eval_pipeline_resource_estimate(
+    plan: TrainEvalPipelinePlan,
+) -> ExperimentResourceEstimate:
     batches = [plan.stage_batches[name] for name in plan.stage_order]
     stages = tuple(build_stage_batch_resource_estimate(batch) for batch in batches)
     first = batches[0]
@@ -64,12 +68,16 @@ def build_train_eval_pipeline_resource_estimate(plan: TrainEvalPipelinePlan) -> 
         project=first.project,
         experiment=first.experiment,
         runs=len(plan.run_set),
-        max_available_gpus=max((stage.max_available_gpus for stage in stages), default=0),
+        max_available_gpus=max(
+            (stage.max_available_gpus for stage in stages), default=0
+        ),
         stages=stages,
     )
 
 
-def build_resource_estimate(plan: StageBatchPlan | TrainEvalPipelinePlan) -> ExperimentResourceEstimate:
+def build_resource_estimate(
+    plan: StageBatchPlan | TrainEvalPipelinePlan,
+) -> ExperimentResourceEstimate:
     if isinstance(plan, StageBatchPlan):
         stage = build_stage_batch_resource_estimate(plan)
         return ExperimentResourceEstimate(
@@ -106,13 +114,23 @@ def render_resource_estimate(estimate: ExperimentResourceEstimate) -> list[str]:
             if sizing.get("estimator"):
                 lines.append(f"  {prefix}.estimator: {sizing['estimator']}")
             if sizing.get("target_memory_gb") is not None:
-                lines.append(f"  {prefix}.target_memory_gb: {sizing['target_memory_gb']}")
+                lines.append(
+                    f"  {prefix}.target_memory_gb: {sizing['target_memory_gb']}"
+                )
             if sizing.get("usable_memory_per_gpu_gb") is not None:
-                lines.append(f"  {prefix}.usable_memory_per_gpu_gb: {sizing['usable_memory_per_gpu_gb']}")
-            lines.append(f"  {prefix}.resolved_gpus_per_node: {sizing.get('resolved_gpus_per_node', 0)}")
-            lines.append(f"  {prefix}.total_gpus_per_run: {sizing.get('resolved_total_gpus', 0)}")
+                lines.append(
+                    f"  {prefix}.usable_memory_per_gpu_gb: {sizing['usable_memory_per_gpu_gb']}"
+                )
+            lines.append(
+                f"  {prefix}.resolved_gpus_per_node: {sizing.get('resolved_gpus_per_node', 0)}"
+            )
+            lines.append(
+                f"  {prefix}.total_gpus_per_run: {sizing.get('resolved_total_gpus', 0)}"
+            )
         for group in stage.resource_groups:
-            throttle = "-" if group.array_throttle is None else str(group.array_throttle)
+            throttle = (
+                "-" if group.array_throttle is None else str(group.array_throttle)
+            )
             lines.append(
                 f"  group {group.group_id}: runs={group.runs} "
                 f"gpus_per_run={group.gpus_per_task} throttle={throttle} "

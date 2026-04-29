@@ -31,7 +31,10 @@ def _validate_artifact_store_contract(spec: ExperimentSpec) -> None:
         raise ConfigContractError(
             f"`artifact_store.strategy` must be {options_sentence('artifact_store.strategy')}"
         )
-    if spec.artifact_store.fallback_strategy is not None and spec.artifact_store.fallback_strategy not in allowed:
+    if (
+        spec.artifact_store.fallback_strategy is not None
+        and spec.artifact_store.fallback_strategy not in allowed
+    ):
         raise ConfigContractError(
             "`artifact_store.fallback_strategy` must be "
             f"{options_sentence('artifact_store.strategy')}"

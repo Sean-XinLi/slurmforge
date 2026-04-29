@@ -18,11 +18,9 @@ class ConfigField:
     section: str
     level: str
     value_type: str = "value"
-    required: bool | None = None
+    required: bool | None = False
     templates: tuple[str, ...] = ()
     default: str | None = None
     options: tuple[ConfigOption, ...] = ()
     yaml_comment: str | None = None
-    validation_scope: str = "config"
-    example: str | None = None
     first_edit: bool = False

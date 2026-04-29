@@ -24,7 +24,9 @@ def _submitted_group_job_ids(batch_root: Path) -> dict[str, str]:
     }
 
 
-def _reconcile_batch_submission(batch_root: Path, *, missing_output_grace_seconds: int) -> None:
+def _reconcile_batch_submission(
+    batch_root: Path, *, missing_output_grace_seconds: int
+) -> None:
     group_job_ids = _submitted_group_job_ids(batch_root)
     if not group_job_ids:
         return
@@ -63,9 +65,15 @@ def run_finalizer(
 def main(argv: list[str] | None = None) -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Send a slurmforge terminal summary notification")
+    parser = argparse.ArgumentParser(
+        description="Send a slurmforge terminal summary notification"
+    )
     parser.add_argument("--root", required=True)
-    parser.add_argument("--event", required=True, choices=("batch_finished", "train_eval_pipeline_finished"))
+    parser.add_argument(
+        "--event",
+        required=True,
+        choices=("batch_finished", "train_eval_pipeline_finished"),
+    )
     parser.add_argument("--missing-output-grace-seconds", type=int, default=300)
     args = parser.parse_args(argv)
     raise SystemExit(

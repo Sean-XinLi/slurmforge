@@ -21,6 +21,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=TRAIN_TEMPLATES,
         default=DEFAULT_TRAIN_SCRIPT,
+        required=True,
         first_edit=True,
     ),
     ConfigField(
@@ -32,6 +33,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=EVAL_TEMPLATES,
         default=DEFAULT_EVAL_SCRIPT,
+        required=True,
         first_edit=True,
     ),
     ConfigField(
@@ -85,6 +87,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="path",
         templates=ALL_STARTER_TEMPLATES,
         default="template-specific",
+        required=None,
     ),
     ConfigField(
         path="stages.*.entry.command",
@@ -96,6 +99,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="command",
         templates=ALL_STARTER_TEMPLATES,
         default="contextual",
+        required=None,
     ),
     ConfigField(
         path="stages.*.entry.workdir",
@@ -107,6 +111,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="path",
         templates=ALL_STARTER_TEMPLATES,
         default=".",
+        required=False,
     ),
     ConfigField(
         path="stages.*.entry.type",
@@ -117,6 +122,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
         default="python_script",
+        required=False,
         options=(
             ConfigOption("python_script", "Run a Python file."),
             ConfigOption("command", "Run a shell command."),
@@ -131,6 +137,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         templates=ALL_STARTER_TEMPLATES,
         default="template-specific",
+        required=False,
         first_edit=True,
     ),
     ConfigField(
@@ -143,6 +150,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
         default="[]",
+        required=False,
     ),
     ConfigField(
         path="stages.*.before[].name",
@@ -153,6 +161,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
         default="",
+        required=False,
     ),
     ConfigField(
         path="stages.*.before[].run",
@@ -164,5 +173,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="command",
         templates=ALL_STARTER_TEMPLATES,
         default="required when before[] is present",
+        required=True,
     ),
 )

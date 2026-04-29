@@ -18,7 +18,9 @@ def _stage_counts(summary_input: NotificationSummaryInput) -> dict[str, dict[str
     return counts
 
 
-def _failed_stages(summary_input: NotificationSummaryInput) -> tuple[FailedStageSummary, ...]:
+def _failed_stages(
+    summary_input: NotificationSummaryInput,
+) -> tuple[FailedStageSummary, ...]:
     failed = []
     for status in summary_input.stage_statuses:
         if status.state == "success":
@@ -37,7 +39,9 @@ def _failed_stages(summary_input: NotificationSummaryInput) -> tuple[FailedStage
     return tuple(sorted(failed, key=lambda item: (item.run_id, item.stage_name)))
 
 
-def build_notification_summary(summary_input: NotificationSummaryInput) -> NotificationSummary:
+def build_notification_summary(
+    summary_input: NotificationSummaryInput,
+) -> NotificationSummary:
     return NotificationSummary(
         event=summary_input.event,
         root_kind=summary_input.root_kind,
@@ -59,7 +63,11 @@ def render_summary_text(summary: NotificationSummary) -> str:
         if summary.root_kind == "train_eval_pipeline"
         else "SlurmForge stage batch finished"
     )
-    object_label = "Train/eval pipeline" if summary.root_kind == "train_eval_pipeline" else "Stage batch"
+    object_label = (
+        "Train/eval pipeline"
+        if summary.root_kind == "train_eval_pipeline"
+        else "Stage batch"
+    )
     lines = [
         title,
         "",

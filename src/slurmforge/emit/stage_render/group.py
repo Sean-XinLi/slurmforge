@@ -19,7 +19,9 @@ def _instances_by_id(batch: StageBatchPlan) -> dict[str, StageInstancePlan]:
 def _runtime_for_group(batch: StageBatchPlan, group: GroupPlan) -> RuntimePlan:
     instances = _instances_by_id(batch)
     plans = {
-        stable_json(instances[stage_instance_id].runtime_plan): instances[stage_instance_id].runtime_plan
+        stable_json(instances[stage_instance_id].runtime_plan): instances[
+            stage_instance_id
+        ].runtime_plan
         for stage_instance_id in group.stage_instance_ids
     }
     if len(plans) != 1:
@@ -30,7 +32,9 @@ def _runtime_for_group(batch: StageBatchPlan, group: GroupPlan) -> RuntimePlan:
 def _environment_for_group(batch: StageBatchPlan, group: GroupPlan) -> EnvironmentPlan:
     instances = _instances_by_id(batch)
     plans = {
-        stable_json(instances[stage_instance_id].environment_plan): instances[stage_instance_id].environment_plan
+        stable_json(instances[stage_instance_id].environment_plan): instances[
+            stage_instance_id
+        ].environment_plan
         for stage_instance_id in group.stage_instance_ids
     }
     if len(plans) != 1:
@@ -38,7 +42,9 @@ def _environment_for_group(batch: StageBatchPlan, group: GroupPlan) -> Environme
     return next(iter(plans.values()))
 
 
-def render_stage_group_sbatch(batch: StageBatchPlan, group: GroupPlan, *, generation_id: str | None = None) -> str:
+def render_stage_group_sbatch(
+    batch: StageBatchPlan, group: GroupPlan, *, generation_id: str | None = None
+) -> str:
     resources = group.resources
     runtime_plan = _runtime_for_group(batch, group)
     environment_plan = _environment_for_group(batch, group)
@@ -77,7 +83,11 @@ def render_stage_group_sbatch(batch: StageBatchPlan, group: GroupPlan, *, genera
     for arg in resources.extra_sbatch_args:
         lines.append(f"#SBATCH {arg}")
     throttle = ""
-    if group.array_throttle is not None and group.array_throttle > 0 and group.array_throttle < group.array_size:
+    if (
+        group.array_throttle is not None
+        and group.array_throttle > 0
+        and group.array_throttle < group.array_size
+    ):
         throttle = f"%{group.array_throttle}"
     lines.extend(
         [

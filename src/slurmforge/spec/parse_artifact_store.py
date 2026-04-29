@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..config_schema import reject_unknown_config_keys
 from .models import ArtifactStoreSpec
 from .parse_common import optional_mapping
 
 
 def parse_artifact_store(raw: Any) -> ArtifactStoreSpec:
     data = optional_mapping(raw, "artifact_store")
+    reject_unknown_config_keys(data, parent="artifact_store")
     fallback = data.get("fallback_strategy")
     return ArtifactStoreSpec(
         strategy=str(data.get("strategy") or "copy"),

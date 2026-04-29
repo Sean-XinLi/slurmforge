@@ -34,6 +34,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
         default="contextual",
+        required=None,
     ),
     ConfigField(
         path="runs.cases",
@@ -45,6 +46,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="list",
         templates=ALL_STARTER_TEMPLATES,
         default="contextual",
+        required=None,
     ),
     ConfigField(
         path="runs.cases[].name",
@@ -55,6 +57,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
         default="required for cases and matrix",
+        required=True,
     ),
     ConfigField(
         path="runs.cases[].set",
@@ -66,6 +69,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
         default="{}",
+        required=False,
     ),
     ConfigField(
         path="runs.cases[].axes",
@@ -77,5 +81,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
         default="contextual",
+        required=None,
     ),
 )

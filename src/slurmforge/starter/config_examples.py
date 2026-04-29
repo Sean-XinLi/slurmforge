@@ -157,7 +157,7 @@ def render_advanced_example() -> str:
                   extra_sbatch_args:
                     - --exclusive
                 gpu_sizing:
-                  estimator: static_memory
+                  estimator: heuristic
                   target_memory_gb: 120
                   min_gpus_per_job: 2
                   max_gpus_per_job: 16

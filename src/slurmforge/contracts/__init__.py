@@ -16,7 +16,11 @@ from .inputs import (
     resolved_kind_matches_expectation,
     resolved_payload_present,
 )
-from .notifications import NotificationRunStatusInput, NotificationStageStatusInput, NotificationSummaryInput
+from .notifications import (
+    NotificationRunStatusInput,
+    NotificationStageStatusInput,
+    NotificationSummaryInput,
+)
 from .outputs import (
     FileOutputDiscoveryRule,
     OutputDiscoveryRule,

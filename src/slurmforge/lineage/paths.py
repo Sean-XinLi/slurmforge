@@ -1,4 +1,5 @@
 """Lineage index file path + low-level read/write."""
+
 from __future__ import annotations
 
 from pathlib import Path
