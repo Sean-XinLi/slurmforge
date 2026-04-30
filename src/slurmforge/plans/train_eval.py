@@ -34,4 +34,7 @@ class TrainEvalPipelinePlan:
     spec_snapshot_digest: str
     pipeline_kind: str
     notification_plan: NotificationPlan
+    release_policy: str
+    dispatch_window_size: int = 1
+    dispatch_window_seconds: int = 0
     schema_version: int = SchemaVersion.PLAN

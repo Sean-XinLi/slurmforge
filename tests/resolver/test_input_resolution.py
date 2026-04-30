@@ -19,9 +19,9 @@ class InputResolutionTests(StageBatchSystemTestCase):
         control_source = "\n".join(
             Path(f"src/slurmforge/control/{name}").read_text(encoding="utf-8")
             for name in (
-                "eval_materialization.py",
-                "eval_selection.py",
-                "train_transition.py",
+                "dependencies.py",
+                "dispatch_queue.py",
+                "instance_reconcile.py",
             )
         )
         self.assertNotIn("upstream_bindings_from_train_batch", control_source)

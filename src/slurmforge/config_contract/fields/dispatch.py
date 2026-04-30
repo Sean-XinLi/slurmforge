@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import Final
 
 from ..default_values import DEFAULT_ENVIRONMENT_NAME
-from ..option_sets import DISPATCH_POLICIES, DISPATCH_POLICY_SERIALIZE_GROUPS
+from ..option_sets import (
+    DISPATCH_POLICIES,
+    DISPATCH_POLICY_SERIALIZE_GROUPS,
+    RELEASE_POLICIES,
+    RELEASE_POLICY_PER_RUN,
+)
 from ..workflows import ALL_STARTER_TEMPLATES, TEMPLATE_TRAIN_EVAL
 from ..models import ConfigField
 
@@ -28,6 +33,39 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         templates=ALL_STARTER_TEMPLATES,
         default_value=DISPATCH_POLICY_SERIALIZE_GROUPS,
         options=DISPATCH_POLICIES,
+    ),
+    ConfigField(
+        path="dispatch.release_policy",
+        title="Release policy",
+        short_help="Controls when downstream stage instances become eligible for dispatch.",
+        when_to_change="Use per_run for streaming eval, per_stage for all-train-then-eval behavior, or per_group/windowed for batched release.",
+        section="Dispatch",
+        level="intermediate",
+        templates=ALL_STARTER_TEMPLATES,
+        default_value=RELEASE_POLICY_PER_RUN,
+        options=RELEASE_POLICIES,
+    ),
+    ConfigField(
+        path="dispatch.window_size",
+        title="Windowed release size",
+        short_help="Number of ready downstream stage instances that trigger a windowed dispatch.",
+        when_to_change="Use this with release_policy=windowed to batch streaming eval submissions.",
+        section="Dispatch",
+        level="intermediate",
+        templates=ALL_STARTER_TEMPLATES,
+        default_value=1,
+        value_type="integer",
+    ),
+    ConfigField(
+        path="dispatch.window_seconds",
+        title="Windowed release wait",
+        short_help="Maximum seconds a ready downstream stage instance waits before windowed dispatch.",
+        when_to_change="Use this with release_policy=windowed when slow trickle completion should still flush eval work.",
+        section="Dispatch",
+        level="intermediate",
+        templates=ALL_STARTER_TEMPLATES,
+        default_value=0,
+        value_type="integer",
     ),
     ConfigField(
         path="orchestration.control",

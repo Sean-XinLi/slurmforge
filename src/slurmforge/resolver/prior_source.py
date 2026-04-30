@@ -32,7 +32,7 @@ def resolve_stage_inputs_from_prior_source(
         resolution = {"kind": source.kind, "state": "unresolved"}
         if source.kind == "upstream_output":
             upstream_stage, output_name = source.stage, source.output
-            lineage_ref = f"{run.run_id}.{upstream_stage}:{output_name}"
+            lineage_ref = f"{upstream_stage}/{run.run_id}:{output_name}"
             resolved = find_upstream_output(
                 source_root,
                 lineage_ref,

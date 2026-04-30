@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..io import write_json
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..workflow_contract import (
-    EVAL_SHARD_GATE,
+    DISPATCH_CATCHUP_GATE,
     FINAL_GATE,
     PIPELINE_GATES,
-    TRAIN_GROUP_GATE,
+    STAGE_INSTANCE_GATE,
 )
 from .sbatch_helpers import _environment_lines, _job_name, _q
 from .stage_render.headers import render_control_job_headers
@@ -21,39 +22,70 @@ def _gate_logs_root(plan: TrainEvalPipelinePlan) -> Path:
     return Path(plan.root_dir) / "control" / "logs"
 
 
-def _validate_gate(gate: str, *, group_id: str | None) -> str:
+def _gate_task_map_root(plan: TrainEvalPipelinePlan) -> Path:
+    return Path(plan.root_dir) / "control" / "gates" / "task_maps"
+
+
+def _safe_id(value: str) -> str:
+    return value.replace("/", "_").replace(":", "_")
+
+
+def _validate_gate(
+    gate: str, *, group_id: str | None, stage_instance_id: str | None = None
+) -> str:
     if gate not in PIPELINE_GATES:
         raise ValueError(f"Unsupported pipeline gate: {gate}")
-    if gate in {TRAIN_GROUP_GATE, EVAL_SHARD_GATE} and not group_id:
-        raise ValueError(f"`group_id` is required for pipeline gate `{gate}`")
-    if gate == FINAL_GATE and group_id:
-        raise ValueError("final pipeline gate does not accept `group_id`")
+    if gate == STAGE_INSTANCE_GATE and not stage_instance_id:
+        raise ValueError("stage-instance gate requires `stage_instance_id`")
+    if gate == FINAL_GATE and (group_id or stage_instance_id):
+        raise ValueError("final pipeline gate does not accept instance or group ids")
     return gate
 
 
-def _gate_file_stem(gate: str, group_id: str | None) -> str:
-    if gate == TRAIN_GROUP_GATE:
-        return f"train_{group_id}_gate"
-    if gate == EVAL_SHARD_GATE:
-        return f"eval_shard_{group_id}_gate"
+def _gate_file_stem(
+    gate: str, group_id: str | None, stage_instance_id: str | None = None
+) -> str:
+    if gate == STAGE_INSTANCE_GATE:
+        return f"{_safe_id(str(stage_instance_id))}_gate"
+    if gate == DISPATCH_CATCHUP_GATE:
+        suffix = "" if group_id is None else f"_{_safe_id(group_id)}"
+        return f"dispatch_catchup{suffix}_gate"
     return "final_gate"
 
 
-def _gate_job_parts(gate: str, group_id: str | None) -> tuple[str, ...]:
+def _gate_job_parts(
+    gate: str, group_id: str | None, stage_instance_id: str | None = None
+) -> tuple[str, ...]:
     if gate == FINAL_GATE:
         return ("final", "gate")
+    if gate == STAGE_INSTANCE_GATE:
+        return ("instance", _safe_id(str(stage_instance_id)), "gate")
+    if gate == DISPATCH_CATCHUP_GATE:
+        if group_id:
+            return ("dispatch", _safe_id(group_id), "catchup")
+        return ("dispatch", "catchup")
     return (gate.replace("-", "_"), str(group_id), "gate")
 
 
 def render_pipeline_gate_sbatch(
-    plan: TrainEvalPipelinePlan, gate: str, *, group_id: str | None = None
+    plan: TrainEvalPipelinePlan,
+    gate: str,
+    *,
+    group_id: str | None = None,
+    stage_instance_id: str | None = None,
 ) -> str:
-    gate = _validate_gate(gate, group_id=group_id)
+    gate = _validate_gate(
+        gate, group_id=group_id, stage_instance_id=stage_instance_id
+    )
     control_plan = plan.control_plan
     python_bin = control_plan.runtime_plan.executor.python.bin
-    stem = _gate_file_stem(gate, group_id)
+    stem = _gate_file_stem(gate, group_id, stage_instance_id)
     lines = render_control_job_headers(
-        job_name=_job_name("sforge", plan.pipeline_id, *_gate_job_parts(gate, group_id)),
+        job_name=_job_name(
+            "sforge",
+            plan.pipeline_id,
+            *_gate_job_parts(gate, group_id, stage_instance_id),
+        ),
         stdout_path=_gate_logs_root(plan) / f"{stem}-%j.out",
         stderr_path=_gate_logs_root(plan) / f"{stem}-%j.err",
         resources=control_plan.resources,
@@ -62,8 +94,11 @@ def render_pipeline_gate_sbatch(
         f'{_q(python_bin)} -m slurmforge.control.gate_runtime --pipeline-root "${{PIPELINE_ROOT}}" '
         f"--gate {_q(gate)}"
     )
-    if group_id:
-        command += f" --group-id {_q(group_id)}"
+    if gate == STAGE_INSTANCE_GATE:
+        command += (
+            " --event stage-instance-finished"
+            f" --stage-instance-id {_q(str(stage_instance_id))}"
+        )
     lines.extend(
         [
             "set -euo pipefail",
@@ -77,18 +112,113 @@ def render_pipeline_gate_sbatch(
 
 
 def write_pipeline_gate_submit_file(
-    plan: TrainEvalPipelinePlan, gate: str, *, group_id: str | None = None
+    plan: TrainEvalPipelinePlan,
+    gate: str,
+    *,
+    group_id: str | None = None,
+    stage_instance_id: str | None = None,
 ) -> Path:
-    gate = _validate_gate(gate, group_id=group_id)
-    path = _gate_root(plan) / f"{_gate_file_stem(gate, group_id)}.sbatch"
+    gate = _validate_gate(
+        gate, group_id=group_id, stage_instance_id=stage_instance_id
+    )
+    path = (
+        _gate_root(plan)
+        / f"{_gate_file_stem(gate, group_id, stage_instance_id)}.sbatch"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     _gate_logs_root(plan).mkdir(parents=True, exist_ok=True)
     path.write_text(
-        render_pipeline_gate_sbatch(plan, gate, group_id=group_id),
+        render_pipeline_gate_sbatch(
+            plan,
+            gate,
+            group_id=group_id,
+            stage_instance_id=stage_instance_id,
+        ),
         encoding="utf-8",
     )
     path.chmod(0o755)
     return path
+
+
+def write_stage_instance_gate_array_submit_file(
+    plan: TrainEvalPipelinePlan,
+    *,
+    submission_id: str,
+    group_id: str,
+    stage_instance_ids: tuple[str, ...],
+) -> Path:
+    if not stage_instance_ids:
+        raise ValueError("stage instance gate array requires at least one instance")
+    task_map_path = (
+        _gate_task_map_root(plan)
+        / f"{_safe_id(submission_id)}_{_safe_id(group_id)}.json"
+    )
+    write_json(
+        task_map_path,
+        {
+            "submission_id": submission_id,
+            "group_id": group_id,
+            "tasks": {
+                str(index): stage_instance_id
+                for index, stage_instance_id in enumerate(stage_instance_ids)
+            },
+        },
+    )
+    path = (
+        _gate_root(plan)
+        / f"{_safe_id(submission_id)}_{_safe_id(group_id)}_instance_gate.sbatch"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    _gate_logs_root(plan).mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        render_stage_instance_gate_array_sbatch(
+            plan,
+            submission_id=submission_id,
+            group_id=group_id,
+            task_map_path=task_map_path,
+            array_size=len(stage_instance_ids),
+        ),
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+    return path
+
+
+def render_stage_instance_gate_array_sbatch(
+    plan: TrainEvalPipelinePlan,
+    *,
+    submission_id: str,
+    group_id: str,
+    task_map_path: Path,
+    array_size: int,
+) -> str:
+    control_plan = plan.control_plan
+    python_bin = control_plan.runtime_plan.executor.python.bin
+    stem = f"{_safe_id(submission_id)}_{_safe_id(group_id)}_instance_gate"
+    lines = render_control_job_headers(
+        job_name=_job_name(
+            "sforge", plan.pipeline_id, "instance", _safe_id(submission_id), group_id
+        ),
+        stdout_path=_gate_logs_root(plan) / f"{stem}-%A_%a.out",
+        stderr_path=_gate_logs_root(plan) / f"{stem}-%A_%a.err",
+        resources=control_plan.resources,
+    )
+    lines.extend(
+        [
+            f"#SBATCH --array=0-{array_size - 1}",
+            "",
+            "set -euo pipefail",
+            *_environment_lines(control_plan.environment_plan),
+            f"PIPELINE_ROOT={_q(plan.root_dir)}",
+            f"TASK_MAP={_q(str(task_map_path))}",
+            f"{_q(python_bin)} -m slurmforge.control.gate_runtime "
+            '--pipeline-root "${PIPELINE_ROOT}" '
+            f"--gate {_q(STAGE_INSTANCE_GATE)} --event stage-instance-finished "
+            '--task-map "${TASK_MAP}"',
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def render_pipeline_gate_barrier_sbatch(

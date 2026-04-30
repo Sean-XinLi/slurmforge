@@ -7,6 +7,9 @@ from dataclasses import dataclass, field
 class DispatchSpec:
     max_available_gpus: int = 0
     overflow_policy: str = ""
+    release_policy: str = ""
+    window_size: int = 1
+    window_seconds: int = 0
 
 
 @dataclass(frozen=True)

@@ -8,11 +8,7 @@ from ..emit.pipeline_gate import (
     write_pipeline_gate_barrier_file,
     write_pipeline_gate_submit_file,
 )
-from ..workflow_contract import (
-    EVAL_SHARD_GATE,
-    FINAL_GATE,
-    TRAIN_GROUP_GATE,
-)
+from ..workflow_contract import DISPATCH_CATCHUP_GATE, FINAL_GATE, STAGE_INSTANCE_GATE
 from ..errors import ConfigContractError
 from ..control_paths import gate_ledger_path
 from ..io import SchemaVersion, read_json, utc_now, write_json
@@ -33,10 +29,10 @@ class GateSubmissionRecord:
 
 
 def gate_ledger_key(gate: str, *, group_id: str | None = None) -> str:
-    if gate == TRAIN_GROUP_GATE:
-        return f"train_group:{group_id}"
-    if gate == EVAL_SHARD_GATE:
-        return f"eval_shard:{group_id}"
+    if gate == STAGE_INSTANCE_GATE:
+        return f"stage_instance:{group_id}"
+    if gate == DISPATCH_CATCHUP_GATE:
+        return f"dispatch_catchup:{group_id or 'all'}"
     if gate == FINAL_GATE:
         return FINAL_GATE
     raise ConfigContractError(f"Unsupported pipeline gate: {gate}")

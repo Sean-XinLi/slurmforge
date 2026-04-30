@@ -64,7 +64,10 @@ def set_workflow_status(
         reason=reason,
         gate_jobs=submitted_gate_records(pipeline_root),
         stage_jobs=submitted_stage_job_ids(pipeline_root),
-        train_groups=workflow_state_to_dict(state)["train_groups"],
+        instances=workflow_state_to_dict(state)["instances"],
+        dependencies=workflow_state_to_dict(state)["dependencies"],
+        dispatch_queue=workflow_state_to_dict(state)["dispatch_queue"],
+        submissions=workflow_state_to_dict(state)["submissions"],
         final_gate=workflow_state_to_dict(state)["final_gate"],
     )
 

@@ -32,12 +32,19 @@ def _with_current_python(extra: dict | None = None) -> dict:
     return apply_overlay(runtime, extra or {})
 
 
+def _grid_runs(count: int) -> dict:
+    return {
+        "runs": {
+            "type": "grid",
+            "axes": {"train.entry.args.lr": [0.001 + index for index in range(count)]},
+        }
+    }
+
+
 class PipelineControlTests(StageBatchSystemTestCase):
-    def test_initial_submit_creates_short_lived_train_gates_without_gpu_partition(
-        self,
-    ) -> None:
+    def test_initial_submit_records_instances_and_dispatch_submission(self) -> None:
         from slurmforge.control.workflow import submit_initial_pipeline
-        from slurmforge.workflow_contract import TRAIN_GROUP_GATE
+        from slurmforge.workflow_contract import STAGE_INSTANCE_GATE
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -45,7 +52,9 @@ class PipelineControlTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(
                 write_demo_project(
                     root,
-                    extra={"orchestration": {"control": {"partition": None}}},
+                    extra=_with_current_python(
+                        {"orchestration": {"control": {"partition": None}}}
+                    ),
                 )
             )
             plan = compile_train_eval_pipeline_plan(spec)
@@ -56,42 +65,44 @@ class PipelineControlTests(StageBatchSystemTestCase):
             workflow_state = json.loads(
                 (pipeline_root / "control" / "workflow_state.json").read_text()
             )
-            ledger = json.loads(
-                (pipeline_root / "control" / "gate_ledger.json").read_text()
-            )
+            train_instance = plan.stage_batches["train"].stage_instances[0]
             sbatch = render_pipeline_gate_sbatch(
                 plan,
-                TRAIN_GROUP_GATE,
-                group_id=plan.stage_batches["train"].group_plans[0].group_id,
+                STAGE_INSTANCE_GATE,
+                stage_instance_id=train_instance.stage_instance_id,
             )
 
             self.assertEqual(result.state, "streaming")
-            self.assertIn("train_group:group_001", ledger["gates"])
-            self.assertEqual(
-                set(workflow_state),
-                {
-                    "schema_version",
-                    "pipeline_id",
-                    "pipeline_kind",
-                    "state",
-                    "current_stage",
-                    "train_groups",
-                    "final_gate",
-                },
+            self.assertEqual(set(workflow_state["submissions"]), {"train_initial"})
+            self.assertIn(train_instance.stage_instance_id, workflow_state["instances"])
+            self.assertIn(
+                plan.stage_batches["eval"].stage_instances[0].stage_instance_id,
+                workflow_state["instances"],
             )
+            self.assertEqual(workflow_state["dispatch_queue"], [])
+            self.assertNotIn("train_groups", workflow_state)
             self.assertNotIn("#SBATCH --partition=gpu", sbatch)
             self.assertNotIn("#SBATCH --partition", sbatch)
 
-    def test_train_group_gate_streams_eval_shard_and_queues_final_gate(self) -> None:
+    def test_per_run_release_dispatches_one_eval_while_other_train_tasks_run(
+        self,
+    ) -> None:
         from slurmforge.control.workflow import advance_pipeline_once
         from slurmforge.control.workflow import submit_initial_pipeline
-        from slurmforge.workflow_contract import TRAIN_GROUP_GATE
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(
-                write_demo_project(root, extra=_with_current_python())
+                write_demo_project(
+                    root,
+                    extra=_with_current_python(
+                        apply_overlay(
+                            _grid_runs(4),
+                            {"dispatch": {"max_available_gpus": 4}},
+                        )
+                    ),
+                )
             )
             plan = compile_train_eval_pipeline_plan(spec)
             materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
@@ -101,64 +112,248 @@ class PipelineControlTests(StageBatchSystemTestCase):
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             client.set_array_task_state(train_job_id, 0, "COMPLETED")
+            for task_index in (1, 2, 3):
+                client.set_array_task_state(train_job_id, task_index, "RUNNING")
 
+            first_train = plan.stage_batches["train"].stage_instances[0]
+            first_eval = plan.stage_batches["eval"].stage_instances[0]
             result = advance_pipeline_once(
                 Path(plan.root_dir),
-                gate=TRAIN_GROUP_GATE,
-                group_id="group_001",
+                event="stage-instance-finished",
+                stage_instance_id=first_train.stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            advance_pipeline_once(
+                Path(plan.root_dir),
+                event="stage-instance-finished",
+                stage_instance_id=first_train.stage_instance_id,
                 client=client,
                 missing_output_grace_seconds=0,
             )
 
-            pipeline_root = Path(plan.root_dir)
-            eval_shard = (
-                pipeline_root / "stage_batches" / "eval" / "shards" / "group_001"
-            )
-            ledger = json.loads(
-                (pipeline_root / "control" / "gate_ledger.json").read_text()
-            )
-            catalog = json.loads(
-                (pipeline_root / "execution" / "stage_catalog.json").read_text()
-            )
-            runtime_batches = json.loads(
-                (pipeline_root / "execution" / "runtime_batches.json").read_text()
-            )
             workflow_state = json.loads(
-                (pipeline_root / "control" / "workflow_state.json").read_text()
+                (Path(plan.root_dir) / "control" / "workflow_state.json").read_text()
+            )
+            self.assertEqual(result.state, "streaming")
+            self.assertEqual(len(client.submissions), 6)
+            self.assertEqual(
+                workflow_state["instances"][first_eval.stage_instance_id]["state"],
+                "submitted",
+            )
+            for eval_instance in plan.stage_batches["eval"].stage_instances[1:]:
+                self.assertEqual(
+                    workflow_state["instances"][eval_instance.stage_instance_id][
+                        "state"
+                    ],
+                    "planned",
+                )
+
+    def test_failed_train_instance_blocks_matching_eval_only(self) -> None:
+        from slurmforge.control.workflow import advance_pipeline_once
+        from slurmforge.control.workflow import submit_initial_pipeline
+        from tests.support.slurm import FakeSlurmClient
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(
+                write_demo_project(
+                    root,
+                    extra=_with_current_python(
+                        apply_overlay(
+                            _grid_runs(2),
+                            {"dispatch": {"max_available_gpus": 2}},
+                        )
+                    ),
+                )
+            )
+            plan = compile_train_eval_pipeline_plan(spec)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
+            client = FakeSlurmClient()
+            submit_initial_pipeline(plan, client=client)
+            train_job_id = client.submissions[0].job_id
+            train_root = Path(plan.stage_batches["train"].submission_root)
+            self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
+            client.set_array_task_state(train_job_id, 0, "COMPLETED")
+            client.set_array_task_state(train_job_id, 1, "FAILED")
+
+            advance_pipeline_once(
+                Path(plan.root_dir),
+                event="stage-instance-finished",
+                stage_instance_id=plan.stage_batches["train"]
+                .stage_instances[0]
+                .stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
             )
 
-            self.assertEqual(result.state, "final_gate_submitted")
-            self.assertTrue((eval_shard / "selected_batch_plan.json").exists())
+            workflow_state = json.loads(
+                (Path(plan.root_dir) / "control" / "workflow_state.json").read_text()
+            )
+            eval_instances = plan.stage_batches["eval"].stage_instances
             self.assertEqual(
-                set(ledger["gates"]),
-                {"train_group:group_001", "eval_shard:group_001", "final"},
+                workflow_state["instances"][eval_instances[0].stage_instance_id][
+                    "state"
+                ],
+                "submitted",
             )
             self.assertEqual(
-                [
-                    (batch["stage_name"], batch["role"], batch["shard_id"])
-                    for batch in catalog["batches"]
+                workflow_state["instances"][eval_instances[1].stage_instance_id][
+                    "state"
                 ],
-                [
-                    ("train", "pipeline_stage", ""),
-                    ("eval", "pipeline_stage", ""),
-                ],
+                "blocked",
+            )
+
+    def test_per_group_release_waits_for_whole_train_group(self) -> None:
+        from slurmforge.control.workflow import advance_pipeline_once
+        from slurmforge.control.workflow import submit_initial_pipeline
+        from tests.support.slurm import FakeSlurmClient
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(
+                write_demo_project(
+                    root,
+                    extra=_with_current_python(
+                        apply_overlay(
+                            _grid_runs(2),
+                            {
+                                "dispatch": {
+                                    "max_available_gpus": 2,
+                                    "release_policy": "per_group",
+                                }
+                            },
+                        )
+                    ),
+                )
+            )
+            plan = compile_train_eval_pipeline_plan(spec)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
+            client = FakeSlurmClient()
+            submit_initial_pipeline(plan, client=client)
+            train_job_id = client.submissions[0].job_id
+            train_root = Path(plan.stage_batches["train"].submission_root)
+            self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
+            client.set_array_task_state(train_job_id, 0, "COMPLETED")
+            client.set_array_task_state(train_job_id, 1, "RUNNING")
+
+            advance_pipeline_once(
+                Path(plan.root_dir),
+                event="stage-instance-finished",
+                stage_instance_id=plan.stage_batches["train"]
+                .stage_instances[0]
+                .stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            workflow_state = json.loads(
+                (Path(plan.root_dir) / "control" / "workflow_state.json").read_text()
+            )
+            for eval_instance in plan.stage_batches["eval"].stage_instances:
+                self.assertEqual(
+                    workflow_state["instances"][eval_instance.stage_instance_id][
+                        "state"
+                    ],
+                    "planned",
+                )
+
+            self.assertEqual(execute_stage_task(train_root, 1, 1), 0)
+            client.set_array_task_state(train_job_id, 1, "COMPLETED")
+            advance_pipeline_once(
+                Path(plan.root_dir),
+                event="stage-instance-finished",
+                stage_instance_id=plan.stage_batches["train"]
+                .stage_instances[1]
+                .stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            workflow_state = json.loads(
+                (Path(plan.root_dir) / "control" / "workflow_state.json").read_text()
+            )
+            for eval_instance in plan.stage_batches["eval"].stage_instances:
+                self.assertEqual(
+                    workflow_state["instances"][eval_instance.stage_instance_id][
+                        "state"
+                    ],
+                    "submitted",
+                )
+
+    def test_windowed_release_batches_ready_eval_instances(self) -> None:
+        from slurmforge.control.workflow import advance_pipeline_once
+        from slurmforge.control.workflow import submit_initial_pipeline
+        from tests.support.slurm import FakeSlurmClient
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(
+                write_demo_project(
+                    root,
+                    extra=_with_current_python(
+                        apply_overlay(
+                            _grid_runs(2),
+                            {
+                                "dispatch": {
+                                    "max_available_gpus": 2,
+                                    "release_policy": "windowed",
+                                    "window_size": 2,
+                                    "window_seconds": 999,
+                                }
+                            },
+                        )
+                    ),
+                )
+            )
+            plan = compile_train_eval_pipeline_plan(spec)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
+            client = FakeSlurmClient()
+            submit_initial_pipeline(plan, client=client)
+            train_job_id = client.submissions[0].job_id
+            train_root = Path(plan.stage_batches["train"].submission_root)
+            self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
+            client.set_array_task_state(train_job_id, 0, "COMPLETED")
+            client.set_array_task_state(train_job_id, 1, "RUNNING")
+
+            advance_pipeline_once(
+                Path(plan.root_dir),
+                event="stage-instance-finished",
+                stage_instance_id=plan.stage_batches["train"]
+                .stage_instances[0]
+                .stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            workflow_state = json.loads(
+                (Path(plan.root_dir) / "control" / "workflow_state.json").read_text()
             )
             self.assertEqual(
-                [
-                    (batch["stage_name"], batch["role"], batch["shard_id"])
-                    for batch in runtime_batches["batches"]
-                ],
-                [
-                    ("train", "pipeline_entry", ""),
-                    ("eval", "eval_shard", "group_001"),
-                ],
+                workflow_state["instances"][
+                    plan.stage_batches["eval"].stage_instances[0].stage_instance_id
+                ]["state"],
+                "ready",
             )
-            group = workflow_state["train_groups"]["group_001"]
-            self.assertEqual(
-                group["terminal_dependency_gate_key"], "eval_shard:group_001"
+
+            self.assertEqual(execute_stage_task(train_root, 1, 1), 0)
+            client.set_array_task_state(train_job_id, 1, "COMPLETED")
+            advance_pipeline_once(
+                Path(plan.root_dir),
+                event="stage-instance-finished",
+                stage_instance_id=plan.stage_batches["train"]
+                .stage_instances[1]
+                .stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
             )
-            self.assertNotIn("train_job_id", group)
-            self.assertNotIn("eval_job_ids", group)
+            workflow_state = json.loads(
+                (Path(plan.root_dir) / "control" / "workflow_state.json").read_text()
+            )
+            for eval_instance in plan.stage_batches["eval"].stage_instances:
+                self.assertEqual(
+                    workflow_state["instances"][eval_instance.stage_instance_id][
+                        "state"
+                    ],
+                    "submitted",
+                )
 
     def test_train_submission_reuses_partial_stage_submission_without_duplicate(
         self,
@@ -207,101 +402,3 @@ class PipelineControlTests(StageBatchSystemTestCase):
             ]
             self.assertIn(f"{second_group}.sbatch", stage_submissions)
             self.assertNotIn(f"{first_group}.sbatch", stage_submissions)
-
-    def test_final_gate_sends_one_pipeline_terminal_notification(self) -> None:
-        from slurmforge.control.workflow import advance_pipeline_once
-        from slurmforge.control.workflow import submit_initial_pipeline
-        from slurmforge.notifications.records import read_notification_record
-        from slurmforge.workflow_contract import EVAL_SHARD_GATE, FINAL_GATE
-        from slurmforge.workflow_contract import TRAIN_GROUP_GATE
-        from tests.support.slurm import FakeSlurmClient
-
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            cfg_path = write_demo_project(
-                root,
-                extra=_with_current_python(
-                    {
-                        "notifications": {
-                            "email": {
-                                "enabled": True,
-                                "recipients": ["you@example.com"],
-                                "events": ["train_eval_pipeline_finished"],
-                                "when": "afterany",
-                            }
-                        },
-                    }
-                ),
-            )
-            spec = load_experiment_spec(cfg_path)
-            plan = compile_train_eval_pipeline_plan(spec)
-            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
-            pipeline_root = Path(plan.root_dir)
-            client = FakeSlurmClient()
-            submit_initial_pipeline(plan, client=client)
-            train_job_id = client.submissions[0].job_id
-            train_root = Path(plan.stage_batches["train"].submission_root)
-            self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
-            client.set_array_task_state(train_job_id, 0, "COMPLETED")
-            advance_pipeline_once(
-                pipeline_root,
-                gate=TRAIN_GROUP_GATE,
-                group_id="group_001",
-                client=client,
-                missing_output_grace_seconds=0,
-            )
-            eval_shard = (
-                pipeline_root / "stage_batches" / "eval" / "shards" / "group_001"
-            )
-            eval_job_id = next(
-                submission.job_id
-                for submission in client.submissions
-                if submission.path.is_relative_to(eval_shard / "submit")
-            )
-            self.assertEqual(execute_stage_task(eval_shard, 1, 0), 0)
-            client.set_array_task_state(eval_job_id, 0, "COMPLETED")
-            advance_pipeline_once(
-                pipeline_root,
-                gate=EVAL_SHARD_GATE,
-                group_id="group_001",
-                client=client,
-                missing_output_grace_seconds=0,
-            )
-
-            advance_pipeline_once(
-                pipeline_root,
-                gate=FINAL_GATE,
-                client=client,
-                missing_output_grace_seconds=0,
-            )
-            advance_pipeline_once(
-                pipeline_root,
-                gate=FINAL_GATE,
-                client=client,
-                missing_output_grace_seconds=0,
-            )
-
-            notify_submissions = [
-                submission
-                for submission in client.submissions
-                if submission.path.name == "notify_train_eval_pipeline_finished.sbatch"
-            ]
-            self.assertEqual(len(notify_submissions), 1)
-            final_gate_submission = next(
-                submission
-                for submission in client.submissions
-                if submission.path.name == "final_gate.sbatch"
-            )
-            self.assertEqual(
-                notify_submissions[0].options.dependency,
-                f"afterany:{final_gate_submission.job_id}",
-            )
-            self.assertEqual(notify_submissions[0].options.mail_user, "you@example.com")
-            self.assertEqual(notify_submissions[0].options.mail_type, "END")
-            record = read_notification_record(
-                pipeline_root, "train_eval_pipeline_finished"
-            )
-            assert record is not None
-            self.assertEqual(record.state, "submitted")
-            self.assertEqual(record.recipients, ("you@example.com",))
-            self.assertEqual(record.scheduler_job_ids, (notify_submissions[0].job_id,))

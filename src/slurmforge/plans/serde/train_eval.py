@@ -53,4 +53,7 @@ def train_eval_pipeline_plan_from_dict(
         spec_snapshot_digest=str(payload["spec_snapshot_digest"]),
         pipeline_kind=pipeline_kind,
         notification_plan=notification_plan_from_dict(payload["notification_plan"]),
+        release_policy=str(payload.get("release_policy") or "per_run"),
+        dispatch_window_size=int(payload.get("dispatch_window_size") or 1),
+        dispatch_window_seconds=int(payload.get("dispatch_window_seconds") or 0),
     )

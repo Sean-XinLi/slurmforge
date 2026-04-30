@@ -6,14 +6,14 @@ TRAIN_EVAL_STAGE_ORDER = (TRAIN_STAGE, EVAL_STAGE)
 
 TRAIN_EVAL_PIPELINE_KIND = "train_eval_pipeline"
 
-TRAIN_GROUP_GATE = "train-group"
-EVAL_SHARD_GATE = "eval-shard"
+STAGE_INSTANCE_GATE = "stage-instance"
+DISPATCH_CATCHUP_GATE = "dispatch-catchup"
 FINAL_GATE = "final"
-PIPELINE_GATES = (TRAIN_GROUP_GATE, EVAL_SHARD_GATE, FINAL_GATE)
+PIPELINE_GATES = (STAGE_INSTANCE_GATE, DISPATCH_CATCHUP_GATE, FINAL_GATE)
 
 BATCH_ROLE_PIPELINE_STAGE = "pipeline_stage"
 BATCH_ROLE_PIPELINE_ENTRY = "pipeline_entry"
-BATCH_ROLE_EVAL_SHARD = "eval_shard"
+BATCH_ROLE_DISPATCH = "dispatch"
 
 WORKFLOW_PLANNED = "planned"
 WORKFLOW_STREAMING = "streaming"
@@ -27,16 +27,5 @@ WORKFLOW_TERMINAL_STATES = (
     WORKFLOW_FAILED,
     WORKFLOW_BLOCKED,
 )
-
-TRAIN_GROUP_TRAIN_SUBMITTED = "train_submitted"
-TRAIN_GROUP_GATE_SUBMITTED = "train_group_gate_submitted"
-TRAIN_GROUP_WAITING_TRAIN = "waiting_train"
-TRAIN_GROUP_RECONCILED = "train_reconciled"
-TRAIN_GROUP_EVAL_MATERIALIZED = "eval_materialized"
-TRAIN_GROUP_EVAL_GATE_SUBMITTED = "eval_shard_gate_submitted"
-TRAIN_GROUP_EVAL_MISSING = "eval_missing"
-TRAIN_GROUP_WAITING_EVAL = "waiting_eval"
-TRAIN_GROUP_EVAL_SKIPPED = "eval_skipped"
-TRAIN_GROUP_TERMINAL = "terminal"
 
 __all__ = [name for name in globals() if name.isupper()]

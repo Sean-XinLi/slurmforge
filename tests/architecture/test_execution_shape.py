@@ -64,23 +64,28 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
     def test_train_eval_control_runtime_is_split_by_responsibility(self) -> None:
         control_root = Path("src/slurmforge/control")
         self.assertFalse((control_root / "eval_shard.py").exists())
-        for name in (
-            "eval_blocking.py",
+        for removed in (
+            "auto_advance.py",
             "eval_materialization.py",
-            "eval_reconcile.py",
             "eval_selection.py",
             "eval_transition.py",
             "final_gate.py",
+            "train_group.py",
+            "train_transition.py",
+        ):
+            self.assertFalse((control_root / removed).exists())
+        for name in (
+            "dependencies.py",
+            "dispatch_queue.py",
+            "finalization.py",
             "gate_ledger.py",
             "gates.py",
             "initial_prepare.py",
             "initial_submit.py",
+            "instance_reconcile.py",
             "stage_submit.py",
             "state_records.py",
-            "train_transition.py",
-            "train_group.py",
             "workflow.py",
-            "terminal.py",
         ):
             self.assertTrue((control_root / name).exists())
         workflow_text = (control_root / "workflow.py").read_text(encoding="utf-8")

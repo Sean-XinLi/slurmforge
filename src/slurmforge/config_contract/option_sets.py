@@ -49,6 +49,10 @@ ARTIFACT_FALLBACK_NULL = "null"
 DISPATCH_POLICY_SERIALIZE_GROUPS = "serialize_groups"
 DISPATCH_POLICY_ERROR = "error"
 DISPATCH_POLICY_BEST_EFFORT = "best_effort"
+RELEASE_POLICY_PER_RUN = "per_run"
+RELEASE_POLICY_PER_GROUP = "per_group"
+RELEASE_POLICY_PER_STAGE = "per_stage"
+RELEASE_POLICY_WINDOWED = "windowed"
 
 EMAIL_EVENT_BATCH_FINISHED = "batch_finished"
 EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED = "train_eval_pipeline_finished"
@@ -150,6 +154,13 @@ DISPATCH_POLICIES = (
     ConfigOption(
         DISPATCH_POLICY_BEST_EFFORT, "Submit groups without strict serialization."
     ),
+)
+
+RELEASE_POLICIES = (
+    ConfigOption(RELEASE_POLICY_PER_RUN, "Release downstream work per completed run."),
+    ConfigOption(RELEASE_POLICY_PER_GROUP, "Release downstream work after a train group completes."),
+    ConfigOption(RELEASE_POLICY_PER_STAGE, "Release downstream work after the train stage completes."),
+    ConfigOption(RELEASE_POLICY_WINDOWED, "Release downstream work in ready windows."),
 )
 
 EMAIL_EVENTS = (
