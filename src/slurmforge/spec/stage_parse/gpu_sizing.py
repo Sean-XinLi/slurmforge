@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB
+from ...config_contract.registry import default_for
 from ...config_schema import reject_unknown_config_keys
 from ...errors import ConfigContractError
 from ..models import StageGpuSizingSpec
 from ..parse_common import require_mapping
+
+DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB = default_for(
+    "stages.*.gpu_sizing.min_gpus_per_job"
+)
 
 
 def parse_stage_gpu_sizing(raw: Any, *, stage_name: str) -> StageGpuSizingSpec | None:

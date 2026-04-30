@@ -6,9 +6,12 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from ..config_contract.defaults import DEFAULT_PYTHON_BIN, DEFAULT_PYTHON_MIN_VERSION
+from ..config_contract.registry import default_for
 from ..errors import RuntimeContractError
 from ..io import SchemaVersion
+
+DEFAULT_PYTHON_BIN = default_for("runtime.executor.python.bin")
+DEFAULT_PYTHON_MIN_VERSION = default_for("runtime.executor.python.min_version")
 
 
 @dataclass(frozen=True)

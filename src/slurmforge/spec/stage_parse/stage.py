@@ -2,11 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import (
-    DEFAULT_STAGE_ENABLED,
-    DEFAULT_STAGE_ENVIRONMENT,
-    DEFAULT_STAGE_RUNTIME,
-)
+from ...config_contract.registry import default_for
 from ...config_schema import reject_unknown_config_keys
 from ..models import StageSpec
 from ..parse_common import require_mapping
@@ -17,6 +13,10 @@ from .gpu_sizing import parse_stage_gpu_sizing
 from .inputs import parse_inputs
 from .launcher import parse_launcher
 from .outputs import parse_stage_output_config
+
+DEFAULT_STAGE_ENABLED = default_for("stages.*.enabled")
+DEFAULT_STAGE_ENVIRONMENT = default_for("stages.*.environment")
+DEFAULT_STAGE_RUNTIME = default_for("stages.*.runtime")
 
 
 def parse_stage(name: str, raw: Any) -> StageSpec:

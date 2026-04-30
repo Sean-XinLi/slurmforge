@@ -3,16 +3,8 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from ..config_contract.defaults import (
-    AUTO_VALUE,
-    DEFAULT_GPU_SIZING_ROUND_TO,
-    DEFAULT_GPU_SIZING_SAFETY_FACTOR,
-    DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK,
-    DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
-    DEFAULT_STAGE_RESOURCES_NODES,
-    DEFAULT_STAGE_RESOURCES_PARTITION,
-    DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
-)
+from ..config_contract.default_values import AUTO_VALUE
+from ..config_contract.registry import default_for
 from ..config_schema import reject_unknown_config_keys
 from .models import (
     GpuSizingDefaultsSpec,
@@ -22,6 +14,14 @@ from .models import (
     SizingSpec,
 )
 from .parse_common import optional_mapping, require_mapping
+
+DEFAULT_GPU_SIZING_ROUND_TO = default_for("sizing.gpu.defaults.round_to")
+DEFAULT_GPU_SIZING_SAFETY_FACTOR = default_for("sizing.gpu.defaults.safety_factor")
+DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK = default_for("stages.*.resources.cpus_per_task")
+DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE = default_for("stages.*.resources.gpus_per_node")
+DEFAULT_STAGE_RESOURCES_NODES = default_for("stages.*.resources.nodes")
+DEFAULT_STAGE_RESOURCES_PARTITION = default_for("stages.*.resources.partition")
+DEFAULT_STAGE_RESOURCES_TIME_LIMIT = default_for("stages.*.resources.time_limit")
 
 
 def parse_resources(raw: Any, *, name: str) -> ResourceSpec:

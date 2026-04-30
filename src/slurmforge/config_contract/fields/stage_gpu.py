@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB
 from ..option_sets import GPU_SIZING_ESTIMATORS
 from ..workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
@@ -53,7 +52,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB,
+        default_value=1,
         required=False,
     ),
     ConfigField(

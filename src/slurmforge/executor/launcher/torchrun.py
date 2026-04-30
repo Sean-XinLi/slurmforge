@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import shlex
 
-from ...config_contract.defaults import (
-    DEFAULT_LAUNCHER_MODE,
-    DEFAULT_RENDEZVOUS_BACKEND,
-    DEFAULT_RENDEZVOUS_ENDPOINT,
-    DEFAULT_RENDEZVOUS_PORT,
-)
-from ...config_contract.options import LAUNCHER_MODE_MULTI_NODE
+from ...config_contract.option_sets import LAUNCHER_MODE_MULTI_NODE
+from ...config_contract.registry import default_for
 from ...plans.launcher import LauncherPlan
+
+DEFAULT_LAUNCHER_MODE = default_for("stages.*.launcher.mode")
+DEFAULT_RENDEZVOUS_BACKEND = default_for("stages.*.launcher.rendezvous.backend")
+DEFAULT_RENDEZVOUS_ENDPOINT = default_for("stages.*.launcher.rendezvous.endpoint")
+DEFAULT_RENDEZVOUS_PORT = default_for("stages.*.launcher.rendezvous.port")
 
 
 def torchrun_python_script_command(

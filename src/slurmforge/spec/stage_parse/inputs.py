@@ -2,21 +2,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import (
-    DEFAULT_INPUT_EXPECTS,
-    DEFAULT_INPUT_INJECT_MODE,
-)
-from ...config_contract.options import (
+from ...config_contract.option_sets import (
     INPUT_SOURCE_EXTERNAL_PATH,
     INPUT_SOURCE_UPSTREAM_OUTPUT,
-    options_for,
-    options_sentence,
 )
+from ...config_contract.registry import default_for, options_for, options_sentence
 from ...config_schema import reject_unknown_config_keys
 from ...contracts import InputInjection, InputSource
 from ...errors import ConfigContractError
 from ..models import StageInputSpec
 from ..parse_common import optional_mapping, require_mapping
+
+DEFAULT_INPUT_EXPECTS = default_for("stages.*.inputs.*.expects")
+DEFAULT_INPUT_INJECT_MODE = default_for("stages.*.inputs.*.inject.mode")
 
 
 def parse_inputs(raw: Any, *, stage_name: str) -> dict[str, StageInputSpec]:

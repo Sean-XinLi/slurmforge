@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import DEFAULT_ENVIRONMENT_NAME, DEFAULT_RUNTIME_NAME
+from ...config_contract.default_values import (
+    DEFAULT_ENVIRONMENT_NAME,
+    DEFAULT_RUNTIME_NAME,
+)
 from ..config_comments import comment_for, inline_comment_for, option_comment
 from .scalar import scalar
 

@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..config_contract.options import (
+from ..config_contract.option_sets import (
     INPUT_EXPECTS_VALUE,
     INPUT_SOURCE_EXTERNAL_PATH,
     INPUT_SOURCE_UPSTREAM_OUTPUT,
-    options_for,
-    options_sentence,
 )
+from ..config_contract.registry import options_for, options_sentence
 from ..contracts import inject_mode_matches_expectation, resolved_kind_for_output_kind
 from ..errors import ConfigContractError
 from .models import ExperimentSpec, StageSpec

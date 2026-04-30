@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from ..config_contract.defaults import (
-    DEFAULT_LAUNCHER_MODE,
-    DEFAULT_LAUNCHER_NNODES,
-    DEFAULT_LAUNCHER_NPROC_PER_NODE,
-    DEFAULT_RENDEZVOUS_PORT,
-)
-from ..config_contract.options import (
+from ..config_contract.option_sets import (
     ENTRY_COMMAND,
     ENTRY_PYTHON_SCRIPT,
     LAUNCHER_COMMAND,
@@ -16,13 +10,17 @@ from ..config_contract.options import (
     LAUNCHER_SINGLE,
     LAUNCHER_SRUN,
     LAUNCHER_TORCHRUN,
-    options_for,
-    options_sentence,
 )
+from ..config_contract.registry import default_for, options_for, options_sentence
 from ..errors import ConfigContractError
 from ..sizing.models import GpuSizingResolution
 from .models import StageSpec
 from .validation_common import explicit_int, require_port
+
+DEFAULT_LAUNCHER_MODE = default_for("stages.*.launcher.mode")
+DEFAULT_LAUNCHER_NNODES = default_for("stages.*.launcher.nnodes")
+DEFAULT_LAUNCHER_NPROC_PER_NODE = default_for("stages.*.launcher.nproc_per_node")
+DEFAULT_RENDEZVOUS_PORT = default_for("stages.*.launcher.rendezvous.port")
 
 
 def validate_launcher_contract(

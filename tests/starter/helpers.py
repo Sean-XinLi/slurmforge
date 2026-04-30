@@ -7,14 +7,14 @@ from typing import Callable
 
 import yaml
 
-from slurmforge.config_contract.defaults import (
-    DEFAULT_CHECKPOINT_PATH,
-    DEFAULT_CONFIG_FILENAME,
-)
+from slurmforge.config_contract.default_values import DEFAULT_CONFIG_FILENAME
+from slurmforge.config_contract.registry import default_for
 from slurmforge.config_contract.workflows import (
     TEMPLATE_TRAIN_EVAL,
     TEMPLATE_TRAIN_ONLY,
 )
+
+DEFAULT_CHECKPOINT_PATH = default_for("stages.*.inputs.*.source.path")
 
 
 def init_args(

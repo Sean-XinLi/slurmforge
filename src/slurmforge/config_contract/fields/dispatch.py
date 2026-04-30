@@ -2,16 +2,8 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import (
-    DEFAULT_CONTROL_CPUS,
-    DEFAULT_CONTROL_ENVIRONMENT,
-    DEFAULT_CONTROL_MEM,
-    DEFAULT_CONTROL_PARTITION,
-    DEFAULT_CONTROL_TIME_LIMIT,
-    DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS,
-    DEFAULT_DISPATCH_OVERFLOW_POLICY,
-)
-from ..option_sets import DISPATCH_POLICIES
+from ..default_values import DEFAULT_ENVIRONMENT_NAME
+from ..option_sets import DISPATCH_POLICIES, DISPATCH_POLICY_SERIALIZE_GROUPS
 from ..workflows import ALL_STARTER_TEMPLATES, TEMPLATE_TRAIN_EVAL
 from ..models import ConfigField
 
@@ -24,7 +16,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS,
+        default_value=1,
     ),
     ConfigField(
         path="dispatch.overflow_policy",
@@ -34,7 +26,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_DISPATCH_OVERFLOW_POLICY,
+        default_value=DISPATCH_POLICY_SERIALIZE_GROUPS,
         options=DISPATCH_POLICIES,
     ),
     ConfigField(
@@ -55,7 +47,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="advanced",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default_value=DEFAULT_CONTROL_PARTITION,
+        default_value=None,
     ),
     ConfigField(
         path="orchestration.control.cpus",
@@ -66,7 +58,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default_value=DEFAULT_CONTROL_CPUS,
+        default_value=1,
     ),
     ConfigField(
         path="orchestration.control.mem",
@@ -76,7 +68,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="advanced",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default_value=DEFAULT_CONTROL_MEM,
+        default_value="2G",
     ),
     ConfigField(
         path="orchestration.control.time_limit",
@@ -87,7 +79,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="duration",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default_value=DEFAULT_CONTROL_TIME_LIMIT,
+        default_value="00:10:00",
     ),
     ConfigField(
         path="orchestration.control.environment",
@@ -97,6 +89,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Dispatch",
         level="advanced",
         templates=(TEMPLATE_TRAIN_EVAL,),
-        default_value=DEFAULT_CONTROL_ENVIRONMENT,
+        default_value=DEFAULT_ENVIRONMENT_NAME,
     ),
 )

@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...config_contract.defaults import DEFAULT_PYTHON_BIN
+from ...config_contract.registry import default_for
 from ...plans.notifications import FinalizerPlan
 from ...plans.resources import ControlResourcesPlan
 from ...plans.runtime import EnvironmentPlan
 from ...plans.stage import StageBatchPlan
 from ..sbatch_helpers import _environment_lines, _job_name, _q
 from .headers import render_control_job_headers
+
+DEFAULT_PYTHON_BIN = default_for("runtime.executor.python.bin")
 
 
 def _submit_root(batch: StageBatchPlan) -> Path:

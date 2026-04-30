@@ -102,16 +102,14 @@ class StarterShapeTests(StageBatchSystemTestCase):
 
     def test_stage_io_schema_fields_are_layered(self) -> None:
         stage_io = Path("src/slurmforge/config_contract/fields/stage_io.py")
-        generic = Path("src/slurmforge/config_contract/fields/stage_io_generic.py")
         base = Path("src/slurmforge/config_contract/fields/stage_io_base.py")
         starter = Path("src/slurmforge/config_contract/fields/stage_io_starter.py")
-        schema_stage_io = Path("src/slurmforge/config_schema/sections/stage_io.py")
-        self.assertFalse(generic.exists())
         self.assertTrue(base.exists())
         self.assertTrue(starter.exists())
-        self.assertIn(
-            "config_contract.fields", schema_stage_io.read_text(encoding="utf-8")
+        self.assertFalse(
+            Path("src/slurmforge/config_contract/fields/stage_io_generic.py").exists()
         )
+        self.assertFalse(Path("src/slurmforge/config_schema/sections").exists())
 
         self.assertIn("stage_io_base", stage_io.read_text(encoding="utf-8"))
         self.assertIn("stage_io_starter", stage_io.read_text(encoding="utf-8"))

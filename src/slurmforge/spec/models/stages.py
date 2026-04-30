@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ...config_contract.defaults import (
-    DEFAULT_STAGE_LAUNCHER_TYPE,
-    DEFAULT_STAGE_RUNTIME,
-)
+from ...config_contract.registry import default_for
 from ...contracts import InputInjection, InputSource
 from ...contracts.outputs import StageOutputContract
 from .common import JsonObject
 from .entry import EntrySpec
 from .resources import ResourceSpec
 from .sizing import StageGpuSizingSpec
+
+DEFAULT_STAGE_LAUNCHER_TYPE = default_for("stages.*.launcher.type")
+DEFAULT_STAGE_RUNTIME = default_for("stages.*.runtime")
 
 
 @dataclass(frozen=True)

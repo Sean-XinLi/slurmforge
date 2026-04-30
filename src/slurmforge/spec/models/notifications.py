@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ...config_contract.defaults import (
-    DEFAULT_EMAIL_ENABLED,
-    DEFAULT_EMAIL_FROM,
-    DEFAULT_EMAIL_MODE,
-    DEFAULT_EMAIL_SENDMAIL,
-    DEFAULT_EMAIL_SUBJECT_PREFIX,
-)
+from ...config_contract.registry import default_for
+
+DEFAULT_EMAIL_ENABLED = default_for("notifications.email.enabled")
+DEFAULT_EMAIL_FROM = default_for("notifications.email.from")
+DEFAULT_EMAIL_MODE = default_for("notifications.email.mode")
+DEFAULT_EMAIL_SENDMAIL = default_for("notifications.email.sendmail")
+DEFAULT_EMAIL_SUBJECT_PREFIX = default_for("notifications.email.subject_prefix")
 
 
 @dataclass(frozen=True)

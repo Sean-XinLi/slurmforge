@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ....config_contract.options import OUTPUT_KIND_MANIFEST, OUTPUT_KIND_METRIC
+from ....config_contract.option_sets import OUTPUT_KIND_MANIFEST, OUTPUT_KIND_METRIC
 from ...config_comments import comment_for, option_comment
 from ..scalar import scalar
 

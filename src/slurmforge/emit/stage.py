@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ..config_contract.options import EMAIL_EVENT_BATCH_FINISHED
+from ..config_contract.option_sets import EMAIL_EVENT_BATCH_FINISHED
 from ..io import SchemaVersion, content_digest, read_json, write_json
 from ..plans.stage import StageBatchPlan
 from .sbatch_helpers import _q

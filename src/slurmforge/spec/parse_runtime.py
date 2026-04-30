@@ -3,17 +3,11 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from ..config_contract.defaults import (
-    DEFAULT_CONTROL_CPUS,
-    DEFAULT_CONTROL_ENVIRONMENT,
-    DEFAULT_CONTROL_MEM,
-    DEFAULT_CONTROL_PARTITION,
-    DEFAULT_CONTROL_TIME_LIMIT,
+from ..config_contract.default_values import (
     DEFAULT_ENVIRONMENT_NAME,
-    DEFAULT_EXECUTOR_MODULE,
-    DEFAULT_PYTHON_MIN_VERSION,
     DEFAULT_RUNTIME_NAME,
 )
+from ..config_contract.registry import default_for
 from ..config_schema import reject_unknown_config_keys
 from ..errors import ConfigContractError
 from .models import (
@@ -27,6 +21,14 @@ from .models import (
     UserRuntimeSpec,
 )
 from .parse_common import optional_mapping, require_mapping
+
+DEFAULT_CONTROL_CPUS = default_for("orchestration.control.cpus")
+DEFAULT_CONTROL_ENVIRONMENT = default_for("orchestration.control.environment")
+DEFAULT_CONTROL_MEM = default_for("orchestration.control.mem")
+DEFAULT_CONTROL_PARTITION = default_for("orchestration.control.partition")
+DEFAULT_CONTROL_TIME_LIMIT = default_for("orchestration.control.time_limit")
+DEFAULT_EXECUTOR_MODULE = default_for("runtime.executor.module")
+DEFAULT_PYTHON_MIN_VERSION = default_for("runtime.executor.python.min_version")
 
 
 def parse_python_runtime(raw: Any, *, name: str) -> PythonRuntimeSpec:

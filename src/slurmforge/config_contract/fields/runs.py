@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import DEFAULT_RUN_TYPE
-from ..option_sets import RUN_TYPES
+from ..option_sets import RUN_SINGLE, RUN_TYPES
 from ..workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
@@ -16,7 +15,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runs",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_RUN_TYPE,
+        default_value=RUN_SINGLE,
         options=RUN_TYPES,
     ),
     ConfigField(

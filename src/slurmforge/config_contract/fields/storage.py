@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import (
-    DEFAULT_ARTIFACT_STORE_FAIL_ON_VERIFY_ERROR,
-    DEFAULT_ARTIFACT_STORE_STRATEGY,
-    DEFAULT_ARTIFACT_STORE_VERIFY_DIGEST,
-    DEFAULT_STORAGE_ROOT,
+from ..option_sets import (
+    ARTIFACT_FALLBACK_STRATEGIES,
+    ARTIFACT_STRATEGIES,
+    ARTIFACT_STRATEGY_COPY,
 )
-from ..option_sets import ARTIFACT_FALLBACK_STRATEGIES, ARTIFACT_STRATEGIES
 from ..workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
@@ -21,7 +19,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_STORAGE_ROOT,
+        default_value="./runs",
         required=True,
         first_edit=True,
     ),
@@ -33,7 +31,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_ARTIFACT_STORE_STRATEGY,
+        default_value=ARTIFACT_STRATEGY_COPY,
         required=False,
         options=ARTIFACT_STRATEGIES,
     ),
@@ -57,7 +55,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_ARTIFACT_STORE_VERIFY_DIGEST,
+        default_value=True,
         required=False,
     ),
     ConfigField(
@@ -68,7 +66,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Storage",
         level="advanced",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_ARTIFACT_STORE_FAIL_ON_VERIFY_ERROR,
+        default_value=True,
         required=False,
     ),
 )

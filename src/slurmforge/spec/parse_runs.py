@@ -3,19 +3,19 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from ..config_contract.defaults import DEFAULT_RUN_TYPE
-from ..config_contract.options import (
+from ..config_contract.option_sets import (
     RUN_CASES,
     RUN_GRID,
     RUN_MATRIX,
     RUN_SINGLE,
-    options_for,
-    options_sentence,
 )
+from ..config_contract.registry import default_for, options_for, options_sentence
 from ..config_schema import reject_unknown_config_keys
 from ..errors import ConfigContractError
 from .models import RunVariantSpec, RunsSpec
 from .parse_common import optional_mapping, require_mapping
+
+DEFAULT_RUN_TYPE = default_for("runs.type")
 
 
 def parse_run_axes(

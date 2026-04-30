@@ -2,18 +2,14 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import (
-    DEFAULT_CHECKPOINT_PATH,
-    DEFAULT_INPUT_EXPECTS,
-    DEFAULT_INPUT_INJECT_MODE,
-    DEFAULT_OUTPUT_DISCOVER_SELECT,
-    DEFAULT_OUTPUT_REQUIRED,
-)
 from ..option_sets import (
     INPUT_EXPECTS,
+    INPUT_EXPECTS_PATH,
     INPUT_INJECT_MODES,
+    INPUT_INJECT_PATH,
     INPUT_SOURCE_KINDS,
     OUTPUT_KINDS,
+    OUTPUT_SELECT_LATEST_STEP,
     OUTPUT_SELECTORS,
 )
 from ..workflows import (
@@ -81,7 +77,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="path",
         templates=EVAL_TEMPLATES,
-        default_value=DEFAULT_CHECKPOINT_PATH,
+        default_value="checkpoint.pt",
         required=None,
     ),
     ConfigField(
@@ -92,7 +88,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=EVAL_TEMPLATES,
-        default_value=DEFAULT_INPUT_EXPECTS,
+        default_value=INPUT_EXPECTS_PATH,
         options=INPUT_EXPECTS,
         required=False,
     ),
@@ -116,7 +112,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=EVAL_TEMPLATES,
-        default_value=DEFAULT_INPUT_INJECT_MODE,
+        default_value=INPUT_INJECT_PATH,
         options=INPUT_INJECT_MODES,
         required=False,
     ),
@@ -163,7 +159,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="boolean",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_OUTPUT_REQUIRED,
+        default_value=False,
         required=False,
     ),
     ConfigField(
@@ -186,7 +182,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="common",
         templates=EVAL_TEMPLATES,
-        default_display="template-specific",
+        default_value="$",
         required=False,
     ),
     ConfigField(
@@ -209,7 +205,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Stage IO",
         level="intermediate",
         templates=TRAIN_TEMPLATES,
-        default_value=DEFAULT_OUTPUT_DISCOVER_SELECT,
+        default_value=OUTPUT_SELECT_LATEST_STEP,
         options=OUTPUT_SELECTORS,
         required=False,
     ),

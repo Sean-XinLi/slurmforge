@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..config_contract.defaults import DEFAULT_RUNTIME_NAME
+from ..config_contract.default_values import DEFAULT_RUNTIME_NAME
 from ..errors import ConfigContractError
 from .models import ExperimentSpec
 from .validation_common import reject_newline

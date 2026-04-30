@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ...config_contract.defaults import (
-    DEFAULT_ARTIFACT_STORE_FAIL_ON_VERIFY_ERROR,
-    DEFAULT_ARTIFACT_STORE_STRATEGY,
-    DEFAULT_ARTIFACT_STORE_VERIFY_DIGEST,
+from ...config_contract.registry import default_for
+
+DEFAULT_ARTIFACT_STORE_FAIL_ON_VERIFY_ERROR = default_for(
+    "artifact_store.fail_on_verify_error"
 )
+DEFAULT_ARTIFACT_STORE_STRATEGY = default_for("artifact_store.strategy")
+DEFAULT_ARTIFACT_STORE_VERIFY_DIGEST = default_for("artifact_store.verify_digest")
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ....config_contract.options import (
+from ....config_contract.option_sets import (
     INPUT_SOURCE_EXTERNAL_PATH,
     INPUT_SOURCE_UPSTREAM_OUTPUT,
 )

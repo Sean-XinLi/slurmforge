@@ -2,21 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import (
-    AUTO_VALUE,
-    DEFAULT_EXECUTOR_MODULE,
-    DEFAULT_LAUNCHER_NNODES,
-    DEFAULT_LAUNCHER_NPROC_PER_NODE,
-    DEFAULT_PYTHON_MIN_VERSION,
-    DEFAULT_RENDEZVOUS_BACKEND,
-    DEFAULT_RENDEZVOUS_ENDPOINT,
-    DEFAULT_RENDEZVOUS_PORT,
-    DEFAULT_STAGE_ENABLED,
-    DEFAULT_STAGE_ENTRY_WORKDIR,
-    DEFAULT_STAGE_ENVIRONMENT,
-    DEFAULT_STAGE_RUNTIME,
-)
-from ...config_contract.options import (
+from ...config_contract.default_values import AUTO_VALUE
+from ...config_contract.option_sets import (
     ARTIFACT_STRATEGY_COPY,
     ARTIFACT_STRATEGY_HARDLINK,
     DISPATCH_POLICY_SERIALIZE_GROUPS,
@@ -35,6 +22,7 @@ from ...config_contract.options import (
     OUTPUT_SELECT_LATEST_STEP,
     RUN_MATRIX,
 )
+from ...config_contract.registry import default_for
 from ...config_contract.starter_io import (
     ACCURACY_FILE,
     ACCURACY_JSON_PATH,
@@ -47,6 +35,18 @@ from ...config_contract.starter_io import (
     EVAL_SPLIT_DEFAULT,
 )
 from ...config_contract.workflows import STAGE_EVAL, STAGE_TRAIN
+
+DEFAULT_EXECUTOR_MODULE = default_for("runtime.executor.module")
+DEFAULT_LAUNCHER_NNODES = default_for("stages.*.launcher.nnodes")
+DEFAULT_LAUNCHER_NPROC_PER_NODE = default_for("stages.*.launcher.nproc_per_node")
+DEFAULT_PYTHON_MIN_VERSION = default_for("runtime.executor.python.min_version")
+DEFAULT_RENDEZVOUS_BACKEND = default_for("stages.*.launcher.rendezvous.backend")
+DEFAULT_RENDEZVOUS_ENDPOINT = default_for("stages.*.launcher.rendezvous.endpoint")
+DEFAULT_RENDEZVOUS_PORT = default_for("stages.*.launcher.rendezvous.port")
+DEFAULT_STAGE_ENABLED = default_for("stages.*.enabled")
+DEFAULT_STAGE_ENTRY_WORKDIR = default_for("stages.*.entry.workdir")
+DEFAULT_STAGE_ENVIRONMENT = default_for("stages.*.environment")
+DEFAULT_STAGE_RUNTIME = default_for("stages.*.runtime")
 
 
 def advanced_example_config() -> dict[str, Any]:

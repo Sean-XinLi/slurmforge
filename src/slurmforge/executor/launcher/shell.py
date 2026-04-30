@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import shlex
 
+from ...config_contract.option_sets import ENTRY_PYTHON_SCRIPT
+from ...config_contract.registry import default_for
 from ...contracts import InputBinding
-from ...config_contract.defaults import (
-    DEFAULT_PYTHON_BIN,
-    DEFAULT_STAGE_LAUNCHER_TYPE,
-)
-from ...config_contract.options import ENTRY_PYTHON_SCRIPT
 from ...plans.stage import StageInstancePlan
 from ..bindings import binding_injected_value
 from .args import args_to_argv, flag
 from .command import command_entry_command, python_script_command
+
+DEFAULT_PYTHON_BIN = default_for("runtime.executor.python.bin")
+DEFAULT_STAGE_LAUNCHER_TYPE = default_for("stages.*.launcher.type")
 
 
 def build_shell_script(

@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ...config_contract.defaults import DEFAULT_RUN_TYPE
+from ...config_contract.registry import default_for
 from .common import JsonObject
+
+DEFAULT_RUN_TYPE = default_for("runs.type")
 
 
 @dataclass(frozen=True)

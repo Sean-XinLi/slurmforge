@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ...config_contract.defaults import (
-    DEFAULT_EXECUTOR_MODULE,
-    DEFAULT_PYTHON_BIN,
-    DEFAULT_PYTHON_MIN_VERSION,
-    DEFAULT_RUNTIME_NAME,
-)
+from ...config_contract.default_values import DEFAULT_RUNTIME_NAME
+from ...config_contract.registry import default_for
 from .common import JsonObject
+
+DEFAULT_EXECUTOR_MODULE = default_for("runtime.executor.module")
+DEFAULT_PYTHON_BIN = default_for("runtime.executor.python.bin")
+DEFAULT_PYTHON_MIN_VERSION = default_for("runtime.executor.python.min_version")
 
 
 @dataclass(frozen=True)

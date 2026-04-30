@@ -2,13 +2,6 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import (
-    DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK,
-    DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
-    DEFAULT_STAGE_RESOURCES_NODES,
-    DEFAULT_STAGE_RESOURCES_PARTITION,
-    DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
-)
 from ..workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
@@ -32,7 +25,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Resources",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_STAGE_RESOURCES_PARTITION,
+        default_value="gpu",
     ),
     ConfigField(
         path="stages.*.resources.account",
@@ -73,7 +66,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_STAGE_RESOURCES_NODES,
+        default_value=1,
     ),
     ConfigField(
         path="stages.*.resources.gpus_per_node",
@@ -84,7 +77,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="integer-or-auto",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
+        default_value=1,
     ),
     ConfigField(
         path="stages.*.resources.cpus_per_task",
@@ -95,7 +88,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK,
+        default_value=1,
     ),
     ConfigField(
         path="stages.*.resources.mem",
@@ -137,6 +130,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="common",
         value_type="duration",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
+        default_value="01:00:00",
     ),
 )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import DEFAULT_CONFIG_FILENAME
+from ...config_contract.default_values import DEFAULT_CONFIG_FILENAME
 from ...config_contract.workflows import STAGE_TRAIN, TEMPLATE_TRAIN_ONLY
 from ..models import InitRequest, StarterReadmePlan, StarterTemplate
 from .base import base_config

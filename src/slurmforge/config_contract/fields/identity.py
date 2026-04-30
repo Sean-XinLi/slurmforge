@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import DEFAULT_EXPERIMENT, DEFAULT_PROJECT
 from ..workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
@@ -15,7 +14,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Identity",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_PROJECT,
+        default_value="demo",
         required=True,
         first_edit=True,
     ),
@@ -27,7 +26,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Identity",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_EXPERIMENT,
+        default_value="baseline",
         required=True,
         first_edit=True,
     ),

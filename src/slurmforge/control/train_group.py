@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from ..errors import ConfigContractError
 from ..root_model.snapshots import (
@@ -40,7 +39,9 @@ def group_run_dirs(batch, group_id: str) -> list[Path]:
 
 
 def group_terminal(batch, group_id: str) -> bool:
-    statuses = [read_stage_status(run_dir) for run_dir in group_run_dirs(batch, group_id)]
+    statuses = [
+        read_stage_status(run_dir) for run_dir in group_run_dirs(batch, group_id)
+    ]
     return bool(statuses) and all(
         status is not None and status.state in TERMINAL_STATES for status in statuses
     )

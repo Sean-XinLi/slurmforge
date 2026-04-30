@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from ...config_contract.defaults import DEFAULT_CONFIG_FILENAME, DEFAULT_STORAGE_ROOT
+from ...config_contract.default_values import DEFAULT_CONFIG_FILENAME
+from ...config_contract.registry import default_for
 from ...config_contract.starter_io import (
     ACCURACY_FIELD,
     ACCURACY_FILE,
@@ -16,6 +17,8 @@ from ...config_contract.workflows import (
 )
 from ...config_schema import render_first_edit_list
 from ..models import InitRequest, StarterCommandSet, StarterReadmePlan
+
+DEFAULT_STORAGE_ROOT = default_for("storage.root")
 
 
 def starter_readme_plan(

@@ -3,11 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from ..config_contract.defaults import AUTO_VALUE, DEFAULT_RENDEZVOUS_PORT
+from ..config_contract.default_values import AUTO_VALUE
+from ..config_contract.registry import default_for
 from ..config_contract.workflows import SUPPORTED_STAGE_KEYS
 from ..errors import ConfigContractError
 from .models import ExperimentSpec, StageSpec
 from .run_paths import normalize_run_override_path
+
+DEFAULT_RENDEZVOUS_PORT = default_for("stages.*.launcher.rendezvous.port")
 
 
 def resolve_workdir(spec: ExperimentSpec, stage: StageSpec) -> Path:

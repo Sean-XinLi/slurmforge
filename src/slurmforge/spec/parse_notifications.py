@@ -2,19 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..config_contract.defaults import (
-    DEFAULT_EMAIL_ENABLED,
-    DEFAULT_EMAIL_EVENTS,
-    DEFAULT_EMAIL_FROM,
-    DEFAULT_EMAIL_MODE,
-    DEFAULT_EMAIL_SENDMAIL,
-    DEFAULT_EMAIL_SUBJECT_PREFIX,
-)
-from ..config_contract.options import options_for, options_sentence
+from ..config_contract.registry import default_for, options_for, options_sentence
 from ..config_schema import reject_unknown_config_keys
 from ..errors import ConfigContractError
 from .models import EmailNotificationSpec, NotificationsSpec
 from .parse_common import optional_mapping
+
+DEFAULT_EMAIL_ENABLED = default_for("notifications.email.enabled")
+DEFAULT_EMAIL_EVENTS = default_for("notifications.email.on")
+DEFAULT_EMAIL_FROM = default_for("notifications.email.from")
+DEFAULT_EMAIL_MODE = default_for("notifications.email.mode")
+DEFAULT_EMAIL_SENDMAIL = default_for("notifications.email.sendmail")
+DEFAULT_EMAIL_SUBJECT_PREFIX = default_for("notifications.email.subject_prefix")
 
 
 def parse_email_recipients(raw: Any) -> tuple[str, ...]:

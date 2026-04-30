@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import (
-    DEFAULT_GPU_SIZING_ROUND_TO,
-    DEFAULT_GPU_SIZING_SAFETY_FACTOR,
-)
 from ..workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
@@ -19,10 +15,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="mapping",
         templates=ALL_STARTER_TEMPLATES,
-        default_display=(
-            f"safety_factor={DEFAULT_GPU_SIZING_SAFETY_FACTOR}, "
-            f"round_to={DEFAULT_GPU_SIZING_ROUND_TO}"
-        ),
+        default_display=("safety_factor=1.0, round_to=1"),
     ),
     ConfigField(
         path="sizing.gpu.defaults.safety_factor",
@@ -33,7 +26,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="float",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_GPU_SIZING_SAFETY_FACTOR,
+        default_value=1.0,
     ),
     ConfigField(
         path="sizing.gpu.defaults.round_to",
@@ -44,6 +37,6 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="integer",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_GPU_SIZING_ROUND_TO,
+        default_value=1,
     ),
 )

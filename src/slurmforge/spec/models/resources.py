@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ...config_contract.defaults import (
-    DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK,
-    DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
-    DEFAULT_STAGE_RESOURCES_NODES,
-    DEFAULT_STAGE_RESOURCES_PARTITION,
-    DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
-)
+from ...config_contract.registry import default_for
+
+DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK = default_for("stages.*.resources.cpus_per_task")
+DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE = default_for("stages.*.resources.gpus_per_node")
+DEFAULT_STAGE_RESOURCES_NODES = default_for("stages.*.resources.nodes")
+DEFAULT_STAGE_RESOURCES_PARTITION = default_for("stages.*.resources.partition")
+DEFAULT_STAGE_RESOURCES_TIME_LIMIT = default_for("stages.*.resources.time_limit")
 
 
 @dataclass(frozen=True)

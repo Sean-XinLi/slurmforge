@@ -2,11 +2,6 @@ from __future__ import annotations
 
 from typing import Final
 
-from ..default_values import (
-    DEFAULT_EXECUTOR_MODULE,
-    DEFAULT_PYTHON_BIN,
-    DEFAULT_PYTHON_MIN_VERSION,
-)
 from ..workflows import ALL_STARTER_TEMPLATES
 from ..models import ConfigField
 
@@ -76,7 +71,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runtime",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_PYTHON_BIN,
+        default_value="python3",
         required=True,
         first_edit=True,
     ),
@@ -89,7 +84,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="version",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_PYTHON_MIN_VERSION,
+        default_value="3.10",
         required=False,
     ),
     ConfigField(
@@ -101,7 +96,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="python-module",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_EXECUTOR_MODULE,
+        default_value="slurmforge.executor.stage",
         required=False,
     ),
     ConfigField(
@@ -112,7 +107,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         section="Runtime",
         level="common",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_PYTHON_BIN,
+        default_value="python3",
         required=True,
         first_edit=True,
     ),
@@ -125,7 +120,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="advanced",
         value_type="version",
         templates=ALL_STARTER_TEMPLATES,
-        default_value=DEFAULT_PYTHON_MIN_VERSION,
+        default_value="3.10",
         required=False,
     ),
     ConfigField(

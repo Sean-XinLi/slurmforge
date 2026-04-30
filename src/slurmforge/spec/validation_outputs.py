@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..config_contract.options import (
+from ..config_contract.option_sets import (
     OUTPUT_KIND_FILE,
     OUTPUT_KIND_FILES,
     OUTPUT_KIND_MANIFEST,

@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..config_contract.defaults import DEFAULT_INPUT_INJECT_MODE
-from ..config_contract.options import (
+from ..config_contract.option_sets import (
     INPUT_EXPECTS_MANIFEST,
     INPUT_EXPECTS_PATH,
     INPUT_EXPECTS_VALUE,
@@ -17,9 +16,11 @@ from ..config_contract.options import (
     OUTPUT_KIND_MANIFEST,
     OUTPUT_KIND_METRIC,
 )
+from ..config_contract.registry import default_for
 from ..io import SchemaVersion, require_schema, stable_json
 
 JsonObject = dict[str, Any]
+DEFAULT_INPUT_INJECT_MODE = default_for("stages.*.inputs.*.inject.mode")
 
 
 @dataclass(frozen=True)

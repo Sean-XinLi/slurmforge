@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ..config_contract.options import (
+from ..config_contract.option_sets import (
     INPUT_EXPECTS_PATH,
     INPUT_INJECT_PATH,
     INPUT_SOURCE_UPSTREAM_OUTPUT,

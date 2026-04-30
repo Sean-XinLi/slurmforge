@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from tests.support.case import StageBatchSystemTestCase
@@ -11,45 +12,81 @@ class ConfigContractShapeTests(StageBatchSystemTestCase):
         self.assertTrue((contract_root / "registry.py").exists())
         self.assertTrue((contract_root / "models.py").exists())
         self.assertTrue((contract_root / "fields").exists())
+        self.assertFalse((contract_root / "defaults.py").exists())
+        self.assertFalse((contract_root / "options.py").exists())
+        self.assertFalse(Path("src/slurmforge/config_schema/sections").exists())
 
-        schema_sections = Path("src/slurmforge/config_schema/sections")
         violations: list[str] = []
-        for path in sorted(schema_sections.glob("*.py")):
-            if path.name == "__init__.py":
-                continue
-            text = path.read_text(encoding="utf-8")
-            for marker in ("ConfigField(", "default_value=", "options="):
-                if marker in text:
-                    violations.append(f"{path}:{marker}")
+        for path in sorted(Path("src/slurmforge").rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom):
+                    module = node.module or ""
+                    if module.endswith(
+                        (
+                            "config_contract.defaults",
+                            "config_contract.options",
+                            "config_schema.sections",
+                        )
+                    ):
+                        violations.append(f"{path}:{module}")
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if alias.name.endswith(
+                            (
+                                "config_contract.defaults",
+                                "config_contract.options",
+                                "config_schema.sections",
+                            )
+                        ):
+                            violations.append(f"{path}:{alias.name}")
         self.assertEqual(violations, [])
 
-    def test_defaults_and_options_are_registry_facades(self) -> None:
-        defaults = Path("src/slurmforge/config_contract/defaults.py").read_text(
-            encoding="utf-8"
-        )
-        options = Path("src/slurmforge/config_contract/options.py").read_text(
-            encoding="utf-8"
-        )
+    def test_config_schema_reads_fields_from_contract_registry(self) -> None:
         schema_fields = Path("src/slurmforge/config_schema/fields.py").read_text(
             encoding="utf-8"
         )
-
-        self.assertIn("from .registry import default_for", defaults)
-        self.assertIn("from .registry import", options)
         self.assertIn("config_contract.registry", schema_fields)
         self.assertNotIn(
             "CONFIG_FIELDS: Final[tuple[ConfigField, ...]] = (", schema_fields
         )
 
-    def test_control_and_stage_partition_defaults_are_explicit(self) -> None:
-        from slurmforge.config_contract.defaults import (
-            DEFAULT_CONTROL_PARTITION,
-            DEFAULT_STAGE_RESOURCES_PARTITION,
+    def test_default_values_are_non_field_constants(self) -> None:
+        allowed = {
+            "DEFAULT_CONFIG_FILENAME",
+            "DEFAULT_OUTPUT_DIR",
+            "AUTO_VALUE",
+            "DEFAULT_ENVIRONMENT_NAME",
+            "DEFAULT_RUNTIME_NAME",
+        }
+        tree = ast.parse(
+            Path("src/slurmforge/config_contract/default_values.py").read_text(
+                encoding="utf-8"
+            )
         )
-        from slurmforge.config_contract.registry import field_by_path
+        assigned = {
+            target.id
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            for target in node.targets
+            if isinstance(target, ast.Name)
+            and (target.id == "AUTO_VALUE" or target.id.startswith("DEFAULT_"))
+        }
+        self.assertEqual(assigned, allowed)
 
-        self.assertIsNone(DEFAULT_CONTROL_PARTITION)
-        self.assertEqual(DEFAULT_STAGE_RESOURCES_PARTITION, "gpu")
+    def test_contract_field_modules_own_field_defaults(self) -> None:
+        violations: list[str] = []
+        for path in sorted(Path("src/slurmforge/config_contract/fields").glob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            if "default_for(" in text:
+                violations.append(str(path))
+        self.assertEqual(violations, [])
+
+    def test_control_and_stage_partition_defaults_are_explicit(self) -> None:
+        from slurmforge.config_contract.registry import default_for, field_by_path
+
+        self.assertIsNone(default_for("orchestration.control.partition"))
+        self.assertEqual(default_for("stages.*.resources.partition"), "gpu")
         self.assertIsNone(
             field_by_path("orchestration.control.partition").default_value
         )

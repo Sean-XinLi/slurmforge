@@ -3,20 +3,18 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from ...config_contract.defaults import (
-    DEFAULT_STAGE_ENTRY_TYPE,
-    DEFAULT_STAGE_ENTRY_WORKDIR,
-)
-from ...config_contract.options import (
+from ...config_contract.option_sets import (
     ENTRY_COMMAND,
     ENTRY_PYTHON_SCRIPT,
-    options_for,
-    options_sentence,
 )
+from ...config_contract.registry import default_for, options_for, options_sentence
 from ...config_schema import reject_unknown_config_keys
 from ...errors import ConfigContractError
 from ..models import EntrySpec
 from ..parse_common import optional_mapping, require_mapping
+
+DEFAULT_STAGE_ENTRY_TYPE = default_for("stages.*.entry.type")
+DEFAULT_STAGE_ENTRY_WORKDIR = default_for("stages.*.entry.workdir")
 
 
 def parse_entry(raw: Any, *, name: str) -> EntrySpec:
