@@ -113,11 +113,11 @@ def advanced_example_config() -> dict[str, Any]:
             "overflow_policy": DISPATCH_POLICY_SERIALIZE_GROUPS,
         },
         "orchestration": {
-            "controller": {
-                "partition": "gpu",
+            "control": {
+                "partition": None,
                 "cpus": 1,
                 "mem": "2G",
-                "time_limit": "12:00:00",
+                "time_limit": "00:10:00",
                 "environment": DEFAULT_STAGE_ENVIRONMENT,
             }
         },

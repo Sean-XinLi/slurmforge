@@ -13,7 +13,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         paths = [field.path for field in all_fields()]
         duplicates = sorted({path for path in paths if paths.count(path) > 1})
         self.assertEqual(duplicates, [])
-        self.assertNotIn("orchestration.controller.resources", paths)
+        self.assertNotIn("orchestration.control.resources", paths)
         self.assertNotIn("runtime.user.default.python.bin", paths)
         self.assertNotIn("environments.default.modules", paths)
         self.assertNotIn("stages.*.launcher.master_port", paths)

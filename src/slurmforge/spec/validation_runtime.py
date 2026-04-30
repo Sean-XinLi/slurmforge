@@ -32,8 +32,8 @@ def validate_environment_contract(spec: ExperimentSpec) -> None:
 
 
 def validate_runtime_contract(spec: ExperimentSpec) -> None:
-    if spec.orchestration.controller.cpus < 1:
-        raise ConfigContractError("`orchestration.controller.cpus` must be >= 1")
+    if spec.orchestration.control.cpus < 1:
+        raise ConfigContractError("`orchestration.control.cpus` must be >= 1")
     if not spec.runtime.executor.python.bin:
         raise ConfigContractError("`runtime.executor.python.bin` must not be empty")
     if not spec.runtime.executor.python.min_version:
@@ -54,9 +54,9 @@ def validate_runtime_contract(spec: ExperimentSpec) -> None:
             raise ConfigContractError(
                 f"`runtime.user.{runtime_name}.python.min_version` must not be empty"
             )
-    controller_environment = spec.orchestration.controller.environment
-    if controller_environment and controller_environment not in spec.environments:
+    control_environment = spec.orchestration.control.environment
+    if control_environment and control_environment not in spec.environments:
         raise ConfigContractError(
-            "`orchestration.controller.environment` references unknown environment "
-            f"`{controller_environment}`"
+            "`orchestration.control.environment` references unknown environment "
+            f"`{control_environment}`"
         )

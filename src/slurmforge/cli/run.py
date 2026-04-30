@@ -1,4 +1,4 @@
-"""``sforge run`` -- submit a train/eval pipeline controller."""
+"""``sforge run`` -- submit a streaming train/eval pipeline."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def add_subparser(
     subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
     parser = subparsers.add_parser(
-        "run", help="Submit a train/eval pipeline controller"
+        "run", help="Submit a streaming train/eval pipeline"
     )
     add_config_args(parser)
     add_execution_mode_args(parser)

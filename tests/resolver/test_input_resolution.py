@@ -15,13 +15,13 @@ from pathlib import Path
 
 
 class InputResolutionTests(StageBatchSystemTestCase):
-    def test_controller_dependency_resolution_is_contract_driven(self) -> None:
-        controller_source = Path(
-            "src/slurmforge/controller/train_eval_pipeline.py"
-        ).read_text(encoding="utf-8")
-        self.assertNotIn("upstream_bindings_from_train_batch", controller_source)
-        self.assertNotIn('kind="eval"', controller_source)
-        self.assertNotIn('stage_spec.name == "eval"', controller_source)
+    def test_pipeline_dependency_resolution_is_contract_driven(self) -> None:
+        control_source = Path("src/slurmforge/control/eval_shard.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("upstream_bindings_from_train_batch", control_source)
+        self.assertNotIn('kind="eval"', control_source)
+        self.assertNotIn('stage_spec.name == "eval"', control_source)
         resolver_source = Path("src/slurmforge/resolver/__init__.py").read_text(
             encoding="utf-8"
         )

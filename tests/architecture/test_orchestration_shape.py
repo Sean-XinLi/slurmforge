@@ -31,7 +31,7 @@ class OrchestrationShapeTests(StageBatchSystemTestCase):
         self.assertFalse(Path("src/slurmforge/orchestration/render.py").exists())
         self.assertTrue(Path("src/slurmforge/orchestration/status_view.py").exists())
 
-    def test_controller_stage_selection_is_named_for_controller_workflow(self) -> None:
-        controller_root = Path("src/slurmforge/controller")
-        self.assertFalse((controller_root / "materialization.py").exists())
-        self.assertTrue((controller_root / "stage_selection.py").exists())
+    def test_control_runtime_owns_pipeline_gate_selection(self) -> None:
+        control_root = Path("src/slurmforge/control")
+        self.assertFalse((control_root / "materialization.py").exists())
+        self.assertTrue((control_root / "workflow.py").exists())

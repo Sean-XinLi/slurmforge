@@ -91,16 +91,16 @@ dispatch:
   overflow_policy: serialize_groups
 
 orchestration:
-  controller:
-    # Slurm partition for the lightweight train/eval controller job.
-    partition: gpu
-    # CPU count requested by the lightweight workflow controller job.
+  control:
+    # Optional Slurm partition for CPU-only pipeline control jobs.
+    partition: null
+    # CPU count requested by short-lived pipeline control jobs.
     cpus: 1
-    # Memory requested by the lightweight workflow controller job.
+    # Memory requested by short-lived pipeline control jobs.
     mem: 2G
-    # Slurm time limit requested by the lightweight workflow controller job.
-    time_limit: "01:00:00"
-    # Environment profile loaded before the lightweight workflow controller runs.
+    # Slurm time limit requested by short-lived pipeline control jobs.
+    time_limit: "00:10:00"
+    # Environment profile loaded before pipeline control jobs run.
     environment: default
 
 stages:
@@ -308,11 +308,11 @@ dispatch:
   max_available_gpus: 16
   overflow_policy: serialize_groups
 orchestration:
-  controller:
-    partition: gpu
+  control:
+    partition: null
     cpus: 1
     mem: 2G
-    time_limit: '12:00:00'
+    time_limit: 00:10:00
     environment: default
 stages:
   train:
@@ -518,12 +518,12 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `runs.type` | enum | no | common | single | `single`, `grid`, `cases`, `matrix` | Controls whether the config plans one run or expands a sweep. | Keep single for the starter; switch to grid, cases, or matrix when you need run expansion. |
 | `dispatch.max_available_gpus` | value | no | intermediate | 1 |  | GPU budget used to serialize Slurm array groups when a plan exceeds available GPUs. | Set this to the practical cluster budget you want this workflow to consume. |
 | `dispatch.overflow_policy` | enum | no | intermediate | serialize_groups | `serialize_groups`, `error`, `best_effort` | Controls planner behavior when run groups exceed the declared GPU budget. | Use error for strict admission control, or best_effort when the scheduler should absorb overflow. |
-| `orchestration.controller` | value | no | advanced | partition=gpu, cpus=1, mem=2G, time_limit=01:00:00 |  | Slurm resources for the lightweight workflow controller job. | Change this when the controller needs a different partition, time limit, or environment. |
-| `orchestration.controller.cpus` | integer | no | advanced | 1 |  | CPU count requested by the lightweight workflow controller job. | Increase this only if controller scheduling or planning overhead requires it. |
-| `orchestration.controller.environment` | value | no | advanced | default |  | Environment profile loaded before the lightweight workflow controller runs. | Change this when controller jobs need cluster modules or setup scripts. |
-| `orchestration.controller.mem` | value | no | advanced | 2G |  | Memory requested by the lightweight workflow controller job. | Increase this when controller planning or notification work needs more memory. |
-| `orchestration.controller.partition` | value | no | advanced | gpu |  | Slurm partition for the lightweight train/eval controller job. | Change this when controller jobs need a different queue from stage jobs. |
-| `orchestration.controller.time_limit` | duration | no | advanced | 01:00:00 |  | Slurm time limit requested by the lightweight workflow controller job. | Increase this when the controller must wait for long train/eval pipeline stages. |
+| `orchestration.control` | value | no | advanced | partition=null, cpus=1, mem=2G, time_limit=00:10:00 |  | Slurm resources for short-lived CPU-only pipeline control jobs. | Change this when gate or notification jobs need a different control queue, time limit, or environment. |
+| `orchestration.control.cpus` | integer | no | advanced | 1 |  | CPU count requested by short-lived pipeline control jobs. | Increase this only if gate reconciliation or planning overhead requires it. |
+| `orchestration.control.environment` | value | no | advanced | default |  | Environment profile loaded before pipeline control jobs run. | Change this when gate jobs need cluster modules or setup scripts. |
+| `orchestration.control.mem` | value | no | advanced | 2G |  | Memory requested by short-lived pipeline control jobs. | Increase this when gate planning or notification work needs more memory. |
+| `orchestration.control.partition` | value | no | advanced |  |  | Optional Slurm partition for CPU-only pipeline control jobs. | Set this only when control jobs must use a named CPU/control queue. |
+| `orchestration.control.time_limit` | duration | no | advanced | 00:10:00 |  | Slurm time limit requested by short-lived pipeline control jobs. | Increase this only if gate reconciliation, eval materialization, or notifications need more time. |
 | `stages.*.resources` | value | no | common | template-specific |  | Slurm partition, CPU, GPU, memory, and time settings for each stage. | Set these before real cluster runs so train and eval request the right resources. |
 | `stages.*.resources.account` | value | no | intermediate | null |  | Slurm account charged for each stage task. | Set this when your cluster requires an account for GPU or partition access. |
 | `stages.*.resources.constraint` | value | no | advanced | null |  | Raw Slurm constraint requested for each stage task. | Use this for cluster-specific node feature constraints that are not covered by gpu_type. |
@@ -589,7 +589,7 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `notifications.email.enabled` | value | no | advanced | false |  | Enables email summary notifications for terminal workflow events. | Enable after sendmail works on the cluster and recipient addresses are configured. |
 | `notifications.email.from` | value | no | advanced | slurmforge@localhost |  | Sender address used by email delivery. | Change this to the approved sender identity for your cluster. |
 | `notifications.email.mode` | enum | no | advanced | summary | `summary` | Controls email content shape. | Keep summary unless a future notification mode is added. |
-| `notifications.email.on` | enum | no | advanced | batch_finished | `batch_finished`, `train_eval_pipeline_finished` | Terminal workflow events that trigger email summaries. | Use batch_finished for stage batches and train_eval_pipeline_finished for controller pipelines. |
+| `notifications.email.on` | enum | no | advanced | batch_finished | `batch_finished`, `train_eval_pipeline_finished` | Terminal workflow events that trigger email summaries. | Use batch_finished for stage batches and train_eval_pipeline_finished for streaming pipelines. |
 | `notifications.email.sendmail` | path | no | advanced | /usr/sbin/sendmail |  | Local sendmail-compatible binary used to deliver email. | Change this if the cluster exposes sendmail at a non-default path. |
 | `notifications.email.subject_prefix` | value | no | advanced | SlurmForge |  | Prefix added to SlurmForge notification email subjects. | Change this to identify a project, team, or cluster in inboxes. |
 | `notifications.email.to` | value | no | advanced | [] |  | Recipients for email notifications when email is enabled. | Set this before enabling notifications. |
@@ -605,7 +605,7 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 
 Notifications are disabled unless `notifications.email.enabled` is true. When enabled, `notifications.email.to` must contain at least one email address and `notifications.email.on` must contain one or more supported terminal workflow events.
 
-`batch_finished` is emitted by stage-batch finalizer jobs. `train_eval_pipeline_finished` is emitted by the train/eval controller when the whole pipeline reaches a terminal state.
+`batch_finished` is emitted by stage-batch finalizer jobs. `train_eval_pipeline_finished` is emitted by the final train/eval control gate when the whole pipeline reaches a terminal state.
 
 ## Resources And Sizing
 

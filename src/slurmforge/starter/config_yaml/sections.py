@@ -144,21 +144,21 @@ def render_dispatch(lines: list[str], config: dict[str, Any]) -> None:
 
 
 def render_orchestration(lines: list[str], config: dict[str, Any]) -> None:
-    controller = config["orchestration"]["controller"]
+    control = config["orchestration"]["control"]
     lines.extend(
         [
             "orchestration:",
-            "  controller:",
-            comment_for("orchestration.controller.partition", indent=4),
-            f"    partition: {scalar(controller['partition'])}",
-            comment_for("orchestration.controller.cpus", indent=4),
-            f"    cpus: {scalar(controller['cpus'])}",
-            comment_for("orchestration.controller.mem", indent=4),
-            f"    mem: {scalar(controller['mem'])}",
-            comment_for("orchestration.controller.time_limit", indent=4),
-            f"    time_limit: {scalar(controller['time_limit'])}",
-            comment_for("orchestration.controller.environment", indent=4),
-            f"    environment: {scalar(controller['environment'])}",
+            "  control:",
+            comment_for("orchestration.control.partition", indent=4),
+            f"    partition: {scalar(control['partition'])}",
+            comment_for("orchestration.control.cpus", indent=4),
+            f"    cpus: {scalar(control['cpus'])}",
+            comment_for("orchestration.control.mem", indent=4),
+            f"    mem: {scalar(control['mem'])}",
+            comment_for("orchestration.control.time_limit", indent=4),
+            f"    time_limit: {scalar(control['time_limit'])}",
+            comment_for("orchestration.control.environment", indent=4),
+            f"    environment: {scalar(control['environment'])}",
             "",
         ]
     )

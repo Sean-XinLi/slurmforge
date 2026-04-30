@@ -13,7 +13,7 @@ from .runtime import environment_payload, executor_runtime_payload
 
 def notification_payload(spec: ExperimentSpec) -> NotificationPlan:
     email = spec.notifications.email
-    controller = spec.orchestration.controller
+    control = spec.orchestration.control
     return NotificationPlan(
         email=EmailNotificationPlan(
             enabled=email.enabled,
@@ -26,8 +26,8 @@ def notification_payload(spec: ExperimentSpec) -> NotificationPlan:
         ),
         finalizer=FinalizerPlan(
             resources=control_resources_payload(spec),
-            environment_name=controller.environment,
-            environment_plan=environment_payload(spec, controller.environment),
+            environment_name=control.environment,
+            environment_plan=environment_payload(spec, control.environment),
             runtime_plan=RuntimePlan(executor=executor_runtime_payload(spec)),
         ),
     )

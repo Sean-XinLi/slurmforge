@@ -41,9 +41,9 @@ class RootCliTests(StageBatchSystemTestCase):
                 "run",
                 "status",
                 "resubmit",
+                "pipeline",
             },
         )
         pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
         self.assertIn('sforge = "slurmforge.launcher:main"', pyproject)
         self.assertNotIn("sforge-stage-executor", pyproject)
-        self.assertNotIn("sforge-pipeline-controller", pyproject)

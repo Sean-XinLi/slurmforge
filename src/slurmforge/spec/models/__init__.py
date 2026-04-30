@@ -5,7 +5,7 @@ from .entry import EntrySpec
 from .environment import EnvironmentSourceSpec, EnvironmentSpec
 from .experiment import ExperimentSpec
 from .notifications import EmailNotificationSpec, NotificationsSpec
-from .orchestration import ControllerSpec, DispatchSpec, OrchestrationSpec
+from .orchestration import ControlSpec, DispatchSpec, OrchestrationSpec
 from .resources import ResourceSpec
 from .runs import RunVariantSpec, RunsSpec
 from .runtime import (
@@ -27,7 +27,7 @@ from .storage import ArtifactStoreSpec, StorageSpec
 __all__ = [
     "ArtifactStoreSpec",
     "BeforeStepSpec",
-    "ControllerSpec",
+    "ControlSpec",
     "DispatchSpec",
     "EmailNotificationSpec",
     "EntrySpec",

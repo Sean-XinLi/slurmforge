@@ -37,7 +37,7 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
 
     def test_cli_does_not_directly_import_execution_layers(self) -> None:
         blocked = {
-            "slurmforge.controller",
+            "slurmforge.control",
             "slurmforge.emit",
             "slurmforge.executor",
             "slurmforge.inputs",
@@ -72,7 +72,7 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
 
     def test_contracts_package_is_leaf(self) -> None:
         blocked = {
-            "slurmforge.controller",
+            "slurmforge.control",
             "slurmforge.emit",
             "slurmforge.executor",
             "slurmforge.inputs",

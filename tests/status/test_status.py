@@ -106,7 +106,7 @@ class StatusTests(StageBatchSystemTestCase):
                 )
                 reconcile.assert_called_once()
 
-    def test_pipeline_status_reconcile_checks_controller_job(self) -> None:
+    def test_pipeline_status_reconcile_checks_execution_batches(self) -> None:
         from slurmforge.orchestration.status_view import render_status_lines
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -116,18 +116,12 @@ class StatusTests(StageBatchSystemTestCase):
             materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             pipeline_root = Path(plan.root_dir)
 
-            with (
-                patch(
-                    "slurmforge.orchestration.status_view.reconcile_controller_job"
-                ) as controller_reconcile,
-                patch(
-                    "slurmforge.orchestration.status_view.reconcile_root_submissions"
-                ) as stage_reconcile,
-            ):
+            with patch(
+                "slurmforge.orchestration.status_view.reconcile_root_submissions"
+            ) as stage_reconcile:
                 render_status_lines(
                     root=pipeline_root, reconcile=True, missing_output_grace_seconds=7
                 )
-                controller_reconcile.assert_called_once_with(pipeline_root)
                 stage_reconcile.assert_called_once()
             self.assertTrue((pipeline_root / "run_status.json").exists())
             self.assertTrue(

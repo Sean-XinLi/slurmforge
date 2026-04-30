@@ -33,4 +33,5 @@ class TrainEvalPipelineExecutionResult:
     root: str
     mode: ExecutionMode
     submitted: bool = False
-    controller_job_id: str | None = None
+    stage_job_ids: dict[str, dict[str, str]] = field(default_factory=dict)
+    gate_job_ids: dict[str, str] = field(default_factory=dict)

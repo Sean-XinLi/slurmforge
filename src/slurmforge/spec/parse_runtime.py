@@ -4,20 +4,20 @@ import copy
 from typing import Any
 
 from ..config_contract.defaults import (
-    DEFAULT_CONTROLLER_CPUS,
-    DEFAULT_CONTROLLER_ENVIRONMENT,
-    DEFAULT_CONTROLLER_MEM,
-    DEFAULT_CONTROLLER_TIME_LIMIT,
+    DEFAULT_CONTROL_CPUS,
+    DEFAULT_CONTROL_ENVIRONMENT,
+    DEFAULT_CONTROL_MEM,
+    DEFAULT_CONTROL_PARTITION,
+    DEFAULT_CONTROL_TIME_LIMIT,
     DEFAULT_ENVIRONMENT_NAME,
     DEFAULT_EXECUTOR_MODULE,
     DEFAULT_PYTHON_MIN_VERSION,
     DEFAULT_RUNTIME_NAME,
-    DEFAULT_STAGE_RESOURCES_PARTITION,
 )
 from ..config_schema import reject_unknown_config_keys
 from ..errors import ConfigContractError
 from .models import (
-    ControllerSpec,
+    ControlSpec,
     EnvironmentSourceSpec,
     EnvironmentSpec,
     ExecutorRuntimeSpec,
@@ -133,30 +133,30 @@ def parse_environments(raw: Any) -> dict[str, EnvironmentSpec]:
 def parse_orchestration(raw: Any) -> OrchestrationSpec:
     data = optional_mapping(raw, "orchestration")
     reject_unknown_config_keys(data, parent="orchestration")
-    controller = optional_mapping(data.get("controller"), "orchestration.controller")
-    reject_unknown_config_keys(controller, parent="orchestration.controller")
+    control = optional_mapping(data.get("control"), "orchestration.control")
+    reject_unknown_config_keys(control, parent="orchestration.control")
     return OrchestrationSpec(
-        controller=ControllerSpec(
+        control=ControlSpec(
             partition=(
-                DEFAULT_STAGE_RESOURCES_PARTITION
-                if controller.get("partition") in (None, "")
-                else str(controller.get("partition"))
+                DEFAULT_CONTROL_PARTITION
+                if control.get("partition") in (None, "")
+                else str(control.get("partition"))
             ),
-            cpus=int(controller.get("cpus", DEFAULT_CONTROLLER_CPUS)),
+            cpus=int(control.get("cpus", DEFAULT_CONTROL_CPUS)),
             mem=(
-                DEFAULT_CONTROLLER_MEM
-                if controller.get("mem") in (None, "")
-                else str(controller.get("mem"))
+                DEFAULT_CONTROL_MEM
+                if control.get("mem") in (None, "")
+                else str(control.get("mem"))
             ),
             time_limit=(
-                DEFAULT_CONTROLLER_TIME_LIMIT
-                if controller.get("time_limit") in (None, "")
-                else str(controller.get("time_limit"))
+                DEFAULT_CONTROL_TIME_LIMIT
+                if control.get("time_limit") in (None, "")
+                else str(control.get("time_limit"))
             ),
             environment=(
-                DEFAULT_CONTROLLER_ENVIRONMENT
-                if controller.get("environment") in (None, "")
-                else str(controller.get("environment"))
+                DEFAULT_CONTROL_ENVIRONMENT
+                if control.get("environment") in (None, "")
+                else str(control.get("environment"))
             ),
         )
     )

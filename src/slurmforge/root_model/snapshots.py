@@ -12,7 +12,7 @@ from .runs import collect_stage_statuses
 
 def refresh_stage_batch_status(batch_root: Path) -> RootStatusSnapshot:
     root = Path(batch_root).resolve()
-    statuses = collect_stage_statuses(root)
+    statuses = collect_stage_statuses(root, status_scope=True)
     snapshot = RootStatusSnapshot(
         root=root,
         kind="stage_batch",
@@ -55,7 +55,7 @@ def refresh_root_status(root: Path) -> RootStatusSnapshot:
 
 def load_root_status_snapshot(root: Path) -> RootStatusSnapshot:
     descriptor = detect_root(root)
-    statuses = collect_stage_statuses(descriptor.root)
+    statuses = collect_stage_statuses(descriptor.root, status_scope=True)
     run_statuses = aggregate_run_statuses(statuses)
     if descriptor.kind == "stage_batch":
         return RootStatusSnapshot(

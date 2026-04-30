@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .controller import reconcile_controller_job
-from ..root_model.detection import detect_root, is_stage_batch_root
+from ..root_model.detection import detect_root
 from ..root_model.runs import collect_stage_statuses
 from ..root_model.snapshots import refresh_root_status
 from ..status.query import state_matches
-from ..storage.controller import read_controller_status
 from ..storage.batch_materialization_records import read_materialization_status
+from ..storage.execution_index import iter_execution_batch_roots
+from ..storage.workflow import read_workflow_status
 from ..submission.reconcile import reconcile_root_submissions
 
 
@@ -29,8 +29,6 @@ def render_status_lines(
     root = descriptor.root
     lines: list[str] = []
     root_is_pipeline = descriptor.kind == "train_eval_pipeline"
-    if reconcile and root_is_pipeline:
-        reconcile_controller_job(root)
     if reconcile:
         reconcile_root_submissions(
             root,
@@ -48,17 +46,22 @@ def render_status_lines(
                 f"state={materialization.state} class={failure_class} reason={reason}"
             )
     elif root_is_pipeline:
-        controller_status = read_controller_status(root)
-        if controller_status is not None:
-            controller_state = str(controller_status.get("state") or "unknown")
-            job_id = str(controller_status.get("scheduler_job_id") or "-")
-            reason = _trim(str(controller_status.get("reason") or ""))
-            lines.append(
-                f"[STATUS] controller state={controller_state} job={job_id} reason={reason}"
+        workflow_status = read_workflow_status(root)
+        if workflow_status is not None:
+            workflow_state = str(workflow_status.get("state") or "unknown")
+            gate_job_records = dict(workflow_status.get("gate_jobs") or {})
+            gate_jobs = []
+            for name, record in sorted(gate_job_records.items()):
+                if isinstance(record, dict) and record.get("scheduler_job_id"):
+                    gate_jobs.append(f"{name}={record['scheduler_job_id']}")
+            job_id = ",".join(gate_jobs) or str(
+                workflow_status.get("scheduler_job_id") or "-"
             )
-        for stage_root in sorted((root / "stage_batches").glob("*")):
-            if not is_stage_batch_root(stage_root):
-                continue
+            reason = _trim(str(workflow_status.get("reason") or ""))
+            lines.append(
+                f"[STATUS] control state={workflow_state} jobs={job_id} reason={reason}"
+            )
+        for stage_root in iter_execution_batch_roots(root):
             materialization = read_materialization_status(stage_root)
             if materialization is None:
                 continue

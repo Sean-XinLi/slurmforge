@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..root_model.detection import is_stage_batch_root, is_train_eval_pipeline_root
+from ..root_model.detection import (
+    is_stage_batch_root,
+    is_train_eval_pipeline_root,
+)
 from ..slurm import SlurmClient, SlurmClientProtocol
 from ..status.reconcile import reconcile_stage_batch_with_slurm
+from ..storage.execution_index import iter_execution_batch_roots
 from ..storage.plan_reader import load_execution_stage_batch_plan
 from .ledger import submitted_group_job_ids
 
@@ -45,9 +49,7 @@ def reconcile_root_submissions(
             )
         return
     if is_train_eval_pipeline_root(root):
-        for stage_root in sorted((root / "stage_batches").glob("*")):
-            if not is_stage_batch_root(stage_root):
-                continue
+        for stage_root in iter_execution_batch_roots(root, status_scope=True):
             batch = load_execution_stage_batch_plan(stage_root)
             if stage is not None and batch.stage_name != stage:
                 continue

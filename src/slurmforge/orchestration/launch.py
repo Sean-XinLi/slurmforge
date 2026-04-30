@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from ..emit.controller import write_controller_submit_file
+from ..control.workflow import submit_initial_pipeline
+from ..emit.pipeline_gate import TRAIN_GROUP_GATE, write_pipeline_gate_submit_file
 from ..materialization.sourced import materialize_sourced_stage_batch
 from ..materialization.stage_batch import materialize_stage_batch
 from ..materialization.train_eval import materialize_train_eval_pipeline
@@ -10,7 +11,6 @@ from ..submission.finalizer import submit_stage_batch_finalizer
 from ..submission.generation import prepare_stage_submission
 from ..submission.models import PreparedSubmission
 from ..submission.submitter import submit_prepared_stage_batch
-from .controller import submit_controller_job
 from .results import (
     ExecutionMode,
     StageBatchExecutionResult,
@@ -92,17 +92,23 @@ def emit_train_eval_pipeline(
     spec: ExperimentSpec, plan, *, submit: bool
 ) -> TrainEvalPipelineExecutionResult:
     materialize_train_eval_pipeline(plan, spec_snapshot=spec.raw)
-    if "train" in plan.stage_batches:
-        prepare_stage_submission(plan.stage_batches["train"])
     if not submit:
-        write_controller_submit_file(plan)
+        if "train" in plan.stage_batches:
+            prepare_stage_submission(plan.stage_batches["train"])
+            for group in plan.stage_batches["train"].group_plans:
+                write_pipeline_gate_submit_file(
+                    plan,
+                    TRAIN_GROUP_GATE,
+                    group_id=group.group_id,
+                )
         return TrainEvalPipelineExecutionResult(root=plan.root_dir, mode="emit")
-    record = submit_controller_job(plan)
+    result = submit_initial_pipeline(plan)
     return TrainEvalPipelineExecutionResult(
         root=plan.root_dir,
         mode="submit",
         submitted=True,
-        controller_job_id=record.scheduler_job_id,
+        stage_job_ids=result.submitted_stage_job_ids,
+        gate_job_ids=result.submitted_gate_job_ids,
     )
 
 

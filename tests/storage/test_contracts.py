@@ -84,7 +84,7 @@ class StorageContractTests(StageBatchSystemTestCase):
                     with self.assertRaisesRegex(KeyError, field):
                         load_stage_batch_plan(Path(train_batch.submission_root))
 
-    def test_pipeline_plan_requires_current_controller_contract_fields(self) -> None:
+    def test_pipeline_plan_requires_current_control_contract_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = load_experiment_spec(write_demo_project(root))
@@ -95,7 +95,7 @@ class StorageContractTests(StageBatchSystemTestCase):
                 Path(pipeline.root_dir) / "train_eval_pipeline_plan.json"
             )
             payload = json.loads(pipeline_plan_path.read_text())
-            del payload["controller_plan"]["runtime_plan"]
+            del payload["control_plan"]["runtime_plan"]
             pipeline_plan_path.write_text(json.dumps(payload), encoding="utf-8")
 
             from slurmforge.storage.plan_reader import load_train_eval_pipeline_plan

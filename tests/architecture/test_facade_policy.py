@@ -9,7 +9,7 @@ class FacadePolicyTests(StageBatchSystemTestCase):
     def test_internal_package_facades_stay_empty(self) -> None:
         internal_packages = (
             "cli",
-            "controller",
+            "control",
             "emit",
             "executor",
             "inputs",

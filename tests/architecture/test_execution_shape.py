@@ -61,15 +61,22 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
         for name in ("__init__.py", "digests.py", "path_checks.py", "records.py"):
             self.assertTrue((verification_root / name).exists())
 
-    def test_train_eval_controller_runtime_is_split_by_responsibility(self) -> None:
-        controller_root = Path("src/slurmforge/controller")
-        self.assertTrue((controller_root / "stage_runtime.py").exists())
-        self.assertTrue((controller_root / "terminal.py").exists())
-        runtime_text = (controller_root / "train_eval_pipeline.py").read_text(
-            encoding="utf-8"
-        )
-        self.assertNotIn("def _wait_terminal", runtime_text)
-        self.assertNotIn("deliver_notification", runtime_text)
+    def test_train_eval_control_runtime_is_split_by_responsibility(self) -> None:
+        control_root = Path("src/slurmforge/control")
+        for name in (
+            "eval_shard.py",
+            "final_gate.py",
+            "gate_ledger.py",
+            "gates.py",
+            "stage_submit.py",
+            "train_group.py",
+            "workflow.py",
+            "terminal.py",
+        ):
+            self.assertTrue((control_root / name).exists())
+        workflow_text = (control_root / "workflow.py").read_text(encoding="utf-8")
+        self.assertNotIn("deliver_notification", workflow_text)
+        self.assertNotIn("materialize_stage_batch", workflow_text)
 
     def test_notification_finalizer_runtime_is_not_submission_runtime(self) -> None:
         submission_finalizer = Path("src/slurmforge/submission/finalizer.py").read_text(

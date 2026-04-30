@@ -6,8 +6,9 @@ from typing import Any
 from ..notifications.delivery import deliver_notification
 from ..root_model.notifications import load_notification_summary_input
 from ..root_model.snapshots import refresh_train_eval_pipeline_status
-from ..storage.controller import write_controller_status
-from .state import record_controller_event, save_controller_state
+from ..storage.workflow import write_workflow_status
+from .gate_ledger import submitted_gate_records
+from .state import record_workflow_event, save_workflow_state
 
 
 def complete_pipeline(
@@ -16,8 +17,15 @@ def complete_pipeline(
     final_state = _pipeline_terminal_state(pipeline_root)
     state["state"] = final_state
     state["current_stage"] = None
-    save_controller_state(pipeline_root, state)
-    write_controller_status(pipeline_root, final_state)
+    save_workflow_state(pipeline_root, state)
+    write_workflow_status(
+        pipeline_root,
+        final_state,
+        gate_jobs=submitted_gate_records(pipeline_root),
+        submitted_stages=state.get("submitted_stages") or {},
+        train_groups=state.get("train_groups") or {},
+        final_gate=state.get("final_gate") or {},
+    )
     record = deliver_notification(
         pipeline_root,
         event="train_eval_pipeline_finished",
@@ -27,7 +35,7 @@ def complete_pipeline(
         ),
     )
     if record is not None:
-        record_controller_event(
+        record_workflow_event(
             pipeline_root,
             "pipeline_notification",
             notification_event="train_eval_pipeline_finished",

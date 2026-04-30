@@ -18,10 +18,8 @@ from pathlib import Path
 class SubmitFinalizerTests(StageBatchSystemTestCase):
     def test_batch_notification_finalizer_submits_after_terminal_groups(self) -> None:
         from slurmforge.notifications.records import read_notification_record
-        from slurmforge.submission.finalizer import (
-            finalizer_dependency_group_ids,
-            submit_stage_batch_finalizer,
-        )
+        from slurmforge.submission.dependency_tree import dependency_sink_group_ids
+        from slurmforge.submission.finalizer import submit_stage_batch_finalizer
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -41,7 +39,7 @@ class SubmitFinalizerTests(StageBatchSystemTestCase):
             )
             spec = load_experiment_spec(cfg_path)
             batch = compile_stage_batch_for_kind(spec, kind="train")
-            self.assertEqual(finalizer_dependency_group_ids(batch), ("group_001",))
+            self.assertEqual(dependency_sink_group_ids(batch), ("group_001",))
             materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
             prepared = prepare_stage_submission(batch)
             client = FakeSlurmClient()

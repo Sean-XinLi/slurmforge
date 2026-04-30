@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -67,12 +68,16 @@ def _stage_batch_default_overlay(root: Path) -> dict[str, Any]:
             },
         },
         "orchestration": {
-            "controller": {
+            "control": {
                 "partition": "cpu",
                 "cpus": 1,
                 "mem": "2G",
                 "time_limit": "01:00:00",
                 "environment": "",
             },
+        },
+        "runtime": {
+            "executor": {"python": {"bin": sys.executable}},
+            "user": {"default": {"python": {"bin": sys.executable}}},
         },
     }

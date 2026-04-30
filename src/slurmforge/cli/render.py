@@ -49,12 +49,18 @@ def print_train_eval_pipeline_execution_result(
     if result.mode == "preview":
         return
     if result.submitted:
-        print(
-            f"[OK] submitted train/eval pipeline controller: {result.controller_job_id}"
-        )
+        train_jobs = result.stage_job_ids.get("train", {})
+        print(f"[OK] submitted train stage: {','.join(train_jobs.values())}")
+        train_gates = {
+            key: value
+            for key, value in result.gate_job_ids.items()
+            if key.startswith("train_group:")
+        }
+        for gate_name, job_id in sorted(train_gates.items()):
+            print(f"[OK] submitted {gate_name}: {job_id}")
         print(f"[OK] pipeline_root={result.root}")
         return
-    print(f"[OK] emitted train/eval pipeline: {result.root}")
+    print(f"[OK] emitted train/eval streaming pipeline: {result.root}")
 
 
 def print_stage_batch_plan(batch) -> None:

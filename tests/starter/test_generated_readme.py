@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
+from tests.starter.helpers import use_current_python_for_dry_run
 import io
 import json
 import os
@@ -46,6 +47,7 @@ class GeneratedReadmeTests(StageBatchSystemTestCase):
             with self.subTest(template=template), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 create_starter_project(InitRequest(template=template, output_dir=root))
+                use_current_python_for_dry_run(root / "experiment.yaml")
                 readme = (root / "README.sforge.md").read_text(encoding="utf-8")
                 config_guide = (root / "CONFIG.sforge.md").read_text(encoding="utf-8")
                 self.assertIn("## Connect Your Model", readme)

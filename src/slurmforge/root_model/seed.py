@@ -49,7 +49,8 @@ def seed_planned_stage_statuses(
 
 def seed_train_eval_pipeline_statuses(plan: TrainEvalPipelinePlan) -> None:
     pipeline_root = Path(plan.root_dir).resolve()
-    for batch in plan.stage_batches.values():
+    for stage_name in plan.stage_order:
+        batch = plan.stage_batches[stage_name]
         seed_planned_stage_statuses(
             batch,
             Path(batch.submission_root),

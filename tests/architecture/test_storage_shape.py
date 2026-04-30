@@ -30,13 +30,10 @@ class StorageShapeTests(StageBatchSystemTestCase):
         self.assertFalse(
             Path("src/slurmforge/storage", "status_" + "seed.py").exists()
         )
-        self.assertFalse(
-            Path("src/slurmforge/storage", "controller_" + "seed.py").exists()
-        )
         self.assertFalse(Path("src/slurmforge/storage/loader.py").exists())
         self.assertTrue(Path("src/slurmforge/storage/plan_reader.py").exists())
+        self.assertTrue(Path("src/slurmforge/storage/workflow.py").exists())
         self.assertTrue(Path("src/slurmforge/root_model/seed.py").exists())
-        self.assertTrue(Path("src/slurmforge/root_model/controller_seed.py").exists())
 
     def test_materialization_workflow_is_not_owned_by_storage(self) -> None:
         storage_root = Path("src/slurmforge/storage")

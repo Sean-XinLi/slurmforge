@@ -3,7 +3,7 @@ from __future__ import annotations
 from .models import (
     ArtifactStoreSpec,
     BeforeStepSpec,
-    ControllerSpec,
+    ControlSpec,
     DispatchSpec,
     EmailNotificationSpec,
     EntrySpec,
@@ -39,7 +39,7 @@ from .validation import validate_experiment_spec
 __all__ = [
     "ArtifactStoreSpec",
     "BeforeStepSpec",
-    "ControllerSpec",
+    "ControlSpec",
     "DispatchSpec",
     "EmailNotificationSpec",
     "EntrySpec",

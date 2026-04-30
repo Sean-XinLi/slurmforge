@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ...config_contract.defaults import (
-    DEFAULT_CONTROLLER_CPUS,
-    DEFAULT_CONTROLLER_ENVIRONMENT,
-    DEFAULT_CONTROLLER_MEM,
-    DEFAULT_CONTROLLER_TIME_LIMIT,
+    DEFAULT_CONTROL_CPUS,
+    DEFAULT_CONTROL_ENVIRONMENT,
+    DEFAULT_CONTROL_MEM,
+    DEFAULT_CONTROL_PARTITION,
+    DEFAULT_CONTROL_TIME_LIMIT,
     DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS,
     DEFAULT_DISPATCH_OVERFLOW_POLICY,
-    DEFAULT_STAGE_RESOURCES_PARTITION,
 )
 
 
@@ -20,14 +20,14 @@ class DispatchSpec:
 
 
 @dataclass(frozen=True)
-class ControllerSpec:
-    partition: str | None = DEFAULT_STAGE_RESOURCES_PARTITION
-    cpus: int = DEFAULT_CONTROLLER_CPUS
-    mem: str | None = DEFAULT_CONTROLLER_MEM
-    time_limit: str | None = DEFAULT_CONTROLLER_TIME_LIMIT
-    environment: str = DEFAULT_CONTROLLER_ENVIRONMENT
+class ControlSpec:
+    partition: str | None = DEFAULT_CONTROL_PARTITION
+    cpus: int = DEFAULT_CONTROL_CPUS
+    mem: str | None = DEFAULT_CONTROL_MEM
+    time_limit: str | None = DEFAULT_CONTROL_TIME_LIMIT
+    environment: str = DEFAULT_CONTROL_ENVIRONMENT
 
 
 @dataclass(frozen=True)
 class OrchestrationSpec:
-    controller: ControllerSpec = field(default_factory=ControllerSpec)
+    control: ControlSpec = field(default_factory=ControlSpec)

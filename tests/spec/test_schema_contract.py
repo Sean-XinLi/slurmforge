@@ -169,23 +169,23 @@ class SchemaContractTests(StageBatchSystemTestCase):
             with self.assertRaisesRegex(Exception, "unknown gpu type `missing`"):
                 load_experiment_spec(cfg_path)
 
-    def test_orchestration_controller_uses_nested_schema(self) -> None:
+    def test_orchestration_control_uses_nested_schema(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             cfg_path = write_demo_project(root)
             spec = load_experiment_spec(cfg_path)
 
-            self.assertEqual(spec.orchestration.controller.partition, "cpu")
-            self.assertEqual(spec.orchestration.controller.cpus, 1)
-            self.assertEqual(spec.orchestration.controller.mem, "2G")
-            self.assertEqual(spec.orchestration.controller.time_limit, "01:00:00")
+            self.assertEqual(spec.orchestration.control.partition, "cpu")
+            self.assertEqual(spec.orchestration.control.cpus, 1)
+            self.assertEqual(spec.orchestration.control.mem, "2G")
+            self.assertEqual(spec.orchestration.control.time_limit, "01:00:00")
 
             payload = yaml.safe_load(cfg_path.read_text())
-            payload["orchestration"] = {"controller_partition": "cpu"}
+            payload["orchestration"] = {"unknown_partition": "cpu"}
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
             with self.assertRaisesRegex(
                 Exception,
-                "Unsupported keys under `orchestration`: controller_partition",
+                "Unsupported keys under `orchestration`: unknown_partition",
             ):
                 load_experiment_spec(cfg_path)
 

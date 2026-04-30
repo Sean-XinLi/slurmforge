@@ -116,8 +116,8 @@ class SubmitGenerationTests(StageBatchSystemTestCase):
         self.assertFalse(hasattr(emit, "load_stage_submit_manifest"))
         self.assertFalse(hasattr(emit, "render_stage_group_sbatch"))
         self.assertFalse(hasattr(emit, "submit_sbatch_files"))
-        self.assertFalse(hasattr(emit, "submit_controller"))
-        self.assertFalse(hasattr(emit, "write_controller_submit_file"))
+        self.assertFalse(hasattr(emit, "render_pipeline_gate_sbatch"))
+        self.assertFalse(hasattr(emit, "write_pipeline_gate_submit_file"))
         generation_source = Path("src/slurmforge/submission/generation.py").read_text(
             encoding="utf-8"
         )

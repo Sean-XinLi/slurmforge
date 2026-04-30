@@ -13,43 +13,11 @@ from ..notifications.policy import email_notification_enabled
 from ..notifications.records import append_notification_event, write_notification_record
 from ..plans.stage import StageBatchPlan
 from ..slurm import SlurmClient, SlurmClientProtocol
-
-
-MAX_DEPENDENCY_LENGTH = 3500
-
-
-def finalizer_dependency_group_ids(batch: StageBatchPlan) -> tuple[str, ...]:
-    group_ids = {group.group_id for group in batch.group_plans}
-    has_outgoing_dependency: set[str] = set()
-    for dep in batch.budget_plan.dependencies:
-        has_outgoing_dependency.update(str(item) for item in dep.from_groups if item)
-    sinks = sorted(group_ids - has_outgoing_dependency)
-    return tuple(sinks or sorted(group_ids))
-
-
-def _dependency(job_ids: tuple[str, ...]) -> str:
-    return f"afterany:{':'.join(job_ids)}"
-
-
-def _dependency_chunks(
-    job_ids: tuple[str, ...], *, max_length: int
-) -> tuple[tuple[str, ...], ...]:
-    chunks: list[tuple[str, ...]] = []
-    current: list[str] = []
-    for job_id in job_ids:
-        candidate = tuple([*current, job_id])
-        if current and len(_dependency(candidate)) > max_length:
-            chunks.append(tuple(current))
-            current = [job_id]
-            continue
-        if len(_dependency((job_id,))) > max_length:
-            raise ConfigContractError(
-                f"Scheduler job id is too long for a dependency expression: {job_id}"
-            )
-        current.append(job_id)
-    if current:
-        chunks.append(tuple(current))
-    return tuple(chunks)
+from .dependency_tree import (
+    MAX_DEPENDENCY_LENGTH,
+    dependency_sink_group_ids,
+    submit_dependent_job_with_dependency_tree,
+)
 
 
 def _submit_with_dependency_tree(
@@ -61,24 +29,17 @@ def _submit_with_dependency_tree(
     client: SlurmClientProtocol,
     max_dependency_length: int,
 ) -> tuple[str, tuple[str, ...]]:
-    current = dependency_job_ids
-    barrier_job_ids: list[str] = []
-    barrier_index = 1
-    while len(_dependency(current)) > max_dependency_length:
-        next_level: list[str] = []
-        for chunk in _dependency_chunks(current, max_length=max_dependency_length):
-            barrier_path = write_stage_notification_barrier_file(
-                batch,
-                event,
-                barrier_index=barrier_index,
-            )
-            barrier_index += 1
-            barrier_id = client.submit(barrier_path, dependency=_dependency(chunk))
-            barrier_job_ids.append(barrier_id)
-            next_level.append(barrier_id)
-        current = tuple(next_level)
-    finalizer_job_id = client.submit(finalizer_path, dependency=_dependency(current))
-    return finalizer_job_id, tuple(barrier_job_ids)
+    return submit_dependent_job_with_dependency_tree(
+        target_path=finalizer_path,
+        dependency_job_ids=dependency_job_ids,
+        client=client,
+        max_dependency_length=max_dependency_length,
+        barrier_path_factory=lambda barrier_index: write_stage_notification_barrier_file(
+            batch,
+            event,
+            barrier_index=barrier_index,
+        ),
+    )
 
 
 def submit_stage_batch_finalizer(
@@ -91,7 +52,7 @@ def submit_stage_batch_finalizer(
 ) -> NotificationDeliveryRecord | None:
     if not email_notification_enabled(batch.notification_plan, event):
         return None
-    dependency_group_ids = finalizer_dependency_group_ids(batch)
+    dependency_group_ids = dependency_sink_group_ids(batch)
     missing = [
         group_id for group_id in dependency_group_ids if group_id not in group_job_ids
     ]

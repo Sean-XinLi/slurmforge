@@ -12,11 +12,11 @@ class TestLayoutShapeTests(StageBatchSystemTestCase):
                 "test_file_outputs_flow.py",
                 "test_metric_artifact_outputs_flow.py",
                 "test_metric_value_inputs_flow.py",
-                "test_pipeline_controller_flow.py",
                 "test_pipeline_dry_run.py",
                 "test_plan_record_contracts.py",
                 "test_stage_execution_flow.py",
             ),
+            "tests/control": ("test_pipeline_control.py",),
             "tests/executor": (
                 "test_before_steps.py",
                 "test_diagnostics.py",

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from tests.support.case import StageBatchSystemTestCase
-from tests.starter.helpers import dry_run_command_for_template
+from tests.starter.helpers import (
+    dry_run_command_for_template,
+    use_current_python_for_dry_run,
+)
 import io
 import json
 import tempfile
@@ -65,6 +68,7 @@ class StarterTests(StageBatchSystemTestCase):
             self.assertEqual(
                 payload["runtime"]["user"]["default"]["python"]["bin"], "python3"
             )
+            use_current_python_for_dry_run(cfg_path)
 
             stdout = io.StringIO()
             stderr = io.StringIO()
@@ -133,6 +137,7 @@ class StarterTests(StageBatchSystemTestCase):
                 root = Path(tmp)
                 cfg_path = root / "experiment.yaml"
                 create_starter_project(InitRequest(template=template, output_dir=root))
+                use_current_python_for_dry_run(cfg_path)
                 command = dry_run_command_for_template(template)
                 args = [*command, "--config", str(cfg_path), "--dry-run=full"]
 
