@@ -5,15 +5,20 @@ from typing import Any
 
 from ..errors import ConfigContractError, RecordContractError
 from ..io import SchemaVersion, utc_now
+from ..record_fields import required_string, required_string_tuple
+from ..workflow_enums import (
+    CONTROL_STATE_FAILED,
+    CONTROL_STATE_SUBMITTED,
+    CONTROL_STATE_SUBMITTING as _CONTROL_STATE_SUBMITTING,
+    CONTROL_STATE_UNCERTAIN,
+    CONTROL_STATES,
+)
 
 CONTROL_KIND_STAGE_INSTANCE_GATE = "stage_instance_gate"
 CONTROL_KIND_DISPATCH_CATCHUP_GATE = "dispatch_catchup_gate"
 CONTROL_KIND_TERMINAL_NOTIFICATION = "terminal_notification"
 
-CONTROL_STATE_SUBMITTING = "submitting"
-CONTROL_STATE_SUBMITTED = "submitted"
-CONTROL_STATE_UNCERTAIN = "uncertain"
-CONTROL_STATE_FAILED = "failed"
+CONTROL_STATE_SUBMITTING = _CONTROL_STATE_SUBMITTING
 
 CONTROL_ON_ERROR_RAISE_UNCERTAIN = "raise_uncertain"
 CONTROL_ON_ERROR_RECORD_FAILED = "record_failed"
@@ -22,12 +27,6 @@ CONTROL_KINDS = (
     CONTROL_KIND_STAGE_INSTANCE_GATE,
     CONTROL_KIND_DISPATCH_CATCHUP_GATE,
     CONTROL_KIND_TERMINAL_NOTIFICATION,
-)
-CONTROL_STATES = (
-    CONTROL_STATE_SUBMITTING,
-    CONTROL_STATE_SUBMITTED,
-    CONTROL_STATE_UNCERTAIN,
-    CONTROL_STATE_FAILED,
 )
 CONTROL_ON_ERROR_POLICIES = (
     CONTROL_ON_ERROR_RAISE_UNCERTAIN,
@@ -83,20 +82,38 @@ def empty_control_submission_ledger() -> ControlSubmissionLedger:
 def control_submission_from_payload(
     key: str, payload: dict[str, Any]
 ) -> ControlSubmissionRecord:
-    payload_key = _required_string(payload, "key")
+    payload_key = required_string(
+        payload, "key", label="control_submissions record", non_empty=True
+    )
     if payload_key != key:
         raise RecordContractError(
             f"control submission payload key `{payload_key}` does not match map key `{key}`"
         )
-    kind = _required_string(payload, "kind")
-    target_kind = _required_string(payload, "target_kind")
-    target_id = _required_string(payload, "target_id")
-    state = _required_string(payload, "state")
-    sbatch_paths = _tuple_field(payload, "sbatch_paths")
-    scheduler_job_ids = _tuple_field(payload, "scheduler_job_ids")
-    barrier_job_ids = _tuple_field(payload, "barrier_job_ids")
-    dependency_job_ids = _tuple_field(payload, "dependency_job_ids")
-    reason = str(payload.get("reason") or "")
+    kind = required_string(
+        payload, "kind", label="control_submissions record", non_empty=True
+    )
+    target_kind = required_string(
+        payload, "target_kind", label="control_submissions record", non_empty=True
+    )
+    target_id = required_string(
+        payload, "target_id", label="control_submissions record", non_empty=True
+    )
+    state = required_string(
+        payload, "state", label="control_submissions record", non_empty=True
+    )
+    sbatch_paths = required_string_tuple(
+        payload, "sbatch_paths", label="control_submissions record"
+    )
+    scheduler_job_ids = required_string_tuple(
+        payload, "scheduler_job_ids", label="control_submissions record"
+    )
+    barrier_job_ids = required_string_tuple(
+        payload, "barrier_job_ids", label="control_submissions record"
+    )
+    dependency_job_ids = required_string_tuple(
+        payload, "dependency_job_ids", label="control_submissions record"
+    )
+    reason = required_string(payload, "reason", label="control_submissions record")
     validate_control_record(
         key=key,
         kind=kind,
@@ -118,9 +135,15 @@ def control_submission_from_payload(
         barrier_job_ids=barrier_job_ids,
         dependency_job_ids=dependency_job_ids,
         reason=reason,
-        started_at=str(payload.get("started_at") or ""),
-        submitted_at=str(payload.get("submitted_at") or ""),
-        failed_at=str(payload.get("failed_at") or ""),
+        started_at=required_string(
+            payload, "started_at", label="control_submissions record"
+        ),
+        submitted_at=required_string(
+            payload, "submitted_at", label="control_submissions record"
+        ),
+        failed_at=required_string(
+            payload, "failed_at", label="control_submissions record"
+        ),
     )
 
 
@@ -158,23 +181,3 @@ def validate_control_record(
         raise RecordContractError(
             f"{state} control submission requires a failure reason"
         )
-
-
-def _required_string(payload: dict[str, Any], field_name: str) -> str:
-    value = payload.get(field_name)
-    if not isinstance(value, str) or not value:
-        raise RecordContractError(
-            f"control_submissions record field `{field_name}` must be a non-empty string"
-        )
-    return value
-
-
-def _tuple_field(payload: dict[str, Any], field_name: str) -> tuple[str, ...]:
-    value = payload.get(field_name)
-    if value is None:
-        return ()
-    if not isinstance(value, (list, tuple)):
-        raise RecordContractError(
-            f"control_submissions record field `{field_name}` must be an array"
-        )
-    return tuple(str(item) for item in value)

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from ..io import SchemaVersion, read_json, utc_now, write_json
+from ..record_fields import required_string
 
 
 def append_scheduler_observation(batch_root: Path, payload: dict[str, Any]) -> None:
@@ -27,7 +28,12 @@ def missing_output_expired(
     path = Path(run_dir) / "reconcile.json"
     if path.exists():
         payload = read_json(path)
-        first_missing = str(payload.get("first_missing_output_at") or utc_now())
+        first_missing = required_string(
+            payload,
+            "first_missing_output_at",
+            label="scheduler_reconcile",
+            non_empty=True,
+        )
     else:
         first_missing = utc_now()
         write_json(

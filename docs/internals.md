@@ -74,7 +74,7 @@ Train/eval pipelines use short-lived control jobs, not a long-running orchestrat
 
 `control/workflow_state.json` is the durable workflow state machine for train/eval progression. Its schema is owned by `storage.workflow_state_records`, initialized through `storage.workflow_state_factory`, and consumed by `control`; `storage` never imports controller modules to build or validate this file.
 
-`control/workflow_status.json` is the typed status read model for users and `sforge status`. Its `control_jobs` projection includes every control submission record, including `failed` and `uncertain` records without scheduler job ids, so operators can see why a gate or notification did not produce a Slurm job.
+`control/workflow_status.json` is the typed status read model for users and `sforge status`. It contains read-model fields only: workflow state/reason, projected stage job ids, and projected control jobs. It does not duplicate workflow instances, dependencies, dispatch queue, submissions, or terminal aggregation from `workflow_state.json`.
 
 `control/control_submissions.json` is the authoritative ledger for stage-instance gates, dispatch catch-up gates, and terminal notification control jobs. It records `submitting` before `sbatch`, `submitted` after scheduler job ids are known, `failed` when no scheduler job was created and retry is safe, and `uncertain` when a retry would risk duplicate control jobs. Records are self-validating: kind, state, target key, sbatch paths, scheduler job ids, and failure reasons must agree before the ledger can be read as a valid control state.
 

@@ -15,7 +15,7 @@ class SourcePlanTests(StageBatchSystemTestCase):
             stage=source.stage,
             query=source.query,
             selected_run_ids=("run_0001",),
-            selected_stage_instance_ids=("run_0001.eval",),
+            selected_stage_instance_ids=("eval/run_0001",),
         )
 
         self.assertEqual(source.schema_version, SchemaVersion.SOURCE_PLAN)

@@ -8,7 +8,7 @@ Every stage instance has `input_bindings.json`:
 ```json
 {
   "schema_version": 1,
-  "stage_instance_id": "run_001.eval",
+  "stage_instance_id": "eval/run_001",
   "bindings": {
     "checkpoint": {
       "source": {
@@ -31,7 +31,7 @@ Every stage instance has `input_bindings.json`:
         "kind": "upstream_output",
         "producer_root": "/abs/path/train_batch",
         "producer_run_dir": "/abs/path/train_batch/runs/run_001",
-        "producer_stage_instance_id": "run_001.train",
+        "producer_stage_instance_id": "train/run_001",
         "producer_run_id": "run_001",
         "producer_stage_name": "train",
         "output_name": "checkpoint",

@@ -4,10 +4,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..storage.workflow import write_workflow_status
+from ..storage.workflow_state_records import WorkflowState
 from ..storage.workflow_status_records import WorkflowStatusRecord
 from ..workflow_contract import WORKFLOW_TERMINAL_STATES
 from .control_submission_ledger import submitted_control_job_ids
-from ..storage.workflow_state_records import WorkflowState, workflow_state_to_dict
 from .workflow_status_projection import workflow_status_control_jobs
 
 
@@ -55,7 +55,6 @@ def set_workflow_status(
     *,
     reason: str,
 ) -> None:
-    snapshot = workflow_state_to_dict(state)
     write_workflow_status(
         pipeline_root,
         WorkflowStatusRecord(
@@ -64,11 +63,6 @@ def set_workflow_status(
             reason=reason,
             control_jobs=workflow_status_control_jobs(pipeline_root),
             stage_jobs=submitted_stage_job_ids_from_state(state),
-            instances=snapshot["instances"],
-            dependencies=snapshot["dependencies"],
-            dispatch_queue=tuple(snapshot["dispatch_queue"]),
-            submissions=snapshot["submissions"],
-            terminal_aggregation=snapshot["terminal_aggregation"],
         ),
     )
 

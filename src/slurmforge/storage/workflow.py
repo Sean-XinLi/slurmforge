@@ -34,11 +34,6 @@ def write_initial_workflow_state(root: Path, plan: TrainEvalPipelinePlan) -> Non
             updated_at=utc_now(),
             control_jobs={},
             stage_jobs={},
-            instances=dict(workflow_state_payload["instances"]),
-            dependencies=dict(workflow_state_payload["dependencies"]),
-            dispatch_queue=tuple(workflow_state_payload["dispatch_queue"]),
-            submissions=dict(workflow_state_payload["submissions"]),
-            terminal_aggregation=dict(workflow_state_payload["terminal_aggregation"]),
         ),
     )
     events = root / "control" / "events.jsonl"

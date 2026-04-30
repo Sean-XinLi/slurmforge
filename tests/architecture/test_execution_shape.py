@@ -97,8 +97,21 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
         ):
             self.assertTrue((control_root / name).exists())
         storage_root = Path("src/slurmforge/storage")
-        for name in ("workflow_state_factory.py", "workflow_state_records.py"):
+        for name in (
+            "workflow_state_constants.py",
+            "workflow_state_factory.py",
+            "workflow_state_models.py",
+            "workflow_state_mutations.py",
+            "workflow_state_records.py",
+            "workflow_state_serde.py",
+            "workflow_state_validation.py",
+        ):
             self.assertTrue((storage_root / name).exists())
+        workflow_state_facade = (storage_root / "workflow_state_records.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertLess(len(workflow_state_facade.splitlines()), 60)
+        self.assertNotIn("@dataclass", workflow_state_facade)
         workflow_text = (control_root / "workflow.py").read_text(encoding="utf-8")
         self.assertNotIn("deliver_notification", workflow_text)
         self.assertNotIn("materialize_stage_batch", workflow_text)

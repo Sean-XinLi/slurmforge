@@ -2,83 +2,103 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...record_fields import (
+    required_int,
+    required_nullable_float,
+    required_nullable_int,
+    required_nullable_string,
+    required_string,
+    required_string_tuple,
+)
 from ...sizing.models import GpuSizingResolution
 from ..resources import ControlResourcesPlan, ResourcePlan
 
 
 def resource_plan_from_dict(payload: dict[str, Any]) -> ResourcePlan:
     return ResourcePlan(
-        partition=None
-        if payload["partition"] in (None, "")
-        else str(payload["partition"]),
-        account=None if payload["account"] in (None, "") else str(payload["account"]),
-        qos=None if payload["qos"] in (None, "") else str(payload["qos"]),
-        time_limit=None
-        if payload["time_limit"] in (None, "")
-        else str(payload["time_limit"]),
-        gpu_type=str(payload["gpu_type"]),
-        nodes=int(payload["nodes"]),
-        gpus_per_node=int(payload["gpus_per_node"]),
-        cpus_per_task=int(payload["cpus_per_task"]),
-        mem=None if payload["mem"] in (None, "") else str(payload["mem"]),
-        constraint=None
-        if payload["constraint"] in (None, "")
-        else str(payload["constraint"]),
-        extra_sbatch_args=tuple(str(item) for item in payload["extra_sbatch_args"]),
+        partition=required_nullable_string(payload, "partition", label="resource_plan"),
+        account=required_nullable_string(payload, "account", label="resource_plan"),
+        qos=required_nullable_string(payload, "qos", label="resource_plan"),
+        time_limit=required_nullable_string(
+            payload, "time_limit", label="resource_plan"
+        ),
+        gpu_type=required_string(payload, "gpu_type", label="resource_plan"),
+        nodes=required_int(payload, "nodes", label="resource_plan"),
+        gpus_per_node=required_int(
+            payload, "gpus_per_node", label="resource_plan"
+        ),
+        cpus_per_task=required_int(
+            payload, "cpus_per_task", label="resource_plan"
+        ),
+        mem=required_nullable_string(payload, "mem", label="resource_plan"),
+        constraint=required_nullable_string(
+            payload, "constraint", label="resource_plan"
+        ),
+        extra_sbatch_args=required_string_tuple(
+            payload, "extra_sbatch_args", label="resource_plan"
+        ),
     )
 
 
 def resource_sizing_from_dict(payload: dict[str, Any]) -> GpuSizingResolution:
     return GpuSizingResolution(
-        mode=str(payload["mode"]),
-        stage_name=str(payload["stage_name"]),
-        nodes=int(payload["nodes"]),
-        gpu_type=str(payload.get("gpu_type") or ""),
-        estimator=str(payload.get("estimator") or ""),
-        target_memory_gb=None
-        if payload.get("target_memory_gb") is None
-        else float(payload["target_memory_gb"]),
-        memory_gb=None
-        if payload.get("memory_gb") is None
-        else float(payload["memory_gb"]),
-        usable_memory_fraction=None
-        if payload.get("usable_memory_fraction") is None
-        else float(payload["usable_memory_fraction"]),
-        usable_memory_per_gpu_gb=None
-        if payload.get("usable_memory_per_gpu_gb") is None
-        else float(payload["usable_memory_per_gpu_gb"]),
-        safety_factor=None
-        if payload.get("safety_factor") is None
-        else float(payload["safety_factor"]),
-        required_memory_gb=None
-        if payload.get("required_memory_gb") is None
-        else float(payload["required_memory_gb"]),
-        raw_total_gpus=None
-        if payload.get("raw_total_gpus") is None
-        else int(payload["raw_total_gpus"]),
-        rounded_total_gpus=None
-        if payload.get("rounded_total_gpus") is None
-        else int(payload["rounded_total_gpus"]),
-        min_gpus_per_job=None
-        if payload.get("min_gpus_per_job") is None
-        else int(payload["min_gpus_per_job"]),
-        max_gpus_per_job=None
-        if payload.get("max_gpus_per_job") is None
-        else int(payload["max_gpus_per_job"]),
-        round_to=int(payload["round_to"]),
-        resolved_total_gpus=int(payload["resolved_total_gpus"]),
-        resolved_gpus_per_node=int(payload["resolved_gpus_per_node"]),
+        mode=required_string(
+            payload, "mode", label="resource_sizing", non_empty=True
+        ),
+        stage_name=required_string(
+            payload, "stage_name", label="resource_sizing", non_empty=True
+        ),
+        nodes=required_int(payload, "nodes", label="resource_sizing"),
+        gpu_type=required_string(payload, "gpu_type", label="resource_sizing"),
+        estimator=required_string(payload, "estimator", label="resource_sizing"),
+        target_memory_gb=required_nullable_float(
+            payload, "target_memory_gb", label="resource_sizing"
+        ),
+        memory_gb=required_nullable_float(
+            payload, "memory_gb", label="resource_sizing"
+        ),
+        usable_memory_fraction=required_nullable_float(
+            payload, "usable_memory_fraction", label="resource_sizing"
+        ),
+        usable_memory_per_gpu_gb=required_nullable_float(
+            payload, "usable_memory_per_gpu_gb", label="resource_sizing"
+        ),
+        safety_factor=required_nullable_float(
+            payload, "safety_factor", label="resource_sizing"
+        ),
+        required_memory_gb=required_nullable_float(
+            payload, "required_memory_gb", label="resource_sizing"
+        ),
+        raw_total_gpus=required_nullable_int(
+            payload, "raw_total_gpus", label="resource_sizing"
+        ),
+        rounded_total_gpus=required_nullable_int(
+            payload, "rounded_total_gpus", label="resource_sizing"
+        ),
+        min_gpus_per_job=required_nullable_int(
+            payload, "min_gpus_per_job", label="resource_sizing"
+        ),
+        max_gpus_per_job=required_nullable_int(
+            payload, "max_gpus_per_job", label="resource_sizing"
+        ),
+        round_to=required_int(payload, "round_to", label="resource_sizing"),
+        resolved_total_gpus=required_int(
+            payload, "resolved_total_gpus", label="resource_sizing"
+        ),
+        resolved_gpus_per_node=required_int(
+            payload, "resolved_gpus_per_node", label="resource_sizing"
+        ),
     )
 
 
 def control_resources_plan_from_dict(payload: dict[str, Any]) -> ControlResourcesPlan:
     return ControlResourcesPlan(
-        partition=None
-        if payload["partition"] in (None, "")
-        else str(payload["partition"]),
-        cpus=int(payload["cpus"]),
-        mem=None if payload["mem"] in (None, "") else str(payload["mem"]),
-        time_limit=None
-        if payload["time_limit"] in (None, "")
-        else str(payload["time_limit"]),
+        partition=required_nullable_string(
+            payload, "partition", label="control_resources_plan"
+        ),
+        cpus=required_int(payload, "cpus", label="control_resources_plan"),
+        mem=required_nullable_string(payload, "mem", label="control_resources_plan"),
+        time_limit=required_nullable_string(
+            payload, "time_limit", label="control_resources_plan"
+        ),
     )

@@ -4,6 +4,11 @@ from typing import Any
 
 from ..errors import RecordContractError
 from ..io import SchemaVersion, require_schema
+from ..record_fields import (
+    required_nullable_string,
+    required_object,
+    required_string,
+)
 from .models import GroupSubmissionRecord, SubmissionLedger, SubmitGeneration
 
 LEDGER_STATE_PLANNED = "planned"
@@ -41,15 +46,23 @@ def submission_ledger_from_dict(payload: dict[str, Any]) -> SubmissionLedger:
     version = require_schema(
         payload, name="submission_ledger", version=SchemaVersion.SUBMISSION_LEDGER
     )
-    groups_raw = payload.get("groups")
-    if not isinstance(groups_raw, dict) or not groups_raw:
+    groups_raw = required_object(payload, "groups", label="submission_ledger")
+    if not groups_raw:
         raise RecordContractError("submission_ledger.groups must be a non-empty object")
     ledger = SubmissionLedger(
         schema_version=version,
-        batch_id=_required_string(payload, "batch_id"),
-        stage_name=_required_string(payload, "stage_name"),
-        generation_id=_required_string(payload, "generation_id"),
-        state=_required_string(payload, "state"),
+        batch_id=required_string(
+            payload, "batch_id", label="submission_ledger", non_empty=True
+        ),
+        stage_name=required_string(
+            payload, "stage_name", label="submission_ledger", non_empty=True
+        ),
+        generation_id=required_string(
+            payload, "generation_id", label="submission_ledger", non_empty=True
+        ),
+        state=required_string(
+            payload, "state", label="submission_ledger", non_empty=True
+        ),
         groups={
             str(group_id): group_submission_record_from_dict(str(group_id), dict(group))
             for group_id, group in groups_raw.items()
@@ -62,19 +75,31 @@ def submission_ledger_from_dict(payload: dict[str, Any]) -> SubmissionLedger:
 def group_submission_record_from_dict(
     group_id: str, payload: dict[str, Any]
 ) -> GroupSubmissionRecord:
-    payload_group_id = _required_string(payload, "group_id")
+    payload_group_id = required_string(
+        payload, "group_id", label="submission_ledger group", non_empty=True
+    )
     if payload_group_id != group_id:
         raise RecordContractError(
             f"submission group key `{group_id}` does not match record `{payload_group_id}`"
         )
     record = GroupSubmissionRecord(
         group_id=group_id,
-        sbatch_path=_required_string(payload, "sbatch_path"),
-        dependency=_optional_string(payload, "dependency"),
-        scheduler_job_id=_optional_string(payload, "scheduler_job_id"),
-        state=_required_string(payload, "state"),
-        submitted_at=_optional_string(payload, "submitted_at"),
-        reason=str(payload.get("reason") or ""),
+        sbatch_path=required_string(
+            payload, "sbatch_path", label="submission_ledger group", non_empty=True
+        ),
+        dependency=required_nullable_string(
+            payload, "dependency", label="submission_ledger group"
+        ),
+        scheduler_job_id=required_nullable_string(
+            payload, "scheduler_job_id", label="submission_ledger group"
+        ),
+        state=required_string(
+            payload, "state", label="submission_ledger group", non_empty=True
+        ),
+        submitted_at=required_nullable_string(
+            payload, "submitted_at", label="submission_ledger group"
+        ),
+        reason=required_string(payload, "reason", label="submission_ledger group"),
     )
     validate_group_submission_record(record)
     return record
@@ -146,21 +171,3 @@ def validate_group_submission_record(record: GroupSubmissionRecord) -> None:
             )
     if record.state == GROUP_STATE_FAILED and not record.reason:
         raise RecordContractError("failed submission group requires reason")
-
-
-def _required_string(payload: dict[str, Any], field_name: str) -> str:
-    value = payload.get(field_name)
-    if not isinstance(value, str) or not value:
-        raise RecordContractError(
-            f"submission_ledger.{field_name} must be a non-empty string"
-        )
-    return value
-
-
-def _optional_string(payload: dict[str, Any], field_name: str) -> str | None:
-    value = payload.get(field_name)
-    if value in (None, ""):
-        return None
-    if not isinstance(value, str):
-        raise RecordContractError(f"submission_ledger.{field_name} must be a string")
-    return value

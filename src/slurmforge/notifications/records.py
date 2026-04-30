@@ -13,6 +13,7 @@ from ..io import (
     utc_now,
     write_json,
 )
+from ..record_fields import required_string, required_string_tuple
 from .models import NotificationSubmissionRecord
 
 NOTIFICATION_STATES = ("submitted", "failed", "uncertain")
@@ -54,20 +55,40 @@ def notification_submission_record_from_dict(
     )
     record = NotificationSubmissionRecord(
         schema_version=version,
-        event=_required_string(payload, "event"),
-        root_kind=_required_string(payload, "root_kind"),
-        root=_required_string(payload, "root"),
-        backend=_required_string(payload, "backend"),
-        state=_required_string(payload, "state"),
-        recipients=_tuple_field(payload, "recipients", non_empty_items=True),
-        scheduler_job_ids=_tuple_field(payload, "scheduler_job_ids"),
-        sbatch_paths=_tuple_field(payload, "sbatch_paths"),
-        barrier_job_ids=_tuple_field(payload, "barrier_job_ids"),
-        dependency_job_ids=_tuple_field(payload, "dependency_job_ids"),
-        dependency_type=_required_string(payload, "dependency_type"),
-        mail_type=_required_string(payload, "mail_type"),
-        submitted_at=str(payload.get("submitted_at") or ""),
-        reason=str(payload.get("reason") or ""),
+        event=required_string(
+            payload, "event", label="notification", non_empty=True
+        ),
+        root_kind=required_string(
+            payload, "root_kind", label="notification", non_empty=True
+        ),
+        root=required_string(payload, "root", label="notification", non_empty=True),
+        backend=required_string(
+            payload, "backend", label="notification", non_empty=True
+        ),
+        state=required_string(payload, "state", label="notification", non_empty=True),
+        recipients=required_string_tuple(
+            payload, "recipients", label="notification", non_empty_items=True
+        ),
+        scheduler_job_ids=required_string_tuple(
+            payload, "scheduler_job_ids", label="notification"
+        ),
+        sbatch_paths=required_string_tuple(
+            payload, "sbatch_paths", label="notification"
+        ),
+        barrier_job_ids=required_string_tuple(
+            payload, "barrier_job_ids", label="notification"
+        ),
+        dependency_job_ids=required_string_tuple(
+            payload, "dependency_job_ids", label="notification"
+        ),
+        dependency_type=required_string(
+            payload, "dependency_type", label="notification", non_empty=True
+        ),
+        mail_type=required_string(
+            payload, "mail_type", label="notification", non_empty=True
+        ),
+        submitted_at=required_string(payload, "submitted_at", label="notification"),
+        reason=required_string(payload, "reason", label="notification"),
     )
     validate_notification_submission_record(record)
     return record
@@ -110,31 +131,3 @@ def validate_notification_submission_record(record: NotificationSubmissionRecord
             raise RecordContractError("submitted notification requires sbatch_paths")
     if record.state in {"failed", "uncertain"} and not record.reason:
         raise RecordContractError(f"{record.state} notification requires reason")
-
-
-def _required_string(payload: dict[str, Any], field_name: str) -> str:
-    value = payload.get(field_name)
-    if not isinstance(value, str) or not value:
-        raise RecordContractError(
-            f"notification.{field_name} must be a non-empty string"
-        )
-    return value
-
-
-def _tuple_field(
-    payload: dict[str, Any],
-    field_name: str,
-    *,
-    non_empty_items: bool = False,
-) -> tuple[str, ...]:
-    value = payload.get(field_name)
-    if value is None:
-        return ()
-    if not isinstance(value, (list, tuple)):
-        raise RecordContractError(f"notification.{field_name} must be an array")
-    result = tuple(str(item) for item in value)
-    if non_empty_items and any(not item for item in result):
-        raise RecordContractError(
-            f"notification.{field_name} must contain non-empty strings"
-        )
-    return result

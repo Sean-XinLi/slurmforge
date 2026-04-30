@@ -15,7 +15,7 @@ The core planning objects are:
 
 `StageInstancePlan` is the executable plan for one stage of one run:
 
-- `stage_instance_id = <run_id>.<stage_name>`
+- `stage_instance_id = <stage_name>/<run_id>`
 - `run_id`
 - `stage_name`
 - `stage_kind`

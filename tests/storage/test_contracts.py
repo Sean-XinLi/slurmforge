@@ -99,8 +99,9 @@ class StorageContractTests(StageBatchSystemTestCase):
             pipeline_plan_path.write_text(json.dumps(payload), encoding="utf-8")
 
             from slurmforge.storage.plan_reader import load_train_eval_pipeline_plan
+            from slurmforge.errors import RecordContractError
 
-            with self.assertRaisesRegex(KeyError, "runtime_plan"):
+            with self.assertRaisesRegex(RecordContractError, "runtime_plan"):
                 load_train_eval_pipeline_plan(Path(pipeline.root_dir))
 
     def test_pipeline_plan_requires_train_eval_pipeline_kind(self) -> None:
@@ -118,6 +119,7 @@ class StorageContractTests(StageBatchSystemTestCase):
             pipeline_plan_path.write_text(json.dumps(payload), encoding="utf-8")
 
             from slurmforge.storage.plan_reader import load_train_eval_pipeline_plan
+            from slurmforge.errors import RecordContractError
 
-            with self.assertRaisesRegex(KeyError, "pipeline_kind"):
+            with self.assertRaisesRegex(RecordContractError, "pipeline_kind"):
                 load_train_eval_pipeline_plan(Path(pipeline.root_dir))

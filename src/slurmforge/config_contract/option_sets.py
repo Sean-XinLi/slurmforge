@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from ..workflow_enums import (
+    RELEASE_PER_GROUP as RELEASE_POLICY_PER_GROUP,
+    RELEASE_PER_RUN as RELEASE_POLICY_PER_RUN,
+    RELEASE_PER_STAGE as RELEASE_POLICY_PER_STAGE,
+    RELEASE_WINDOWED as RELEASE_POLICY_WINDOWED,
+)
 from .models import ConfigOption
 
 RUN_SINGLE = "single"
@@ -49,10 +55,6 @@ ARTIFACT_FALLBACK_NULL = "null"
 DISPATCH_POLICY_SERIALIZE_GROUPS = "serialize_groups"
 DISPATCH_POLICY_ERROR = "error"
 DISPATCH_POLICY_BEST_EFFORT = "best_effort"
-RELEASE_POLICY_PER_RUN = "per_run"
-RELEASE_POLICY_PER_GROUP = "per_group"
-RELEASE_POLICY_PER_STAGE = "per_stage"
-RELEASE_POLICY_WINDOWED = "windowed"
 
 EMAIL_EVENT_BATCH_FINISHED = "batch_finished"
 EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED = "train_eval_pipeline_finished"
