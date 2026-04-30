@@ -143,6 +143,13 @@ def advance_pipeline_once(
             write_exception_diagnostic(workflow_traceback_path(root), exc)
             state.state = WORKFLOW_FAILED
             save_workflow_state(root, state)
+            record_workflow_event(
+                root,
+                "controller_advance_failed",
+                **_hint_payload(hint),
+                workflow_state_after=state.state,
+                reason=str(exc),
+            )
             set_workflow_status(root, state, WORKFLOW_FAILED, reason=str(exc))
             raise
 

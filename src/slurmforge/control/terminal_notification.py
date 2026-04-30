@@ -17,12 +17,14 @@ from ..notifications.records import (
 from ..slurm import SlurmClientProtocol
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..submission.notification_mail import SLURM_MAIL_BACKEND, submit_slurm_mail_jobs
-from .control_submissions import (
+from .control_submission_records import (
     CONTROL_KIND_TERMINAL_NOTIFICATION,
     CONTROL_ON_ERROR_RECORD_FAILED,
     ControlSubmissionRecord,
     ControlSubmitResult,
     control_submission_key,
+)
+from .control_submission_submit import (
     submit_control_once,
 )
 

@@ -31,6 +31,8 @@ DISPATCH_SUBMITTED = "submitted"
 DISPATCH_TERMINAL = "terminal"
 DISPATCH_FAILED = "failed"
 DISPATCH_ACTIVE_STATES = (DISPATCH_SUBMITTING, DISPATCH_SUBMITTED)
+DISPATCH_ROLE_INITIAL = "initial"
+DISPATCH_ROLE_DISPATCH = "dispatch"
 
 RELEASE_PER_RUN = "per_run"
 RELEASE_PER_GROUP = "per_group"
@@ -83,6 +85,8 @@ class DispatchGroupSubmissionState:
 class DispatchSubmissionState:
     submission_id: str
     stage_name: str
+    role: str
+    display_key: str
     instance_ids: tuple[str, ...]
     root: str
     groups: dict[str, DispatchGroupSubmissionState] = field(default_factory=dict)
@@ -251,6 +255,8 @@ def _submission_from_dict(payload: dict[str, Any]) -> DispatchSubmissionState:
     return DispatchSubmissionState(
         submission_id=str(payload["submission_id"]),
         stage_name=str(payload["stage_name"]),
+        role=str(payload["role"]),
+        display_key=str(payload["display_key"]),
         instance_ids=tuple(str(item) for item in payload.get("instance_ids") or ()),
         root=str(payload.get("root") or ""),
         groups={

@@ -70,6 +70,8 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             "eval_selection.py",
             "eval_transition.py",
             "final_gate.py",
+            "control_submissions.py",
+            "stage_runtime.py",
             "train_group.py",
             "train_transition.py",
         ):
@@ -82,7 +84,9 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             "dispatch_queue.py",
             "dispatch_submit.py",
             "finalization.py",
-            "control_submissions.py",
+            "control_submission_ledger.py",
+            "control_submission_records.py",
+            "control_submission_submit.py",
             "gates.py",
             "initial_prepare.py",
             "initial_submit.py",
@@ -97,11 +101,26 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
         self.assertNotIn("deliver_notification", workflow_text)
         self.assertNotIn("materialize_stage_batch", workflow_text)
         for path in sorted(control_root.glob("*.py")):
-            if path.name in {"control_submissions.py", "state_records.py"}:
+            if path.name in {
+                "control_submission_records.py",
+                "state_records.py",
+            }:
                 continue
             text = path.read_text(encoding="utf-8")
             self.assertNotIn('state["', text, path.name)
             self.assertNotIn('record["', text, path.name)
+
+    def test_status_view_is_split_into_read_model_and_formatter(self) -> None:
+        orchestration_root = Path("src/slurmforge/orchestration")
+        for name in ("status_read_model.py", "status_format.py", "status_view.py"):
+            self.assertTrue((orchestration_root / name).exists())
+        status_view = (orchestration_root / "status_view.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("read_workflow_status", status_view)
+        self.assertNotIn("reconcile_root_submissions", status_view)
+        self.assertNotIn('workflow_status["', status_view)
+        self.assertNotIn("workflow_status.get", status_view)
 
     def test_notifications_use_slurm_mail_submission_runtime(self) -> None:
         submission_notifications = Path(

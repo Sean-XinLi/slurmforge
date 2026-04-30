@@ -4,8 +4,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..storage.workflow import write_workflow_status
+from ..storage.workflow_status_records import (
+    WorkflowStatusRecord,
+    workflow_status_control_job_from_dict,
+)
 from ..workflow_contract import WORKFLOW_TERMINAL_STATES
-from .control_submissions import submitted_control_records, submitted_control_job_ids
+from .control_submission_ledger import all_control_records, submitted_control_job_ids
 from .state_records import WorkflowState, workflow_state_to_dict
 
 
@@ -30,7 +34,7 @@ def submitted_stage_job_ids_from_state(
         }
         if not job_ids:
             continue
-        stage_jobs[_submission_stage_key(submission)] = job_ids
+        stage_jobs[submission.display_key] = job_ids
     return stage_jobs
 
 
@@ -53,26 +57,26 @@ def set_workflow_status(
     *,
     reason: str,
 ) -> None:
+    snapshot = workflow_state_to_dict(state)
     write_workflow_status(
         pipeline_root,
-        status,
-        reason=reason,
-        control_jobs=submitted_control_records(pipeline_root),
-        stage_jobs=submitted_stage_job_ids_from_state(state),
-        instances=workflow_state_to_dict(state)["instances"],
-        dependencies=workflow_state_to_dict(state)["dependencies"],
-        dispatch_queue=workflow_state_to_dict(state)["dispatch_queue"],
-        submissions=workflow_state_to_dict(state)["submissions"],
-        terminal_aggregation=workflow_state_to_dict(state)["terminal_aggregation"],
+        WorkflowStatusRecord(
+            state=status,
+            updated_at="pending",
+            reason=reason,
+            control_jobs={
+                key: workflow_status_control_job_from_dict(key, record)
+                for key, record in all_control_records(pipeline_root).items()
+            },
+            stage_jobs=submitted_stage_job_ids_from_state(state),
+            instances=snapshot["instances"],
+            dependencies=snapshot["dependencies"],
+            dispatch_queue=tuple(snapshot["dispatch_queue"]),
+            submissions=snapshot["submissions"],
+            terminal_aggregation=snapshot["terminal_aggregation"],
+        ),
     )
 
 
 def stage_key(stage_name: str, *, dispatch_id: str | None = None) -> str:
     return stage_name if dispatch_id is None else f"{stage_name}:{dispatch_id}"
-
-
-def _submission_stage_key(submission) -> str:
-    initial_id = f"{submission.stage_name}_initial"
-    if submission.submission_id == initial_id:
-        return submission.stage_name
-    return stage_key(submission.stage_name, dispatch_id=submission.submission_id)

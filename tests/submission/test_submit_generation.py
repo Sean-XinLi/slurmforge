@@ -148,3 +148,60 @@ class SubmitGenerationTests(StageBatchSystemTestCase):
                     replace(prepared, materialization_state="blocked"),
                     client=FakeSlurmClient(),
                 )
+
+    def test_malformed_submission_ledger_is_rejected(self) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.submission.ledger import read_submission_ledger
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(write_demo_project(root))
+            batch = compile_stage_batch_for_kind(spec, kind="train")
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
+            prepare_stage_submission(batch)
+            batch_root = Path(batch.submission_root)
+            ledger_path = batch_root / "submissions" / "ledger.json"
+            payload = json.loads(ledger_path.read_text(encoding="utf-8"))
+            group_id = next(iter(payload["groups"]))
+
+            cases = {
+                "invalid_ledger_state": {
+                    **payload,
+                    "state": "done",
+                },
+                "group_key_mismatch": {
+                    **payload,
+                    "groups": {
+                        group_id: {
+                            **payload["groups"][group_id],
+                            "group_id": "wrong",
+                        }
+                    },
+                },
+                "submitted_group_without_job": {
+                    **payload,
+                    "groups": {
+                        group_id: {
+                            **payload["groups"][group_id],
+                            "state": "submitted",
+                            "scheduler_job_id": "",
+                        }
+                    },
+                },
+                "failed_group_without_reason": {
+                    **payload,
+                    "groups": {
+                        group_id: {
+                            **payload["groups"][group_id],
+                            "state": "failed",
+                            "reason": "",
+                        }
+                    },
+                },
+            }
+
+            for name, invalid in cases.items():
+                with self.subTest(name=name):
+                    ledger_path.write_text(json.dumps(invalid), encoding="utf-8")
+                    with self.assertRaises(RecordContractError):
+                        read_submission_ledger(batch_root)

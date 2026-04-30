@@ -16,7 +16,12 @@ from .dispatch_pack import (
 from .dispatch_submit import submit_dispatch
 from .instance_reconcile import sync_materialized_statuses
 from .state import record_workflow_event
-from .state_records import WorkflowState, dequeue_instances
+from .state_records import (
+    DISPATCH_ROLE_DISPATCH,
+    DISPATCH_ROLE_INITIAL,
+    WorkflowState,
+    dequeue_instances,
+)
 
 
 def dispatch_ready_instances(
@@ -65,6 +70,8 @@ def _dispatch_initial_train(
         state,
         batch,
         submission_id=submission_id,
+        role=DISPATCH_ROLE_INITIAL,
+        display_key=TRAIN_STAGE,
         client=client,
         max_dependency_length=max_dependency_length,
     )
@@ -110,6 +117,8 @@ def _dispatch_ready_eval(
         state,
         materialized.batch,
         submission_id=submission_id,
+        role=DISPATCH_ROLE_DISPATCH,
+        display_key=f"{EVAL_STAGE}:{submission_id}",
         client=client,
         max_dependency_length=max_dependency_length,
     )

@@ -74,15 +74,17 @@ Train/eval pipelines use short-lived control jobs, not a long-running orchestrat
 
 `control/workflow_state.json` is the durable workflow state machine for train/eval progression.
 
-`control/workflow_status.json` is the mutable status read model for users and `sforge status`.
+`control/workflow_status.json` is the typed status read model for users and `sforge status`. Its `control_jobs` projection includes every control submission record, including `failed` and `uncertain` records without scheduler job ids, so operators can see why a gate or notification did not produce a Slurm job.
 
-`control/control_submissions.json` is the authoritative ledger for stage-instance gates, dispatch catch-up gates, and terminal notification control jobs. It records `submitting` before `sbatch`, `submitted` after scheduler job ids are known, `failed` when no scheduler job was created and retry is safe, and `uncertain` when a retry would risk duplicate control jobs.
+`control/control_submissions.json` is the authoritative ledger for stage-instance gates, dispatch catch-up gates, and terminal notification control jobs. It records `submitting` before `sbatch`, `submitted` after scheduler job ids are known, `failed` when no scheduler job was created and retry is safe, and `uncertain` when a retry would risk duplicate control jobs. Records are self-validating: kind, state, target key, sbatch paths, scheduler job ids, and failure reasons must agree before the ledger can be read as a valid control state.
 
 `execution/stage_catalog.json` is the catalog of planned pipeline stage batch roots. It includes train and eval stage plans even when eval is not yet submitted, so resubmit and inspection commands can reason about the full declared pipeline.
 
 `execution/runtime_batches.json` is the runtime registry of batch roots that participate in the current execution. It starts with the train entry batch and gains one dispatch batch for each submitted downstream projection. Status and reconcile read this registry instead of recursively scanning `stage_batches/**`.
 
 Each controller invocation reconciles runtime status, resolves dependency edges from successful upstream `stage_outputs.json`, materializes only the ready downstream dispatch projection, and marks unresolved required inputs as `blocked`.
+
+Status rendering is split into read-model construction and formatting. `orchestration.status_read_model` owns root detection, optional reconcile, workflow status loading, and aggregate status collection. `orchestration.status_format` owns CLI text rendering. `orchestration.status_view` is only the thin public wrapper.
 
 ## Notifications
 

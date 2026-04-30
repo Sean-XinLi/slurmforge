@@ -15,6 +15,18 @@ from .ledger import (
 from .models import PreparedSubmission
 from .queueing import mark_stage_batch_queued
 from .ready import load_ready_prepared_submission
+from .submit_policy import (
+    adopt_existing_group_job,
+    require_retryable_group,
+    validate_submit_policy,
+)
+from .submit_transition import (
+    mark_batch_submitted,
+    mark_group_failed,
+    mark_group_submitted,
+    mark_group_submitting,
+    mark_group_uncertain,
+)
 
 
 def submit_prepared_stage_batch(
@@ -24,8 +36,7 @@ def submit_prepared_stage_batch(
     mark_queued: bool = True,
     policy: Literal["new_only", "recover_partial"] = "new_only",
 ) -> dict[str, str]:
-    if policy not in {"new_only", "recover_partial"}:
-        raise ConfigContractError(f"Unsupported submission policy: {policy}")
+    validate_submit_policy(policy)
     batch, ledger = load_ready_prepared_submission(prepared)
     batch_root = Path(prepared.batch_root)
     slurm = client or SlurmClient()
@@ -33,29 +44,27 @@ def submit_prepared_stage_batch(
 
     for group in batch.group_plans:
         record = ledger.groups[group.group_id]
-        if record.scheduler_job_id and record.state in {"submitted", "adopted"}:
-            if policy == "new_only":
-                raise ConfigContractError(
-                    f"Stage batch `{batch.stage_name}` already has submitted group `{group.group_id}` "
-                    f"with scheduler job `{record.scheduler_job_id}`; submit a derived batch for a new execution"
-                )
-            group_job_ids[group.group_id] = record.scheduler_job_id
+        if adopt_existing_group_job(
+            stage_name=batch.stage_name,
+            group_id=group.group_id,
+            record=record,
+            policy=policy,
+            group_job_ids=group_job_ids,
+        ):
             continue
-        if record.state == "submitting" and not record.scheduler_job_id:
-            ledger.state = "uncertain"
-            record.reason = (
-                "group may have reached sbatch without a recorded scheduler job id"
-            )
+        try:
+            require_retryable_group(record, stage_name=batch.stage_name)
+        except ConfigContractError:
+            mark_group_uncertain(ledger, record)
             write_submission_ledger(batch_root, ledger)
-            raise ConfigContractError(
-                f"Submission ledger for `{batch.stage_name}` is uncertain at group `{group.group_id}`; "
-                "manual reconcile is required before retrying"
-            )
+            raise
         dependency = dependency_for(group.group_id, batch, group_job_ids)
-        record.state = "submitting"
-        record.dependency = dependency
-        record.reason = ""
-        ledger.state = "partial" if group_job_ids else "submitting"
+        mark_group_submitting(
+            ledger,
+            record,
+            dependency=dependency,
+            submitted_group_count=len(group_job_ids),
+        )
         write_submission_ledger(batch_root, ledger)
         append_submission_event(
             batch_root,
@@ -80,9 +89,7 @@ def submit_prepared_stage_batch(
                 ),
                 exc,
             )
-            record.state = "failed"
-            record.reason = str(exc)
-            ledger.state = "failed"
+            mark_group_failed(ledger, record, reason=str(exc))
             write_submission_ledger(batch_root, ledger)
             append_submission_event(
                 batch_root,
@@ -93,12 +100,8 @@ def submit_prepared_stage_batch(
                 diagnostic_path=str(diagnostic),
             )
             raise
-        record.scheduler_job_id = job_id
-        record.submitted_at = utc_now()
-        record.state = "submitted"
-        record.reason = ""
+        mark_group_submitted(ledger, record, job_id=job_id, submitted_at=utc_now())
         group_job_ids[group.group_id] = job_id
-        ledger.state = "partial"
         write_submission_ledger(batch_root, ledger)
         append_submission_event(
             batch_root,
@@ -110,7 +113,7 @@ def submit_prepared_stage_batch(
             dependency=dependency,
         )
 
-    ledger.state = "submitted"
+    mark_batch_submitted(ledger)
     write_submission_ledger(batch_root, ledger)
     append_submission_event(
         batch_root,

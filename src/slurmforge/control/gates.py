@@ -9,11 +9,13 @@ from ..emit.pipeline_gate import (
 from ..slurm import SlurmClientProtocol
 from ..submission.dependency_tree import submit_dependent_job_with_dependency_tree
 from ..workflow_contract import DISPATCH_CATCHUP_GATE
-from .control_submissions import (
+from .control_submission_ledger import submitted_control_job_ids
+from .control_submission_records import (
     CONTROL_KIND_DISPATCH_CATCHUP_GATE,
     ControlSubmitResult,
     control_submission_key,
-    submitted_control_job_ids,
+)
+from .control_submission_submit import (
     submit_control_once,
 )
 from .state import record_workflow_event, save_workflow_state

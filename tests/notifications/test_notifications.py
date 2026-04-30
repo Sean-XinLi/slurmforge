@@ -3,7 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 import tempfile
 
+from slurmforge.errors import RecordContractError
+from slurmforge.notifications.models import NotificationSubmissionRecord
 from slurmforge.notifications.records import read_notification_record
+from slurmforge.notifications.records import write_notification_record
 from slurmforge.plans.notifications import EmailNotificationPlan, NotificationPlan
 from slurmforge.submission.notification_mail import submit_slurm_mail_notification
 from tests.support.case import StageBatchSystemTestCase
@@ -87,3 +90,38 @@ class NotificationSubmissionTests(StageBatchSystemTestCase):
             persisted = read_notification_record(root, "batch_finished")
             assert persisted is not None
             self.assertEqual(persisted.state, "failed")
+
+    def test_malformed_notification_record_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = {
+                "event": "batch_finished",
+                "root_kind": "stage_batch",
+                "root": str(root),
+                "backend": "slurm_mail",
+                "recipients": ("you@example.com",),
+                "sbatch_paths": ("notify.sbatch",),
+                "dependency_type": "afterany",
+                "mail_type": "END",
+            }
+
+            with self.assertRaises(RecordContractError):
+                write_notification_record(
+                    root,
+                    NotificationSubmissionRecord(
+                        **base,
+                        state="submitted",
+                        scheduler_job_ids=(),
+                    ),
+                )
+
+            with self.assertRaises(RecordContractError):
+                write_notification_record(
+                    root,
+                    NotificationSubmissionRecord(
+                        **base,
+                        state="failed",
+                        scheduler_job_ids=(),
+                        reason="",
+                    ),
+                )

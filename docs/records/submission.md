@@ -97,3 +97,5 @@ States:
 `blocked` is readiness failure, not execution failure. It does not create an attempt. The affected stage instances move to `StageStatusRecord.state=blocked` with `failure_class=input_contract_error`.
 
 Submission has one public write path: `prepare_stage_submission(batch)` returns a `PreparedSubmission`, and `submit_prepared_stage_batch(prepared)` is the only public submit entrypoint. Low-level ledger writes, event appends, and stage sbatch generation are private package internals.
+
+`submissions/ledger.json` is a strict record. Ledger and group states must be known states, submitted/adopted groups must carry scheduler job ids, failed groups must carry a reason, and the ledger group set must match the current submit manifest for that generation. A group in the uncertain window remains `submitting` with no scheduler job id and forces manual reconcile before retry.

@@ -7,10 +7,12 @@ from ..emit.pipeline_gate import write_stage_instance_gate_array_submit_file
 from ..slurm import SlurmClientProtocol, SlurmSubmitOptions
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..workflow_contract import DISPATCH_CATCHUP_GATE
-from .control_submissions import (
+from .control_submission_records import (
     CONTROL_KIND_STAGE_INSTANCE_GATE,
     ControlSubmitResult,
     control_submission_key,
+)
+from .control_submission_submit import (
     submit_control_once,
 )
 from .gates import submit_control_gate
@@ -33,6 +35,8 @@ def submit_dispatch(
     batch,
     *,
     submission_id: str,
+    role: str,
+    display_key: str,
     client: SlurmClientProtocol,
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,
 ) -> dict[str, str]:
@@ -46,6 +50,8 @@ def submit_dispatch(
         state,
         batch,
         submission_id=submission_id,
+        role=role,
+        display_key=display_key,
         group_job_ids=group_job_ids,
         budgeted_gpus=_batch_budgeted_gpus(batch),
     )
@@ -67,6 +73,8 @@ def record_dispatch_submission(
     batch,
     *,
     submission_id: str,
+    role: str,
+    display_key: str,
     group_job_ids: dict[str, str],
     budgeted_gpus: int,
 ) -> None:
@@ -88,6 +96,8 @@ def record_dispatch_submission(
     submission = DispatchSubmissionState(
         submission_id=submission_id,
         stage_name=batch.stage_name,
+        role=role,
+        display_key=display_key,
         instance_ids=tuple(
             instance.stage_instance_id for instance in batch.stage_instances
         ),

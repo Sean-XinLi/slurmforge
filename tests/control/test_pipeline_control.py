@@ -94,6 +94,8 @@ class PipelineControlTests(StageBatchSystemTestCase):
             self.assertEqual(result.state, "streaming")
             self.assertEqual(workflow_state["schema_version"], 2)
             self.assertEqual(set(workflow_state["submissions"]), {"train_initial"})
+            self.assertEqual(train_submission["role"], "initial")
+            self.assertEqual(train_submission["display_key"], "train")
             self.assertNotIn("scheduler_job_ids", train_submission)
             self.assertEqual(
                 submitted_dispatch_group["scheduler_job_id"],
@@ -475,7 +477,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
             )
 
     def test_malformed_control_submission_ledger_is_rejected(self) -> None:
-        from slurmforge.control.control_submissions import (
+        from slurmforge.control.control_submission_ledger import (
             read_control_submission_ledger,
         )
         from slurmforge.errors import RecordContractError
@@ -484,13 +486,150 @@ class PipelineControlTests(StageBatchSystemTestCase):
             pipeline_root = Path(tmp)
             control_dir = pipeline_root / "control"
             control_dir.mkdir()
-            (control_dir / "control_submissions.json").write_text(
-                json.dumps({"schema_version": 1, "submissions": []}),
-                encoding="utf-8",
-            )
+            ledger_path = control_dir / "control_submissions.json"
 
-            with self.assertRaises(RecordContractError):
-                read_control_submission_ledger(pipeline_root)
+            valid_record = {
+                "key": "dispatch_catchup_gate:target",
+                "kind": "dispatch_catchup_gate",
+                "target_kind": "dispatch",
+                "target_id": "target",
+                "state": "submitted",
+                "sbatch_paths": ["gate.sbatch"],
+                "scheduler_job_ids": ["1001"],
+            }
+            cases = {
+                "submissions_not_object": {
+                    "schema_version": 1,
+                    "submissions": [],
+                },
+                "payload_key_mismatch": {
+                    "schema_version": 1,
+                    "submissions": {
+                        "dispatch_catchup_gate:target": {
+                            **valid_record,
+                            "key": "dispatch_catchup_gate:other",
+                        }
+                    },
+                },
+                "invalid_kind": {
+                    "schema_version": 1,
+                    "submissions": {
+                        "bad:target": {
+                            **valid_record,
+                            "key": "bad:target",
+                            "kind": "bad",
+                        }
+                    },
+                },
+                "invalid_state": {
+                    "schema_version": 1,
+                    "submissions": {
+                        "dispatch_catchup_gate:target": {
+                            **valid_record,
+                            "state": "done",
+                        }
+                    },
+                },
+                "submitted_without_scheduler_ids": {
+                    "schema_version": 1,
+                    "submissions": {
+                        "dispatch_catchup_gate:target": {
+                            **valid_record,
+                            "scheduler_job_ids": [],
+                        }
+                    },
+                },
+                "failed_without_reason": {
+                    "schema_version": 1,
+                    "submissions": {
+                        "dispatch_catchup_gate:target": {
+                            **valid_record,
+                            "state": "failed",
+                            "scheduler_job_ids": [],
+                            "reason": "",
+                        }
+                    },
+                },
+                "empty_sbatch_paths": {
+                    "schema_version": 1,
+                    "submissions": {
+                        "dispatch_catchup_gate:target": {
+                            **valid_record,
+                            "sbatch_paths": [],
+                        }
+                    },
+                },
+                "expected_key_mismatch": {
+                    "schema_version": 1,
+                    "submissions": {
+                        "dispatch_catchup_gate:wrong": {
+                            **valid_record,
+                            "key": "dispatch_catchup_gate:wrong",
+                        }
+                    },
+                },
+                "scheduler_ids_not_array": {
+                    "schema_version": 1,
+                    "submissions": {
+                        "dispatch_catchup_gate:target": {
+                            **valid_record,
+                            "scheduler_job_ids": "1001",
+                        }
+                    },
+                },
+            }
+
+            for name, payload in cases.items():
+                with self.subTest(name=name):
+                    ledger_path.write_text(json.dumps(payload), encoding="utf-8")
+                    with self.assertRaises(RecordContractError):
+                        read_control_submission_ledger(pipeline_root)
+
+    def test_controller_advance_failure_records_terminal_event(self) -> None:
+        from slurmforge.control.workflow import advance_pipeline_once
+        from slurmforge.control.workflow import submit_initial_pipeline
+        from tests.support.slurm import FakeSlurmClient
+
+        class FailingObservedQuerySlurm(FakeSlurmClient):
+            def __init__(self, source: FakeSlurmClient) -> None:
+                super().__init__()
+                self._next_job_id = source._next_job_id
+                self.submissions = list(source.submissions)
+                self.job_states = dict(source.job_states)
+
+            def query_observed_jobs(self, job_ids):
+                raise RuntimeError("scheduler query unavailable")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(write_demo_project(root, extra=_with_current_python()))
+            plan = compile_train_eval_pipeline_plan(spec)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
+            pipeline_root = Path(plan.root_dir)
+            client = FakeSlurmClient()
+            submit_initial_pipeline(plan, client=client)
+
+            with self.assertRaises(RuntimeError):
+                advance_pipeline_once(
+                    pipeline_root,
+                    client=FailingObservedQuerySlurm(client),
+                    missing_output_grace_seconds=0,
+                )
+
+            events = [
+                json.loads(line)
+                for line in (pipeline_root / "control" / "events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertTrue(
+                any(
+                    event["event"] == "controller_advance_failed"
+                    and event["workflow_state_after"] == "failed"
+                    and "scheduler query unavailable" in event["reason"]
+                    for event in events
+                )
+            )
 
     def test_train_submission_reuses_partial_stage_submission_without_duplicate(
         self,
@@ -749,7 +888,19 @@ class PipelineControlTests(StageBatchSystemTestCase):
             workflow_state = json.loads(
                 (pipeline_root / "control" / "workflow_state.json").read_text()
             )
+            workflow_status = json.loads(
+                (pipeline_root / "control" / "workflow_status.json").read_text()
+            )
+            notification_key = "terminal_notification:train_eval_pipeline_finished"
             self.assertEqual(workflow_state["terminal_aggregation"]["state"], "failed")
+            self.assertEqual(
+                workflow_status["control_jobs"][notification_key]["state"],
+                "failed",
+            )
+            self.assertIn(
+                "mail scheduler unavailable",
+                workflow_status["control_jobs"][notification_key]["reason"],
+            )
 
             recovery_client = FakeSlurmClient()
             advance_pipeline_once(pipeline_root, client=recovery_client)
@@ -847,6 +998,9 @@ class PipelineControlTests(StageBatchSystemTestCase):
             control_submissions = json.loads(
                 (pipeline_root / "control" / "control_submissions.json").read_text()
             )
+            workflow_status = json.loads(
+                (pipeline_root / "control" / "workflow_status.json").read_text()
+            )
             notification_key = "terminal_notification:train_eval_pipeline_finished"
             self.assertEqual(
                 workflow_state["terminal_aggregation"]["state"],
@@ -859,6 +1013,18 @@ class PipelineControlTests(StageBatchSystemTestCase):
             self.assertEqual(
                 len(
                     control_submissions["submissions"][notification_key][
+                        "scheduler_job_ids"
+                    ]
+                ),
+                1,
+            )
+            self.assertEqual(
+                workflow_status["control_jobs"][notification_key]["state"],
+                "uncertain",
+            )
+            self.assertEqual(
+                len(
+                    workflow_status["control_jobs"][notification_key][
                         "scheduler_job_ids"
                     ]
                 ),

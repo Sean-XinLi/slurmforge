@@ -12,6 +12,11 @@ from ..workflow_contract import (
     TRAIN_STAGE,
     WORKFLOW_PLANNED,
 )
+from .workflow_status_records import (
+    WorkflowStatusRecord,
+    workflow_status_from_dict,
+    workflow_status_to_dict,
+)
 
 
 def default_workflow_state(plan: TrainEvalPipelinePlan) -> dict[str, Any]:
@@ -77,31 +82,36 @@ def default_workflow_state(plan: TrainEvalPipelinePlan) -> dict[str, Any]:
 
 def write_initial_workflow_state(root: Path, plan: TrainEvalPipelinePlan) -> None:
     root = Path(root)
+    workflow_state = default_workflow_state(plan)
     write_json(root / "control" / "control_plan.json", plan.control_plan)
-    write_json(workflow_state_path(root), default_workflow_state(plan))
-    write_json(
-        workflow_status_path(root),
-        {"schema_version": SchemaVersion.WORKFLOW_STATUS, "state": "planned"},
+    write_json(workflow_state_path(root), workflow_state)
+    write_workflow_status(
+        root,
+        WorkflowStatusRecord(
+            state=WORKFLOW_PLANNED,
+            updated_at=utc_now(),
+            control_jobs={},
+            stage_jobs={},
+            instances=dict(workflow_state["instances"]),
+            dependencies=dict(workflow_state["dependencies"]),
+            dispatch_queue=tuple(workflow_state["dispatch_queue"]),
+            submissions=dict(workflow_state["submissions"]),
+            terminal_aggregation=dict(workflow_state["terminal_aggregation"]),
+        ),
     )
     events = root / "control" / "events.jsonl"
     events.parent.mkdir(parents=True, exist_ok=True)
     events.touch()
 
 
-def read_workflow_status(pipeline_root: Path) -> dict[str, Any] | None:
+def read_workflow_status(pipeline_root: Path) -> WorkflowStatusRecord | None:
     path = workflow_status_path(pipeline_root)
     if not path.exists():
         return None
-    return read_json(path)
+    return workflow_status_from_dict(read_json(path))
 
 
-def write_workflow_status(pipeline_root: Path, state: str, **payload: Any) -> None:
-    write_json(
-        workflow_status_path(pipeline_root),
-        {
-            "schema_version": SchemaVersion.WORKFLOW_STATUS,
-            "updated_at": utc_now(),
-            "state": state,
-            **payload,
-        },
-    )
+def write_workflow_status(pipeline_root: Path, record: WorkflowStatusRecord) -> None:
+    record.schema_version = SchemaVersion.WORKFLOW_STATUS
+    record.updated_at = utc_now()
+    write_json(workflow_status_path(pipeline_root), workflow_status_to_dict(record))
