@@ -597,7 +597,7 @@ This table is generated from `slurmforge.config_contract.models.ConfigField`. St
 
 Notifications are disabled unless `notifications.email.enabled` is true. When enabled, `notifications.email.recipients` must contain at least one email address and `notifications.email.events` must contain one or more supported terminal workflow events. `notifications.email.when` controls the Slurm dependency condition used by the notification job.
 
-`batch_finished` is emitted by stage-batch notification jobs. `train_eval_pipeline_finished` is emitted by Slurm-native notification jobs that depend on the final train/eval control gate.
+`batch_finished` is emitted by stage-batch notification jobs. `train_eval_pipeline_finished` is emitted by a terminal aggregation control action that submits one Slurm-native notification job depending on the submitted train/eval stage group jobs.
 
 ## Resources And Sizing
 
