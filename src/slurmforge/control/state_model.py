@@ -8,7 +8,7 @@ from ..storage.runtime_batches import iter_runtime_batch_records
 from ..storage.workflow import write_workflow_status
 from ..submission.ledger import submitted_group_job_ids
 from ..workflow_contract import WORKFLOW_TERMINAL_STATES
-from .gate_ledger import submitted_gate_records
+from .control_submissions import submitted_control_records, submitted_control_job_ids
 from .state_records import WorkflowState, workflow_state_to_dict
 
 
@@ -17,16 +17,8 @@ class PipelineAdvanceResult:
     pipeline_root: str
     state: str
     submitted_stage_job_ids: dict[str, dict[str, str]] = field(default_factory=dict)
-    submitted_gate_job_ids: dict[str, str] = field(default_factory=dict)
+    submitted_control_job_ids: dict[str, str] = field(default_factory=dict)
     completed: bool = False
-
-
-def submitted_gate_job_ids(pipeline_root: Path) -> dict[str, str]:
-    return {
-        key: str(payload["scheduler_job_id"])
-        for key, payload in submitted_gate_records(pipeline_root).items()
-        if payload.get("scheduler_job_id")
-    }
 
 
 def submitted_stage_job_ids(pipeline_root: Path) -> dict[str, dict[str, str]]:
@@ -46,7 +38,7 @@ def result_from_state(
         pipeline_root=str(pipeline_root),
         state=state.state,
         submitted_stage_job_ids=submitted_stage_job_ids(pipeline_root),
-        submitted_gate_job_ids=submitted_gate_job_ids(pipeline_root),
+        submitted_control_job_ids=submitted_control_job_ids(pipeline_root),
         completed=state.state in WORKFLOW_TERMINAL_STATES,
     )
 
@@ -62,7 +54,7 @@ def set_workflow_status(
         pipeline_root,
         status,
         reason=reason,
-        gate_jobs=submitted_gate_records(pipeline_root),
+        control_jobs=submitted_control_records(pipeline_root),
         stage_jobs=submitted_stage_job_ids(pipeline_root),
         instances=workflow_state_to_dict(state)["instances"],
         dependencies=workflow_state_to_dict(state)["dependencies"],

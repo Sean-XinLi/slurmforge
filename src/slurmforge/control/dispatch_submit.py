@@ -1,16 +1,24 @@
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 
 from ..emit.pipeline_gate import write_stage_instance_gate_array_submit_file
 from ..slurm import SlurmClientProtocol, SlurmSubmitOptions
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..workflow_contract import DISPATCH_CATCHUP_GATE
+from .control_submissions import (
+    CONTROL_KIND_STAGE_INSTANCE_GATE,
+    ControlSubmitResult,
+    control_submission_key,
+    submit_control_once,
+)
 from .gates import submit_control_gate
 from .stage_submit import ensure_stage_submitted
 from .state import record_workflow_event
 from .state_records import (
     DISPATCH_SUBMITTED,
+    DispatchGroupSubmissionState,
     INSTANCE_SUBMITTED,
     DispatchSubmissionState,
     WorkflowState,
@@ -62,9 +70,21 @@ def record_dispatch_submission(
     group_job_ids: dict[str, str],
     budgeted_gpus: int,
 ) -> None:
-    ordered_job_ids = tuple(
-        group_job_ids.get(group.group_id, "") for group in batch.group_plans
-    )
+    groups = {
+        group.group_id: DispatchGroupSubmissionState(
+            group_id=group.group_id,
+            stage_instance_ids=tuple(group.stage_instance_ids),
+            scheduler_job_id=group_job_ids.get(group.group_id, ""),
+            array_size=group.array_size,
+            array_throttle=group.array_throttle or 0,
+            gpus_per_task=group.gpus_per_task,
+            task_ids_by_instance={
+                instance_id: str(task_index) if group.array_size > 1 else ""
+                for task_index, instance_id in enumerate(group.stage_instance_ids)
+            },
+        )
+        for group in batch.group_plans
+    }
     submission = DispatchSubmissionState(
         submission_id=submission_id,
         stage_name=batch.stage_name,
@@ -72,19 +92,16 @@ def record_dispatch_submission(
             instance.stage_instance_id for instance in batch.stage_instances
         ),
         root=str(Path(batch.submission_root).resolve()),
-        scheduler_job_ids=ordered_job_ids,
+        groups=groups,
         budgeted_gpus=budgeted_gpus,
         state=DISPATCH_SUBMITTED,
     )
     set_submission(state, submission)
-    jobs_by_instance: dict[str, tuple[str, str]] = {}
-    for group_index, group in enumerate(batch.group_plans):
-        job_id = ordered_job_ids[group_index]
-        for task_index, instance_id in enumerate(group.stage_instance_ids):
-            jobs_by_instance[instance_id] = (
-                job_id,
-                str(task_index) if group.array_size > 1 else "",
-            )
+    jobs_by_instance: dict[str, tuple[str, str]] = {
+        instance_id: (group.scheduler_job_id, task_id)
+        for group in groups.values()
+        for instance_id, task_id in group.task_ids_by_instance.items()
+    }
     for instance_id in submission.instance_ids:
         instance = state.instances[instance_id]
         instance.submission_id = submission_id
@@ -115,16 +132,37 @@ def submit_dispatch_gates(
             group_id=group.group_id,
             stage_instance_ids=tuple(group.stage_instance_ids),
         )
-        gate_job_id = client.submit(
-            gate_path,
-            options=SlurmSubmitOptions(dependency=f"aftercorr:{scheduler_job_id}"),
+        target_id = f"{submission_id}:{group.group_id}"
+        key = control_submission_key(
+            CONTROL_KIND_STAGE_INSTANCE_GATE,
+            target_id=target_id,
         )
+        gate_record = submit_control_once(
+            pipeline_root,
+            key=key,
+            kind=CONTROL_KIND_STAGE_INSTANCE_GATE,
+            target_kind="dispatch_group",
+            target_id=target_id,
+            sbatch_paths=(gate_path,),
+            dependency_job_ids=(scheduler_job_id,),
+            submitter=partial(
+                _submit_stage_instance_gate,
+                client,
+                gate_path=gate_path,
+                scheduler_job_id=scheduler_job_id,
+            ),
+        )
+        gate_job_id = gate_record.scheduler_job_ids[0]
+        state.submissions[submission_id].groups[
+            group.group_id
+        ].stage_instance_gate_job_id = gate_job_id
         record_workflow_event(
             pipeline_root,
             "stage_instance_gate_submitted",
             submission_id=submission_id,
             stage=batch.stage_name,
             group_id=group.group_id,
+            control_key=key,
             scheduler_job_id=gate_job_id,
             dependency_job_id=scheduler_job_id,
         )
@@ -140,6 +178,19 @@ def submit_dispatch_gates(
             client=client,
             max_dependency_length=max_dependency_length,
         )
+
+
+def _submit_stage_instance_gate(
+    client: SlurmClientProtocol,
+    *,
+    gate_path: Path,
+    scheduler_job_id: str,
+) -> ControlSubmitResult:
+    gate_job_id = client.submit(
+        gate_path,
+        options=SlurmSubmitOptions(dependency=f"aftercorr:{scheduler_job_id}"),
+    )
+    return ControlSubmitResult(scheduler_job_ids=(gate_job_id,))
 
 
 def _batch_budgeted_gpus(batch) -> int:

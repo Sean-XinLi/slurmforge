@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from ..storage.plan_reader import load_execution_stage_batch_plan
 from ..workflow_contract import EVAL_STAGE
 from .state_records import (
     DISPATCH_ACTIVE_STATES,
@@ -45,12 +42,8 @@ def select_instances_with_budget(
 
 
 def _submission_active_gpus(state: WorkflowState, submission) -> int:
-    if submission.state not in DISPATCH_ACTIVE_STATES or not submission.root:
+    if submission.state not in DISPATCH_ACTIVE_STATES:
         return 0
-    batch_root = Path(submission.root)
-    if not batch_root.exists():
-        return 0
-    batch = load_execution_stage_batch_plan(batch_root)
     active_instance_ids = {
         instance_id
         for instance_id in submission.instance_ids
@@ -58,9 +51,11 @@ def _submission_active_gpus(state: WorkflowState, submission) -> int:
         and state.instances[instance_id].state in {INSTANCE_SUBMITTED, INSTANCE_RUNNING}
     }
     total = 0
-    for group in batch.group_plans:
+    for group in submission.groups.values():
         active_tasks = sum(
-            1 for instance_id in group.stage_instance_ids if instance_id in active_instance_ids
+            1
+            for instance_id in group.stage_instance_ids
+            if instance_id in active_instance_ids
         )
         if active_tasks <= 0:
             continue

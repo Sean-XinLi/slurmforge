@@ -38,18 +38,28 @@ def finalize_if_terminal(
     terminal_state = _terminal_state(state)
     state.state = terminal_state
     state.current_stage = ""
-    state.terminal_aggregation.state = "completed"
+    state.terminal_aggregation.workflow_terminal_state = terminal_state
     state.terminal_aggregation.reason = _terminal_reason(state, terminal_state)
     state.terminal_aggregation.completed_at = utc_now()
+    state.terminal_aggregation.dependency_job_ids = _terminal_dependency_job_ids(state)
     notification = submit_pipeline_terminal_notification(
         pipeline_root,
         plan,
-        dependency_job_ids=_terminal_dependency_job_ids(state),
+        dependency_job_ids=state.terminal_aggregation.dependency_job_ids,
         client=client,
         max_dependency_length=max_dependency_length,
     )
     if notification is not None:
         state.terminal_aggregation.notification_job_ids = notification.scheduler_job_ids
+        state.terminal_aggregation.notification_barrier_job_ids = (
+            notification.barrier_job_ids
+        )
+        state.terminal_aggregation.submitted_at = notification.submitted_at
+        state.terminal_aggregation.state = notification.state
+    elif not state.terminal_aggregation.notification_job_ids:
+        state.terminal_aggregation.state = "disabled"
+    if notification is not None and notification.state != "submitted":
+        state.terminal_aggregation.reason = notification.reason
     set_workflow_status(
         pipeline_root,
         state,
@@ -63,7 +73,8 @@ def _terminal_dependency_job_ids(state: WorkflowState) -> tuple[str, ...]:
     seen: set[str] = set()
     job_ids: list[str] = []
     for submission in state.submissions.values():
-        for job_id in submission.scheduler_job_ids:
+        for group in submission.groups.values():
+            job_id = group.scheduler_job_id
             if not job_id or job_id in seen:
                 continue
             seen.add(job_id)

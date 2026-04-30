@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..io import SchemaVersion, to_jsonable
+from ..io import SchemaVersion, require_schema, to_jsonable
 from ..workflow_contract import WORKFLOW_PLANNED
 
 INSTANCE_PLANNED = "planned"
@@ -67,12 +67,25 @@ class DependencyState:
 
 
 @dataclass
+class DispatchGroupSubmissionState:
+    group_id: str
+    stage_instance_ids: tuple[str, ...]
+    scheduler_job_id: str = ""
+    array_size: int = 1
+    array_throttle: int = 0
+    gpus_per_task: int = 0
+    task_ids_by_instance: dict[str, str] = field(default_factory=dict)
+    stage_instance_gate_job_id: str = ""
+    state: str = DISPATCH_SUBMITTED
+
+
+@dataclass
 class DispatchSubmissionState:
     submission_id: str
     stage_name: str
     instance_ids: tuple[str, ...]
     root: str
-    scheduler_job_ids: tuple[str, ...] = ()
+    groups: dict[str, DispatchGroupSubmissionState] = field(default_factory=dict)
     budgeted_gpus: int = 0
     state: str = DISPATCH_SUBMITTING
 
@@ -80,8 +93,12 @@ class DispatchSubmissionState:
 @dataclass
 class TerminalAggregationState:
     state: str = "pending"
+    workflow_terminal_state: str = ""
     reason: str = ""
+    dependency_job_ids: tuple[str, ...] = ()
     notification_job_ids: tuple[str, ...] = ()
+    notification_barrier_job_ids: tuple[str, ...] = ()
+    submitted_at: str = ""
     completed_at: str = ""
 
 
@@ -107,6 +124,7 @@ def dependency_key(upstream_instance_id: str, downstream_instance_id: str) -> st
 
 
 def workflow_state_from_dict(payload: dict[str, Any]) -> WorkflowState:
+    require_schema(payload, name="workflow_state", version=SchemaVersion.WORKFLOW_STATE)
     terminal_aggregation = dict(payload.get("terminal_aggregation") or {})
     release_policy = str(payload.get("release_policy") or RELEASE_PER_RUN)
     if release_policy not in RELEASE_POLICIES:
@@ -133,11 +151,23 @@ def workflow_state_from_dict(payload: dict[str, Any]) -> WorkflowState:
         },
         terminal_aggregation=TerminalAggregationState(
             state=str(terminal_aggregation.get("state") or "pending"),
+            workflow_terminal_state=str(
+                terminal_aggregation.get("workflow_terminal_state") or ""
+            ),
             reason=str(terminal_aggregation.get("reason") or ""),
+            dependency_job_ids=tuple(
+                str(item) for item in terminal_aggregation.get("dependency_job_ids") or ()
+            ),
             notification_job_ids=tuple(
                 str(item)
                 for item in terminal_aggregation.get("notification_job_ids") or ()
             ),
+            notification_barrier_job_ids=tuple(
+                str(item)
+                for item in terminal_aggregation.get("notification_barrier_job_ids")
+                or ()
+            ),
+            submitted_at=str(terminal_aggregation.get("submitted_at") or ""),
             completed_at=str(terminal_aggregation.get("completed_at") or ""),
         ),
         release_policy=release_policy,
@@ -207,15 +237,39 @@ def _dependency_from_dict(payload: dict[str, Any]) -> DependencyState:
     )
 
 
+def _dispatch_group_from_dict(payload: dict[str, Any]) -> DispatchGroupSubmissionState:
+    return DispatchGroupSubmissionState(
+        group_id=str(payload["group_id"]),
+        stage_instance_ids=tuple(
+            str(item) for item in payload.get("stage_instance_ids") or ()
+        ),
+        scheduler_job_id=str(payload.get("scheduler_job_id") or ""),
+        array_size=int(payload.get("array_size") or 1),
+        array_throttle=int(payload.get("array_throttle") or 0),
+        gpus_per_task=int(payload.get("gpus_per_task") or 0),
+        task_ids_by_instance={
+            str(instance_id): str(task_id)
+            for instance_id, task_id in dict(
+                payload.get("task_ids_by_instance") or {}
+            ).items()
+        },
+        stage_instance_gate_job_id=str(
+            payload.get("stage_instance_gate_job_id") or ""
+        ),
+        state=str(payload.get("state") or DISPATCH_SUBMITTED),
+    )
+
+
 def _submission_from_dict(payload: dict[str, Any]) -> DispatchSubmissionState:
     return DispatchSubmissionState(
         submission_id=str(payload["submission_id"]),
         stage_name=str(payload["stage_name"]),
         instance_ids=tuple(str(item) for item in payload.get("instance_ids") or ()),
         root=str(payload.get("root") or ""),
-        scheduler_job_ids=tuple(
-            str(item) for item in payload.get("scheduler_job_ids") or ()
-        ),
+        groups={
+            str(group_id): _dispatch_group_from_dict(dict(record))
+            for group_id, record in dict(payload.get("groups") or {}).items()
+        },
         budgeted_gpus=int(payload.get("budgeted_gpus") or 0),
         state=str(payload.get("state") or DISPATCH_SUBMITTING),
     )
@@ -229,6 +283,7 @@ __all__ = [
     in {
         "StageInstanceState",
         "DependencyState",
+        "DispatchGroupSubmissionState",
         "DispatchSubmissionState",
         "TerminalAggregationState",
         "WorkflowState",

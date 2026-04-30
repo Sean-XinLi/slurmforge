@@ -77,8 +77,8 @@ def render_pipeline_gate_sbatch(
         resources=control_plan.resources,
     )
     command = (
-        f'{_q(python_bin)} -m slurmforge.control.gate_runtime --pipeline-root "${{PIPELINE_ROOT}}" '
-        f"--gate {_q(gate)}"
+        f'{_q(python_bin)} -m slurmforge.control.gate_runtime '
+        '--pipeline-root "${PIPELINE_ROOT}"'
     )
     if gate == STAGE_INSTANCE_GATE:
         command += (
@@ -195,7 +195,7 @@ def render_stage_instance_gate_array_sbatch(
             f"TASK_MAP={_q(str(task_map_path))}",
             f"{_q(python_bin)} -m slurmforge.control.gate_runtime "
             '--pipeline-root "${PIPELINE_ROOT}" '
-            f"--gate {_q(STAGE_INSTANCE_GATE)} --event stage-instance-finished "
+            "--event stage-instance-finished "
             '--task-map "${TASK_MAP}"',
             "",
         ]

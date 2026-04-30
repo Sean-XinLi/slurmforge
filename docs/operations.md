@@ -98,7 +98,7 @@ A train/eval pipeline root contains:
     control_plan.json
     workflow_state.json
     workflow_status.json
-    gate_ledger.json
+    control_submissions.json
     events.jsonl
     gates/
       train_initial_group_001_instance_gate.sbatch

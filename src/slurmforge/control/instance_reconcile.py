@@ -72,11 +72,11 @@ def sync_materialized_statuses(state: WorkflowState, batch: StageBatchPlan) -> N
 def _group_job_ids(
     batch: StageBatchPlan, submission: DispatchSubmissionState
 ) -> dict[str, str]:
-    jobs = list(submission.scheduler_job_ids)
     return {
-        group.group_id: jobs[index]
-        for index, group in enumerate(batch.group_plans)
-        if index < len(jobs) and jobs[index]
+        group.group_id: submission.groups[group.group_id].scheduler_job_id
+        for group in batch.group_plans
+        if group.group_id in submission.groups
+        and submission.groups[group.group_id].scheduler_job_id
     }
 
 
@@ -86,11 +86,16 @@ def _sync_batch_statuses(
     submission: DispatchSubmissionState,
 ) -> None:
     instance_to_job: dict[str, tuple[str, str]] = {}
-    jobs = list(submission.scheduler_job_ids)
-    for group_index, group in enumerate(batch.group_plans):
-        job_id = jobs[group_index] if group_index < len(jobs) else ""
+    for group in batch.group_plans:
+        submitted_group = submission.groups.get(group.group_id)
+        job_id = "" if submitted_group is None else submitted_group.scheduler_job_id
         for task_index, stage_instance_id in enumerate(group.stage_instance_ids):
-            array_task_id = str(task_index) if group.array_size > 1 else ""
+            if submitted_group is not None:
+                array_task_id = submitted_group.task_ids_by_instance.get(
+                    stage_instance_id, ""
+                )
+            else:
+                array_task_id = str(task_index) if group.array_size > 1 else ""
             instance_to_job[stage_instance_id] = (job_id, array_task_id)
 
     for instance in batch.stage_instances:

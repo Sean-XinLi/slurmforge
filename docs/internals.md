@@ -76,7 +76,7 @@ Train/eval pipelines use short-lived control jobs, not a long-running orchestrat
 
 `control/workflow_status.json` is the mutable status read model for users and `sforge status`.
 
-`control/gate_ledger.json` is the authoritative ledger for stage-instance and dispatch catch-up control gate submissions. It records `submitting` before `sbatch`, `submitted` after a scheduler job id is known, and `uncertain` when a retry would risk duplicate control jobs.
+`control/control_submissions.json` is the authoritative ledger for stage-instance gates, dispatch catch-up gates, and terminal notification control jobs. It records `submitting` before `sbatch`, `submitted` after scheduler job ids are known, and `uncertain` when a retry would risk duplicate control jobs.
 
 `execution/stage_catalog.json` is the catalog of planned pipeline stage batch roots. It includes train and eval stage plans even when eval is not yet submitted, so resubmit and inspection commands can reason about the full declared pipeline.
 

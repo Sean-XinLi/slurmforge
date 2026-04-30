@@ -101,7 +101,7 @@ def emit_train_eval_pipeline(
         mode="submit",
         submitted=True,
         stage_job_ids=result.submitted_stage_job_ids,
-        gate_job_ids=result.submitted_gate_job_ids,
+        control_job_ids=result.submitted_control_job_ids,
     )
 
 

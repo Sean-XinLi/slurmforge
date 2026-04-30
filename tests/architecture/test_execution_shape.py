@@ -82,7 +82,7 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             "dispatch_queue.py",
             "dispatch_submit.py",
             "finalization.py",
-            "gate_ledger.py",
+            "control_submissions.py",
             "gates.py",
             "initial_prepare.py",
             "initial_submit.py",
@@ -96,7 +96,7 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
         self.assertNotIn("deliver_notification", workflow_text)
         self.assertNotIn("materialize_stage_batch", workflow_text)
         for path in sorted(control_root.glob("*.py")):
-            if path.name in {"gate_ledger.py", "state_records.py"}:
+            if path.name in {"control_submissions.py", "state_records.py"}:
                 continue
             text = path.read_text(encoding="utf-8")
             self.assertNotIn('state["', text, path.name)

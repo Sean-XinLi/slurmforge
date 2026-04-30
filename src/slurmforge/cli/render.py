@@ -51,13 +51,13 @@ def print_train_eval_pipeline_execution_result(
     if result.submitted:
         train_jobs = result.stage_job_ids.get("train", {})
         print(f"[OK] submitted train stage: {','.join(train_jobs.values())}")
-        train_gates = {
+        train_controls = {
             key: value
-            for key, value in result.gate_job_ids.items()
-            if key.startswith("train_group:")
+            for key, value in result.control_job_ids.items()
+            if key.startswith("stage_instance_gate:train_initial:")
         }
-        for gate_name, job_id in sorted(train_gates.items()):
-            print(f"[OK] submitted {gate_name}: {job_id}")
+        for control_key, job_id in sorted(train_controls.items()):
+            print(f"[OK] submitted {control_key}: {job_id}")
         print(f"[OK] pipeline_root={result.root}")
         return
     print(f"[OK] emitted train/eval streaming pipeline: {result.root}")

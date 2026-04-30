@@ -49,12 +49,15 @@ def render_status_lines(
         workflow_status = read_workflow_status(root)
         if workflow_status is not None:
             workflow_state = str(workflow_status.get("state") or "unknown")
-            gate_job_records = dict(workflow_status.get("gate_jobs") or {})
-            gate_jobs = []
-            for name, record in sorted(gate_job_records.items()):
-                if isinstance(record, dict) and record.get("scheduler_job_id"):
-                    gate_jobs.append(f"{name}={record['scheduler_job_id']}")
-            job_id = ",".join(gate_jobs) or str(
+            control_records = dict(workflow_status.get("control_jobs") or {})
+            control_jobs = []
+            for name, record in sorted(control_records.items()):
+                if not isinstance(record, dict):
+                    continue
+                scheduler_ids = record.get("scheduler_job_ids") or ()
+                if scheduler_ids:
+                    control_jobs.append(f"{name}={scheduler_ids[0]}")
+            job_id = ",".join(control_jobs) or str(
                 workflow_status.get("scheduler_job_id") or "-"
             )
             reason = _trim(str(workflow_status.get("reason") or ""))

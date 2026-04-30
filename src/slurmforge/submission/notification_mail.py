@@ -53,13 +53,15 @@ def submit_slurm_mail_notification(
     sbatch_paths: list[str] = []
     barrier_job_ids: tuple[str, ...] = ()
     try:
-        dependency, barrier_job_ids = submit_dependency_barriers(
-            dependency_job_ids=dependency_job_ids,
-            client=client,
-            barrier_path_factory=barrier_path_factory,
-            dependency_type=dependency_type,
-            max_dependency_length=max_dependency_length,
-        )
+        dependency = ""
+        if dependency_job_ids:
+            dependency, barrier_job_ids = submit_dependency_barriers(
+                dependency_job_ids=dependency_job_ids,
+                client=client,
+                barrier_path_factory=barrier_path_factory,
+                dependency_type=dependency_type,
+                max_dependency_length=max_dependency_length,
+            )
         for recipient in email.recipients:
             job_id = client.submit(
                 sbatch_path,

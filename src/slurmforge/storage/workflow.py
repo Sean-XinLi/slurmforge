@@ -66,8 +66,12 @@ def default_workflow_state(plan: TrainEvalPipelinePlan) -> dict[str, Any]:
         "submissions": {},
         "terminal_aggregation": {
             "state": "pending",
+            "workflow_terminal_state": "",
             "reason": "",
+            "dependency_job_ids": [],
             "notification_job_ids": [],
+            "notification_barrier_job_ids": [],
+            "submitted_at": "",
             "completed_at": "",
         },
         "release_policy": getattr(plan, "release_policy", "per_run"),

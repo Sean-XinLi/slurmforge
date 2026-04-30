@@ -19,6 +19,7 @@ class BatchRegistryRecord:
     source_ref: str
     source_dispatch_id: str
     run_ids: tuple[str, ...]
+    stage_instance_ids: tuple[str, ...]
     group_ids: tuple[str, ...]
     updated_at: str
 
@@ -100,6 +101,9 @@ def upsert_batch_record(
         source_ref=batch.source_ref,
         source_dispatch_id=source_dispatch_id,
         run_ids=tuple(batch.selected_runs),
+        stage_instance_ids=tuple(
+            instance.stage_instance_id for instance in batch.stage_instances
+        ),
         group_ids=tuple(group.group_id for group in batch.group_plans),
         updated_at=utc_now(),
     )
@@ -149,6 +153,9 @@ def batch_registry_record_from_dict(payload: dict[str, Any]) -> BatchRegistryRec
         source_ref=str(payload["source_ref"]),
         source_dispatch_id=str(payload.get("source_dispatch_id") or ""),
         run_ids=tuple(str(item) for item in payload["run_ids"]),
+        stage_instance_ids=tuple(
+            str(item) for item in payload.get("stage_instance_ids") or ()
+        ),
         group_ids=tuple(str(item) for item in payload["group_ids"]),
         updated_at=str(payload["updated_at"]),
     )

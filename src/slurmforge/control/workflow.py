@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from dataclasses import dataclass
 import fcntl
 from pathlib import Path
 from typing import Iterator
@@ -12,8 +13,6 @@ from ..slurm import SlurmClient, SlurmClientProtocol
 from ..storage.plan_reader import load_train_eval_pipeline_plan
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..workflow_contract import (
-    DISPATCH_CATCHUP_GATE,
-    STAGE_INSTANCE_GATE,
     WORKFLOW_FAILED,
     WORKFLOW_STREAMING,
     WORKFLOW_TERMINAL_STATES,
@@ -25,6 +24,12 @@ from .initial_submit import submit_initial_pipeline_locked
 from .instance_reconcile import reconcile_instances
 from .state import load_workflow_state, save_workflow_state
 from .state_model import PipelineAdvanceResult, result_from_state, set_workflow_status
+
+
+@dataclass(frozen=True)
+class AdvanceHint:
+    event: str = ""
+    stage_instance_id: str = ""
 
 
 @contextmanager
@@ -57,9 +62,7 @@ def submit_initial_pipeline(
 def advance_pipeline_once(
     pipeline_root: Path,
     *,
-    gate: str | None = None,
-    event: str | None = None,
-    stage_instance_id: str | None = None,
+    hint: AdvanceHint | None = None,
     client: SlurmClientProtocol | None = None,
     missing_output_grace_seconds: int = 300,
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,
@@ -69,8 +72,17 @@ def advance_pipeline_once(
     with _pipeline_lock(root):
         plan = load_train_eval_pipeline_plan(root)
         state = load_workflow_state(root, plan)
-        _validate_gate_request(gate, event=event, stage_instance_id=stage_instance_id)
+        _validate_advance_hint(hint)
         if state.state in WORKFLOW_TERMINAL_STATES:
+            if state.terminal_aggregation.state in {"pending", "failed"}:
+                finalize_if_terminal(
+                    root,
+                    plan,
+                    state,
+                    client=slurm,
+                    max_dependency_length=max_dependency_length,
+                )
+                save_workflow_state(root, state)
             return result_from_state(root, state)
         try:
             reconcile_instances(
@@ -117,17 +129,12 @@ def advance_pipeline_once(
             raise
 
 
-def _validate_gate_request(
-    gate: str | None,
-    *,
-    event: str | None,
-    stage_instance_id: str | None,
-) -> None:
-    if gate not in {None, STAGE_INSTANCE_GATE, DISPATCH_CATCHUP_GATE}:
-        raise ConfigContractError(f"Unsupported pipeline gate: {gate}")
-    if event and event != "stage-instance-finished":
-        raise ConfigContractError(f"Unsupported pipeline event: {event}")
-    if event == "stage-instance-finished" and not stage_instance_id:
+def _validate_advance_hint(hint: AdvanceHint | None) -> None:
+    if hint is None:
+        return
+    if hint.event and hint.event != "stage-instance-finished":
+        raise ConfigContractError(f"Unsupported pipeline event: {hint.event}")
+    if hint.event == "stage-instance-finished" and not hint.stage_instance_id:
         raise ConfigContractError(
             "`--stage-instance-id` is required for stage-instance-finished events"
         )
