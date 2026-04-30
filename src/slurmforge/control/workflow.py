@@ -13,7 +13,6 @@ from ..storage.plan_reader import load_train_eval_pipeline_plan
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..workflow_contract import (
     DISPATCH_CATCHUP_GATE,
-    FINAL_GATE,
     STAGE_INSTANCE_GATE,
     WORKFLOW_FAILED,
     WORKFLOW_STREAMING,
@@ -59,14 +58,12 @@ def advance_pipeline_once(
     pipeline_root: Path,
     *,
     gate: str | None = None,
-    group_id: str | None = None,
     event: str | None = None,
     stage_instance_id: str | None = None,
     client: SlurmClientProtocol | None = None,
     missing_output_grace_seconds: int = 300,
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,
 ) -> PipelineAdvanceResult:
-    del group_id
     root = Path(pipeline_root).resolve()
     slurm = client or SlurmClient()
     with _pipeline_lock(root):
@@ -96,7 +93,13 @@ def advance_pipeline_once(
                 client=slurm,
                 missing_output_grace_seconds=missing_output_grace_seconds,
             )
-            finalize_if_terminal(root, state)
+            finalize_if_terminal(
+                root,
+                plan,
+                state,
+                client=slurm,
+                max_dependency_length=max_dependency_length,
+            )
             save_workflow_state(root, state)
             if state.state not in WORKFLOW_TERMINAL_STATES:
                 set_workflow_status(
@@ -120,7 +123,7 @@ def _validate_gate_request(
     event: str | None,
     stage_instance_id: str | None,
 ) -> None:
-    if gate not in {None, STAGE_INSTANCE_GATE, DISPATCH_CATCHUP_GATE, FINAL_GATE}:
+    if gate not in {None, STAGE_INSTANCE_GATE, DISPATCH_CATCHUP_GATE}:
         raise ConfigContractError(f"Unsupported pipeline gate: {gate}")
     if event and event != "stage-instance-finished":
         raise ConfigContractError(f"Unsupported pipeline event: {event}")

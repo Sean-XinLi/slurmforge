@@ -8,7 +8,7 @@ from ..emit.pipeline_gate import (
     write_pipeline_gate_barrier_file,
     write_pipeline_gate_submit_file,
 )
-from ..workflow_contract import DISPATCH_CATCHUP_GATE, FINAL_GATE, STAGE_INSTANCE_GATE
+from ..workflow_contract import DISPATCH_CATCHUP_GATE, STAGE_INSTANCE_GATE
 from ..errors import ConfigContractError
 from ..control_paths import gate_ledger_path
 from ..io import SchemaVersion, read_json, utc_now, write_json
@@ -20,7 +20,8 @@ from ..submission.dependency_tree import submit_dependent_job_with_dependency_tr
 class GateSubmissionRecord:
     key: str
     gate: str
-    group_id: str
+    target_kind: str
+    target_id: str
     scheduler_job_id: str
     sbatch_path: str
     barrier_job_ids: tuple[str, ...]
@@ -28,13 +29,11 @@ class GateSubmissionRecord:
     state: str
 
 
-def gate_ledger_key(gate: str, *, group_id: str | None = None) -> str:
+def gate_ledger_key(gate: str, *, target_id: str | None = None) -> str:
     if gate == STAGE_INSTANCE_GATE:
-        return f"stage_instance:{group_id}"
+        return f"stage_instance:{target_id}"
     if gate == DISPATCH_CATCHUP_GATE:
-        return f"dispatch_catchup:{group_id or 'all'}"
-    if gate == FINAL_GATE:
-        return FINAL_GATE
+        return f"dispatch_catchup:{target_id or 'all'}"
     raise ConfigContractError(f"Unsupported pipeline gate: {gate}")
 
 
@@ -73,7 +72,8 @@ def _record_from_payload(key: str, payload: dict[str, Any]) -> GateSubmissionRec
     return GateSubmissionRecord(
         key=key,
         gate=str(payload["gate"]),
-        group_id=str(payload.get("group_id") or ""),
+        target_kind=str(payload.get("target_kind") or ""),
+        target_id=str(payload.get("target_id") or ""),
         scheduler_job_id=str(payload["scheduler_job_id"]),
         sbatch_path=str(payload["sbatch_path"]),
         barrier_job_ids=tuple(str(item) for item in payload.get("barrier_job_ids") or ()),
@@ -91,11 +91,12 @@ def submit_gate_once(
     *,
     dependency_job_ids: tuple[str, ...],
     client: SlurmClientProtocol,
-    group_id: str | None = None,
+    target_id: str | None = None,
+    target_kind: str = "",
     max_dependency_length: int,
     barrier_path_factory: Callable[[int], Path] | None = None,
 ) -> GateSubmissionRecord:
-    key = gate_ledger_key(gate, group_id=group_id)
+    key = gate_ledger_key(gate, target_id=target_id)
     ledger = read_gate_ledger(pipeline_root)
     gates = ledger.setdefault("gates", {})
     existing = gates.get(key)
@@ -115,11 +116,12 @@ def submit_gate_once(
                 f"{gate_ledger_path(pipeline_root)} before retrying"
             )
 
-    gate_path = write_pipeline_gate_submit_file(plan, gate, group_id=group_id)
+    gate_path = write_pipeline_gate_submit_file(plan, gate, target_id=target_id)
     gates[key] = {
         "state": "submitting",
         "gate": gate,
-        "group_id": group_id or "",
+        "target_kind": target_kind,
+        "target_id": target_id or "",
         "sbatch_path": str(gate_path),
         "dependency_job_ids": list(dependency_job_ids),
         "started_at": utc_now(),
@@ -137,7 +139,7 @@ def submit_gate_once(
                 lambda barrier_index: write_pipeline_gate_barrier_file(
                     plan,
                     gate,
-                    group_id=group_id,
+                    target_id=target_id,
                     barrier_index=barrier_index,
                 )
             ),

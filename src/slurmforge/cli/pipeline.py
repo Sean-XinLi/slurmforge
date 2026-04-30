@@ -11,7 +11,8 @@ def handle_pipeline_resume(args: argparse.Namespace) -> None:
     result = resume_train_eval_pipeline(
         Path(args.root).resolve(),
         gate=args.gate,
-        group_id=args.group_id,
+        event=args.event,
+        stage_instance_id=args.stage_instance_id,
     )
     print(f"[OK] pipeline state={result.state}")
     if result.submitted_stage_job_ids:
@@ -41,5 +42,10 @@ def add_subparser(
         choices=PIPELINE_GATE_CHOICES,
         default=None,
     )
-    resume_parser.add_argument("--group-id", default=None)
+    resume_parser.add_argument(
+        "--event",
+        choices=("stage-instance-finished",),
+        default=None,
+    )
+    resume_parser.add_argument("--stage-instance-id", default=None)
     resume_parser.set_defaults(handler=handle_pipeline_resume)

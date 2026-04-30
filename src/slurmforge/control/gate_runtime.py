@@ -6,7 +6,6 @@ from pathlib import Path
 from ..io import read_json
 from ..workflow_contract import (
     DISPATCH_CATCHUP_GATE,
-    FINAL_GATE,
     STAGE_INSTANCE_GATE,
 )
 from .workflow import advance_pipeline_once
@@ -42,7 +41,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--gate",
         default=None,
-        choices=(STAGE_INSTANCE_GATE, DISPATCH_CATCHUP_GATE, FINAL_GATE),
+        choices=(STAGE_INSTANCE_GATE, DISPATCH_CATCHUP_GATE),
     )
     parser.add_argument(
         "--event",

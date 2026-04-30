@@ -13,11 +13,11 @@ from ..workflow_contract import TRAIN_EVAL_STAGE_ORDER
 class BatchRegistryRecord:
     stage_name: str
     role: str
-    shard_id: str
+    dispatch_id: str
     stage_batch_root: str
     batch_id: str
     source_ref: str
-    source_train_group_id: str
+    source_dispatch_id: str
     run_ids: tuple[str, ...]
     group_ids: tuple[str, ...]
     updated_at: str
@@ -82,8 +82,8 @@ def upsert_batch_record(
     *,
     schema_version: int,
     role: str,
-    shard_id: str = "",
-    source_train_group_id: str = "",
+    dispatch_id: str = "",
+    source_dispatch_id: str = "",
 ) -> None:
     try:
         registry = read_batch_registry(path, schema_version=schema_version)
@@ -94,11 +94,11 @@ def upsert_batch_record(
     record = BatchRegistryRecord(
         stage_name=batch.stage_name,
         role=role,
-        shard_id=shard_id,
+        dispatch_id=dispatch_id,
         stage_batch_root=root,
         batch_id=batch.batch_id,
         source_ref=batch.source_ref,
-        source_train_group_id=source_train_group_id,
+        source_dispatch_id=source_dispatch_id,
         run_ids=tuple(batch.selected_runs),
         group_ids=tuple(group.group_id for group in batch.group_plans),
         updated_at=utc_now(),
@@ -110,7 +110,7 @@ def upsert_batch_record(
             if not (
                 item.stage_name == record.stage_name
                 and item.role == record.role
-                and item.shard_id == record.shard_id
+                and item.dispatch_id == record.dispatch_id
                 and item.stage_batch_root == record.stage_batch_root
             )
         ]
@@ -143,11 +143,11 @@ def batch_registry_record_from_dict(payload: dict[str, Any]) -> BatchRegistryRec
     return BatchRegistryRecord(
         stage_name=str(payload["stage_name"]),
         role=str(payload["role"]),
-        shard_id=str(payload.get("shard_id") or ""),
+        dispatch_id=str(payload.get("dispatch_id") or ""),
         stage_batch_root=str(payload["stage_batch_root"]),
         batch_id=str(payload["batch_id"]),
         source_ref=str(payload["source_ref"]),
-        source_train_group_id=str(payload.get("source_train_group_id") or ""),
+        source_dispatch_id=str(payload.get("source_dispatch_id") or ""),
         run_ids=tuple(str(item) for item in payload["run_ids"]),
         group_ids=tuple(str(item) for item in payload["group_ids"]),
         updated_at=str(payload["updated_at"]),
@@ -159,6 +159,6 @@ def _batch_record_sort_key(item: BatchRegistryRecord) -> tuple[int, str, str, st
     return (
         stage_order.get(item.stage_name, 99),
         item.role,
-        item.shard_id,
+        item.dispatch_id,
         item.stage_batch_root,
     )

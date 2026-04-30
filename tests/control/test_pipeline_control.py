@@ -69,7 +69,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
             sbatch = render_pipeline_gate_sbatch(
                 plan,
                 STAGE_INSTANCE_GATE,
-                stage_instance_id=train_instance.stage_instance_id,
+                target_id=train_instance.stage_instance_id,
             )
 
             self.assertEqual(result.state, "streaming")
@@ -355,6 +355,34 @@ class PipelineControlTests(StageBatchSystemTestCase):
                     "submitted",
                 )
 
+    def test_active_gpu_budget_uses_array_throttle_not_submitted_task_count(
+        self,
+    ) -> None:
+        from slurmforge.control.dispatch_budget import active_budgeted_gpus
+        from slurmforge.control.state import load_workflow_state
+        from slurmforge.control.workflow import submit_initial_pipeline
+        from tests.support.slurm import FakeSlurmClient
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(
+                write_demo_project(
+                    root,
+                    extra=_with_current_python(
+                        apply_overlay(
+                            _grid_runs(4),
+                            {"dispatch": {"max_available_gpus": 2}},
+                        )
+                    ),
+                )
+            )
+            plan = compile_train_eval_pipeline_plan(spec)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
+            submit_initial_pipeline(plan, client=FakeSlurmClient())
+
+            state = load_workflow_state(Path(plan.root_dir), plan)
+            self.assertEqual(active_budgeted_gpus(state), 2)
+
     def test_train_submission_reuses_partial_stage_submission_without_duplicate(
         self,
     ) -> None:
@@ -402,3 +430,93 @@ class PipelineControlTests(StageBatchSystemTestCase):
             ]
             self.assertIn(f"{second_group}.sbatch", stage_submissions)
             self.assertNotIn(f"{first_group}.sbatch", stage_submissions)
+
+    def test_pipeline_terminal_notification_submits_once(self) -> None:
+        from slurmforge.control.workflow import advance_pipeline_once
+        from slurmforge.control.workflow import submit_initial_pipeline
+        from slurmforge.notifications.records import read_notification_record
+        from tests.support.slurm import FakeSlurmClient
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(
+                write_demo_project(
+                    root,
+                    extra=_with_current_python(
+                        {
+                            "notifications": {
+                                "email": {
+                                    "enabled": True,
+                                    "recipients": ["you@example.com"],
+                                    "events": ["train_eval_pipeline_finished"],
+                                    "when": "afterany",
+                                }
+                            }
+                        }
+                    ),
+                )
+            )
+            plan = compile_train_eval_pipeline_plan(spec)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
+            pipeline_root = Path(plan.root_dir)
+            client = FakeSlurmClient()
+            submit_initial_pipeline(plan, client=client)
+            train_job_id = client.submissions[0].job_id
+            train_root = Path(plan.stage_batches["train"].submission_root)
+            self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
+            client.set_array_task_state(train_job_id, 0, "COMPLETED")
+
+            advance_pipeline_once(
+                pipeline_root,
+                event="stage-instance-finished",
+                stage_instance_id=plan.stage_batches["train"]
+                .stage_instances[0]
+                .stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            workflow_state = json.loads(
+                (pipeline_root / "control" / "workflow_state.json").read_text()
+            )
+            eval_submission = next(
+                item
+                for item in workflow_state["submissions"].values()
+                if item["stage_name"] == "eval"
+            )
+            eval_root = Path(eval_submission["root"])
+            eval_job_id = eval_submission["scheduler_job_ids"][0]
+            self.assertEqual(execute_stage_task(eval_root, 1, 0), 0)
+            client.set_array_task_state(eval_job_id, 0, "COMPLETED")
+
+            advance_pipeline_once(
+                pipeline_root,
+                event="stage-instance-finished",
+                stage_instance_id=plan.stage_batches["eval"]
+                .stage_instances[0]
+                .stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            advance_pipeline_once(
+                pipeline_root,
+                event="stage-instance-finished",
+                stage_instance_id=plan.stage_batches["eval"]
+                .stage_instances[0]
+                .stage_instance_id,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+
+            notify_submissions = [
+                submission
+                for submission in client.submissions
+                if submission.path.name == "notify_train_eval_pipeline_finished.sbatch"
+            ]
+            self.assertEqual(len(notify_submissions), 1)
+            self.assertEqual(notify_submissions[0].options.mail_user, "you@example.com")
+            self.assertEqual(notify_submissions[0].options.mail_type, "END")
+            record = read_notification_record(
+                pipeline_root, "train_eval_pipeline_finished"
+            )
+            assert record is not None
+            self.assertEqual(record.scheduler_job_ids, (notify_submissions[0].job_id,))

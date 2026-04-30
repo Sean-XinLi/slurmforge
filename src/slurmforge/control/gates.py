@@ -17,10 +17,11 @@ def submit_control_gate(
     *,
     dependency_job_ids: tuple[str, ...],
     client: SlurmClientProtocol,
-    group_id: str | None = None,
+    target_id: str | None = None,
+    target_kind: str = "",
     max_dependency_length: int,
 ) -> str:
-    key = gate_ledger_key(gate, group_id=group_id)
+    key = gate_ledger_key(gate, target_id=target_id)
     existing_job_ids = submitted_gate_job_ids(pipeline_root)
     if key in existing_job_ids:
         return existing_job_ids[key]
@@ -30,7 +31,8 @@ def submit_control_gate(
         gate,
         dependency_job_ids=dependency_job_ids,
         client=client,
-        group_id=group_id,
+        target_id=target_id,
+        target_kind=target_kind,
         max_dependency_length=max_dependency_length,
     )
     save_workflow_state(pipeline_root, state)
@@ -38,7 +40,8 @@ def submit_control_gate(
         pipeline_root,
         "pipeline_gate_submitted",
         gate=gate,
-        group_id=group_id or "",
+        target_kind=target_kind,
+        target_id=target_id or "",
         gate_key=key,
         scheduler_job_id=record.scheduler_job_id,
         barrier_job_ids=list(record.barrier_job_ids),

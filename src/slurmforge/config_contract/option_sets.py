@@ -158,7 +158,10 @@ DISPATCH_POLICIES = (
 
 RELEASE_POLICIES = (
     ConfigOption(RELEASE_POLICY_PER_RUN, "Release downstream work per completed run."),
-    ConfigOption(RELEASE_POLICY_PER_GROUP, "Release downstream work after a train group completes."),
+    ConfigOption(
+        RELEASE_POLICY_PER_GROUP,
+        "Release downstream work after an upstream dispatch group completes.",
+    ),
     ConfigOption(RELEASE_POLICY_PER_STAGE, "Release downstream work after the train stage completes."),
     ConfigOption(RELEASE_POLICY_WINDOWED, "Release downstream work in ready windows."),
 )

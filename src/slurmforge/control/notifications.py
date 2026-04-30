@@ -18,7 +18,7 @@ def submit_pipeline_terminal_notification(
     pipeline_root: Path,
     plan,
     *,
-    final_gate_job_id: str,
+    dependency_job_ids: tuple[str, ...],
     client: SlurmClientProtocol,
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,
 ) -> NotificationSubmissionRecord | None:
@@ -31,7 +31,7 @@ def submit_pipeline_terminal_notification(
         root_kind="train_eval_pipeline",
         event=event,
         notification_plan=plan.notification_plan,
-        dependency_job_ids=(final_gate_job_id,),
+        dependency_job_ids=dependency_job_ids,
         sbatch_path=notification_path,
         client=client,
         barrier_path_factory=lambda barrier_index: write_pipeline_notification_barrier_file(

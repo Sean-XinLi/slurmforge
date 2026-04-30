@@ -16,7 +16,7 @@ def ensure_stage_submitted(
     batch,
     *,
     client: SlurmClientProtocol,
-    state_group_id: str | None = None,
+    state_dispatch_id: str | None = None,
     prepared: PreparedSubmission | None = None,
 ) -> dict[str, str]:
     batch_root = Path(batch.submission_root)
@@ -27,7 +27,7 @@ def ensure_stage_submitted(
             pipeline_root,
             "stage_submission_adopted",
             stage=batch.stage_name,
-            stage_key=stage_key(batch.stage_name, group_id=state_group_id),
+            stage_key=stage_key(batch.stage_name, dispatch_id=state_dispatch_id),
             job_ids=list(existing.values()),
         )
         return existing
@@ -40,7 +40,7 @@ def ensure_stage_submitted(
         pipeline_root,
         "stage_submitted",
         stage=batch.stage_name,
-        stage_key=stage_key(batch.stage_name, group_id=state_group_id),
+        stage_key=stage_key(batch.stage_name, dispatch_id=state_dispatch_id),
         job_ids=list(group_job_ids.values()),
     )
     return group_job_ids

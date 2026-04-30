@@ -46,16 +46,16 @@ def upsert_runtime_batch(
     batch: StageBatchPlan,
     *,
     role: str,
-    shard_id: str = "",
-    source_train_group_id: str = "",
+    dispatch_id: str = "",
+    source_dispatch_id: str = "",
 ) -> None:
     upsert_batch_record(
         runtime_batches_path(pipeline_root),
         batch,
         schema_version=SchemaVersion.RUNTIME_BATCHES,
         role=role,
-        shard_id=shard_id,
-        source_train_group_id=source_train_group_id,
+        dispatch_id=dispatch_id,
+        source_dispatch_id=source_dispatch_id,
     )
 
 

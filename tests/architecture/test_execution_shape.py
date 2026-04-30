@@ -76,7 +76,11 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             self.assertFalse((control_root / removed).exists())
         for name in (
             "dependencies.py",
+            "dispatch_budget.py",
+            "dispatch_materialization.py",
+            "dispatch_pack.py",
             "dispatch_queue.py",
+            "dispatch_submit.py",
             "finalization.py",
             "gate_ledger.py",
             "gates.py",

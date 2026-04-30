@@ -6,7 +6,6 @@ from ..io import write_json
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..workflow_contract import (
     DISPATCH_CATCHUP_GATE,
-    FINAL_GATE,
     PIPELINE_GATES,
     STAGE_INSTANCE_GATE,
 )
@@ -30,61 +29,48 @@ def _safe_id(value: str) -> str:
     return value.replace("/", "_").replace(":", "_")
 
 
-def _validate_gate(
-    gate: str, *, group_id: str | None, stage_instance_id: str | None = None
-) -> str:
+def _validate_gate(gate: str, *, target_id: str | None = None) -> str:
     if gate not in PIPELINE_GATES:
         raise ValueError(f"Unsupported pipeline gate: {gate}")
-    if gate == STAGE_INSTANCE_GATE and not stage_instance_id:
-        raise ValueError("stage-instance gate requires `stage_instance_id`")
-    if gate == FINAL_GATE and (group_id or stage_instance_id):
-        raise ValueError("final pipeline gate does not accept instance or group ids")
+    if gate == STAGE_INSTANCE_GATE and not target_id:
+        raise ValueError("stage-instance gate requires `target_id`")
     return gate
 
 
-def _gate_file_stem(
-    gate: str, group_id: str | None, stage_instance_id: str | None = None
-) -> str:
+def _gate_file_stem(gate: str, target_id: str | None = None) -> str:
     if gate == STAGE_INSTANCE_GATE:
-        return f"{_safe_id(str(stage_instance_id))}_gate"
+        return f"{_safe_id(str(target_id))}_gate"
     if gate == DISPATCH_CATCHUP_GATE:
-        suffix = "" if group_id is None else f"_{_safe_id(group_id)}"
+        suffix = "" if target_id is None else f"_{_safe_id(target_id)}"
         return f"dispatch_catchup{suffix}_gate"
-    return "final_gate"
+    return f"{gate.replace('-', '_')}_gate"
 
 
-def _gate_job_parts(
-    gate: str, group_id: str | None, stage_instance_id: str | None = None
-) -> tuple[str, ...]:
-    if gate == FINAL_GATE:
-        return ("final", "gate")
+def _gate_job_parts(gate: str, target_id: str | None = None) -> tuple[str, ...]:
     if gate == STAGE_INSTANCE_GATE:
-        return ("instance", _safe_id(str(stage_instance_id)), "gate")
+        return ("instance", _safe_id(str(target_id)), "gate")
     if gate == DISPATCH_CATCHUP_GATE:
-        if group_id:
-            return ("dispatch", _safe_id(group_id), "catchup")
+        if target_id:
+            return ("dispatch", _safe_id(target_id), "catchup")
         return ("dispatch", "catchup")
-    return (gate.replace("-", "_"), str(group_id), "gate")
+    return (gate.replace("-", "_"), str(target_id), "gate")
 
 
 def render_pipeline_gate_sbatch(
     plan: TrainEvalPipelinePlan,
     gate: str,
     *,
-    group_id: str | None = None,
-    stage_instance_id: str | None = None,
+    target_id: str | None = None,
 ) -> str:
-    gate = _validate_gate(
-        gate, group_id=group_id, stage_instance_id=stage_instance_id
-    )
+    gate = _validate_gate(gate, target_id=target_id)
     control_plan = plan.control_plan
     python_bin = control_plan.runtime_plan.executor.python.bin
-    stem = _gate_file_stem(gate, group_id, stage_instance_id)
+    stem = _gate_file_stem(gate, target_id)
     lines = render_control_job_headers(
         job_name=_job_name(
             "sforge",
             plan.pipeline_id,
-            *_gate_job_parts(gate, group_id, stage_instance_id),
+            *_gate_job_parts(gate, target_id),
         ),
         stdout_path=_gate_logs_root(plan) / f"{stem}-%j.out",
         stderr_path=_gate_logs_root(plan) / f"{stem}-%j.err",
@@ -97,7 +83,7 @@ def render_pipeline_gate_sbatch(
     if gate == STAGE_INSTANCE_GATE:
         command += (
             " --event stage-instance-finished"
-            f" --stage-instance-id {_q(str(stage_instance_id))}"
+            f" --stage-instance-id {_q(str(target_id))}"
         )
     lines.extend(
         [
@@ -115,15 +101,12 @@ def write_pipeline_gate_submit_file(
     plan: TrainEvalPipelinePlan,
     gate: str,
     *,
-    group_id: str | None = None,
-    stage_instance_id: str | None = None,
+    target_id: str | None = None,
 ) -> Path:
-    gate = _validate_gate(
-        gate, group_id=group_id, stage_instance_id=stage_instance_id
-    )
+    gate = _validate_gate(gate, target_id=target_id)
     path = (
         _gate_root(plan)
-        / f"{_gate_file_stem(gate, group_id, stage_instance_id)}.sbatch"
+        / f"{_gate_file_stem(gate, target_id)}.sbatch"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     _gate_logs_root(plan).mkdir(parents=True, exist_ok=True)
@@ -131,8 +114,7 @@ def write_pipeline_gate_submit_file(
         render_pipeline_gate_sbatch(
             plan,
             gate,
-            group_id=group_id,
-            stage_instance_id=stage_instance_id,
+            target_id=target_id,
         ),
         encoding="utf-8",
     )
@@ -225,16 +207,16 @@ def render_pipeline_gate_barrier_sbatch(
     plan: TrainEvalPipelinePlan,
     gate: str,
     *,
-    group_id: str | None = None,
+    target_id: str | None = None,
     barrier_index: int,
 ) -> str:
-    gate = _validate_gate(gate, group_id=group_id)
-    stem = _gate_file_stem(gate, group_id)
+    gate = _validate_gate(gate, target_id=target_id)
+    stem = _gate_file_stem(gate, target_id)
     lines = render_control_job_headers(
         job_name=_job_name(
             "sforge",
             plan.pipeline_id,
-            *_gate_job_parts(gate, group_id),
+            *_gate_job_parts(gate, target_id),
             "barrier",
             str(barrier_index),
         ),
@@ -244,11 +226,11 @@ def render_pipeline_gate_barrier_sbatch(
         / f"{stem}-barrier-{barrier_index:03d}-%j.err",
         resources=plan.control_plan.resources,
     )
-    group_text = "" if group_id is None else f" group={group_id}"
+    target_text = "" if target_id is None else f" target={target_id}"
     lines.extend(
         [
             "set -euo pipefail",
-            f'printf "%s\\n" "pipeline gate barrier gate={gate}{group_text} index={barrier_index}"',
+            f'printf "%s\\n" "pipeline gate barrier gate={gate}{target_text} index={barrier_index}"',
             "",
         ]
     )
@@ -259,13 +241,13 @@ def write_pipeline_gate_barrier_file(
     plan: TrainEvalPipelinePlan,
     gate: str,
     *,
-    group_id: str | None = None,
+    target_id: str | None = None,
     barrier_index: int,
 ) -> Path:
-    gate = _validate_gate(gate, group_id=group_id)
+    gate = _validate_gate(gate, target_id=target_id)
     path = (
         _gate_root(plan)
-        / f"{_gate_file_stem(gate, group_id)}_barrier_{barrier_index:03d}.sbatch"
+        / f"{_gate_file_stem(gate, target_id)}_barrier_{barrier_index:03d}.sbatch"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     _gate_logs_root(plan).mkdir(parents=True, exist_ok=True)
@@ -273,7 +255,7 @@ def write_pipeline_gate_barrier_file(
         render_pipeline_gate_barrier_sbatch(
             plan,
             gate,
-            group_id=group_id,
+            target_id=target_id,
             barrier_index=barrier_index,
         ),
         encoding="utf-8",

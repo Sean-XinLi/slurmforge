@@ -78,10 +78,11 @@ class DispatchSubmissionState:
 
 
 @dataclass
-class FinalGateState:
+class TerminalAggregationState:
     state: str = "pending"
-    job_id: str = ""
     reason: str = ""
+    notification_job_ids: tuple[str, ...] = ()
+    completed_at: str = ""
 
 
 @dataclass
@@ -94,7 +95,9 @@ class WorkflowState:
     dependencies: dict[str, DependencyState] = field(default_factory=dict)
     dispatch_queue: tuple[str, ...] = ()
     submissions: dict[str, DispatchSubmissionState] = field(default_factory=dict)
-    final_gate: FinalGateState = field(default_factory=FinalGateState)
+    terminal_aggregation: TerminalAggregationState = field(
+        default_factory=TerminalAggregationState
+    )
     release_policy: str = RELEASE_PER_RUN
     schema_version: int = SchemaVersion.WORKFLOW_STATE
 
@@ -104,7 +107,7 @@ def dependency_key(upstream_instance_id: str, downstream_instance_id: str) -> st
 
 
 def workflow_state_from_dict(payload: dict[str, Any]) -> WorkflowState:
-    final_gate = dict(payload.get("final_gate") or {})
+    terminal_aggregation = dict(payload.get("terminal_aggregation") or {})
     release_policy = str(payload.get("release_policy") or RELEASE_PER_RUN)
     if release_policy not in RELEASE_POLICIES:
         raise ValueError(f"unsupported release_policy: {release_policy}")
@@ -128,10 +131,14 @@ def workflow_state_from_dict(payload: dict[str, Any]) -> WorkflowState:
             str(submission_id): _submission_from_dict(dict(record))
             for submission_id, record in dict(payload.get("submissions") or {}).items()
         },
-        final_gate=FinalGateState(
-            state=str(final_gate.get("state") or "pending"),
-            job_id=str(final_gate.get("job_id") or ""),
-            reason=str(final_gate.get("reason") or ""),
+        terminal_aggregation=TerminalAggregationState(
+            state=str(terminal_aggregation.get("state") or "pending"),
+            reason=str(terminal_aggregation.get("reason") or ""),
+            notification_job_ids=tuple(
+                str(item)
+                for item in terminal_aggregation.get("notification_job_ids") or ()
+            ),
+            completed_at=str(terminal_aggregation.get("completed_at") or ""),
         ),
         release_policy=release_policy,
     )
@@ -223,7 +230,7 @@ __all__ = [
         "StageInstanceState",
         "DependencyState",
         "DispatchSubmissionState",
-        "FinalGateState",
+        "TerminalAggregationState",
         "WorkflowState",
         "dependency_key",
         "workflow_state_from_dict",

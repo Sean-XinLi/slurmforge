@@ -201,7 +201,6 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                     '"pipeline_stage"',
                     '"pipeline_entry"',
                     '"streaming"',
-                    '"final_gate_submitted"',
                 ):
                     if value in text:
                         violations.append(f"{path}:{value}")

@@ -68,13 +68,13 @@ def set_workflow_status(
         dependencies=workflow_state_to_dict(state)["dependencies"],
         dispatch_queue=workflow_state_to_dict(state)["dispatch_queue"],
         submissions=workflow_state_to_dict(state)["submissions"],
-        final_gate=workflow_state_to_dict(state)["final_gate"],
+        terminal_aggregation=workflow_state_to_dict(state)["terminal_aggregation"],
     )
 
 
-def stage_key(stage_name: str, *, group_id: str | None = None) -> str:
-    return stage_name if group_id is None else f"{stage_name}:{group_id}"
+def stage_key(stage_name: str, *, dispatch_id: str | None = None) -> str:
+    return stage_name if dispatch_id is None else f"{stage_name}:{dispatch_id}"
 
 
 def _stage_job_key(record: BatchRegistryRecord) -> str:
-    return stage_key(record.stage_name, group_id=record.shard_id or None)
+    return stage_key(record.stage_name, dispatch_id=record.dispatch_id or None)

@@ -113,7 +113,7 @@ class ConfigContractShapeTests(StageBatchSystemTestCase):
 
     def test_plan_models_do_not_reexport_workflow_gates(self) -> None:
         text = Path("src/slurmforge/plans/train_eval.py").read_text(encoding="utf-8")
-        for name in ("STAGE_INSTANCE_GATE", "DISPATCH_CATCHUP_GATE", "FINAL_GATE"):
+        for name in ("STAGE_INSTANCE_GATE", "DISPATCH_CATCHUP_GATE"):
             self.assertNotIn(name, text)
 
     def test_control_and_stage_partition_defaults_are_explicit(self) -> None:
