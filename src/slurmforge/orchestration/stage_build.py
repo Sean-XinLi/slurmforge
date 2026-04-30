@@ -13,6 +13,7 @@ from ..resolver.explicit.run import upstream_bindings_from_run
 from ..resolver.explicit.stage_batch import upstream_bindings_from_stage_batch
 from ..spec import ExperimentSpec
 from ..spec.queries import stage_source_input_name
+from ..workflow_contract import EVAL_STAGE, TRAIN_STAGE
 
 
 def resolve_eval_inputs(
@@ -23,7 +24,7 @@ def resolve_eval_inputs(
     checkpoint: str | None,
     input_name: str | None = None,
 ) -> tuple[tuple[Any, ...], dict[str, tuple[Any, ...]], str]:
-    selected_input = input_name or stage_source_input_name(spec, stage_name="eval")
+    selected_input = input_name or stage_source_input_name(spec, stage_name=EVAL_STAGE)
     if checkpoint:
         runs, bindings = explicit_input_bindings(
             spec,
@@ -51,7 +52,7 @@ def resolve_eval_inputs(
 
 
 def build_train_stage_batch(spec: ExperimentSpec):
-    return compile_stage_batch_for_kind(spec, kind="train")
+    return compile_stage_batch_for_kind(spec, kind=TRAIN_STAGE)
 
 
 def build_eval_stage_batch(
@@ -64,7 +65,7 @@ def build_eval_stage_batch(
     allow_unresolved: bool = False,
 ):
     if allow_unresolved and not (from_train_batch or from_run or checkpoint):
-        return compile_stage_batch_for_kind(spec, kind="eval")
+        return compile_stage_batch_for_kind(spec, kind=EVAL_STAGE)
     runs, bindings, source_ref = resolve_eval_inputs(
         spec,
         from_train_batch=from_train_batch,
@@ -74,7 +75,7 @@ def build_eval_stage_batch(
     )
     return compile_stage_batch_for_kind(
         spec,
-        kind="eval",
+        kind=EVAL_STAGE,
         runs=runs,
         input_bindings_by_run=bindings,
         source_ref=source_ref,

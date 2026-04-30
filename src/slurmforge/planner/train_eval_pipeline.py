@@ -6,10 +6,10 @@ from ..errors import ConfigContractError
 from ..plans.runtime import RuntimePlan
 from ..plans.stage import StageBatchPlan
 from ..plans.train_eval import (
-    TRAIN_EVAL_PIPELINE_KIND,
     TrainEvalControlPlan,
     TrainEvalPipelinePlan,
 )
+from ..workflow_contract import TRAIN_EVAL_PIPELINE_KIND, TRAIN_EVAL_STAGE_ORDER
 from ..spec import ExperimentSpec
 from ..spec.run_expansion import expand_run_definitions
 from .identifiers import train_eval_pipeline_id
@@ -27,7 +27,7 @@ def compile_train_eval_pipeline_plan(
 ) -> TrainEvalPipelinePlan:
     runs = expand_run_definitions(spec)
     stage_order = spec.stage_order()
-    if stage_order != ("train", "eval"):
+    if stage_order != TRAIN_EVAL_STAGE_ORDER:
         raise ConfigContractError(
             "Train/eval pipeline runs require enabled `stages.train` and `stages.eval` in train -> eval order"
         )

@@ -3,17 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..io import SchemaVersion
+from ..workflow_contract import (
+    EVAL_SHARD_GATE,
+    FINAL_GATE,
+    PIPELINE_GATES,
+    TRAIN_EVAL_PIPELINE_KIND,
+    TRAIN_GROUP_GATE,
+)
 from .notifications import NotificationPlan
 from .resources import ControlResourcesPlan
 from .runtime import EnvironmentPlan, RuntimePlan
 from .stage import StageBatchPlan
-
-
-TRAIN_EVAL_PIPELINE_KIND = "train_eval_pipeline"
-TRAIN_GROUP_GATE = "train-group"
-EVAL_SHARD_GATE = "eval-shard"
-FINAL_GATE = "final"
-PIPELINE_GATES = (TRAIN_GROUP_GATE, EVAL_SHARD_GATE, FINAL_GATE)
 
 
 @dataclass(frozen=True)

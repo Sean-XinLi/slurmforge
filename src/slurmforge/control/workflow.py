@@ -8,10 +8,16 @@ from typing import Iterator
 from ..control_paths import workflow_lock_path, workflow_traceback_path
 from ..errors import ConfigContractError
 from ..io import write_exception_diagnostic
-from ..plans.train_eval import EVAL_SHARD_GATE, FINAL_GATE, TRAIN_GROUP_GATE
 from ..slurm import SlurmClient, SlurmClientProtocol
 from ..storage.plan_reader import load_train_eval_pipeline_plan
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
+from ..workflow_contract import (
+    EVAL_SHARD_GATE,
+    FINAL_GATE,
+    TRAIN_GROUP_GATE,
+    WORKFLOW_FAILED,
+    WORKFLOW_TERMINAL_STATES,
+)
 from .auto_advance import advance_next_ready
 from .eval_transition import advance_eval_shard
 from .final_gate import advance_final
@@ -21,7 +27,6 @@ from .state_model import (
     PipelineAdvanceResult,
     result_from_state,
     set_workflow_status,
-    train_groups,
 )
 from .train_transition import advance_train_group
 
@@ -68,11 +73,7 @@ def advance_pipeline_once(
         plan = load_train_eval_pipeline_plan(root)
         state = load_workflow_state(root, plan)
         _validate_gate_request(gate, group_id=group_id)
-        if state.get("current_stage") is None and str(state.get("state") or "") in {
-            "success",
-            "failed",
-            "blocked",
-        }:
+        if state.current_stage is None and state.state in WORKFLOW_TERMINAL_STATES:
             return result_from_state(root, state)
         try:
             if gate == TRAIN_GROUP_GATE:
@@ -104,7 +105,7 @@ def advance_pipeline_once(
                     missing_output_grace_seconds=missing_output_grace_seconds,
                 )
                 return result_from_state(root, state)
-            if not train_groups(state):
+            if not state.train_groups:
                 return submit_initial_pipeline_locked(
                     plan,
                     client=slurm,
@@ -120,9 +121,9 @@ def advance_pipeline_once(
             )
         except Exception as exc:
             write_exception_diagnostic(workflow_traceback_path(root), exc)
-            state["state"] = "failed"
+            state.state = WORKFLOW_FAILED
             save_workflow_state(root, state)
-            set_workflow_status(root, state, "failed", reason=str(exc))
+            set_workflow_status(root, state, WORKFLOW_FAILED, reason=str(exc))
             raise
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..control.workflow import PipelineAdvanceResult, advance_pipeline_once
-from ..plans.train_eval import PIPELINE_GATES
+from ..workflow_contract import PIPELINE_GATES
 from ..slurm import SlurmClientProtocol
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 

@@ -13,7 +13,9 @@ from ..status.models import TERMINAL_STATES
 from ..status.reader import read_stage_status
 from ..status.reconcile import reconcile_stage_batch_with_slurm
 from ..submission.ledger import submitted_group_job_ids
-from .state_model import submitted_gate_job_ids, train_groups
+from ..workflow_contract import TRAIN_GROUP_TRAIN_SUBMITTED
+from .state_model import submitted_gate_job_ids
+from .state_records import TrainGroupState, WorkflowState, set_train_group
 
 
 def group_plan(batch, group_id: str):
@@ -44,13 +46,33 @@ def group_terminal(batch, group_id: str) -> bool:
     )
 
 
-def initialize_train_groups(state: dict[str, Any], train_batch) -> None:
-    groups = train_groups(state)
+def initialize_train_groups(state: WorkflowState, train_batch) -> None:
     for group in train_batch.group_plans:
-        record = groups.setdefault(group.group_id, {})
-        record.setdefault("state", "train_submitted")
-        record["run_ids"] = list(group.run_ids)
-        record["stage_instance_ids"] = list(group.stage_instance_ids)
+        existing = state.train_groups.get(group.group_id)
+        set_train_group(
+            state,
+            TrainGroupState(
+                group_id=group.group_id,
+                state=existing.state
+                if existing is not None
+                else TRAIN_GROUP_TRAIN_SUBMITTED,
+                run_ids=tuple(group.run_ids),
+                stage_instance_ids=tuple(group.stage_instance_ids),
+                train_group_gate_key=""
+                if existing is None
+                else existing.train_group_gate_key,
+                eval_shard_root="" if existing is None else existing.eval_shard_root,
+                eval_shard_gate_key=""
+                if existing is None
+                else existing.eval_shard_gate_key,
+                terminal_dependency_gate_key=""
+                if existing is None
+                else existing.terminal_dependency_gate_key,
+                eval_shard_group_count=0
+                if existing is None
+                else existing.eval_shard_group_count,
+            ),
+        )
 
 
 def submitted_train_group_job_id(train_batch, group_id: str) -> str:
@@ -81,15 +103,15 @@ def reconcile_train_group(
 
 
 def terminal_gate_job_ids(
-    pipeline_root: Path, state: dict[str, Any]
+    pipeline_root: Path, state: WorkflowState
 ) -> tuple[str, ...] | None:
-    groups = train_groups(state)
+    groups = state.train_groups
     if not groups:
         return None
     gate_jobs = submitted_gate_job_ids(pipeline_root)
     job_ids: list[str] = []
     for _, record in sorted(groups.items()):
-        gate_key = str(record.get("terminal_dependency_gate_key") or "")
+        gate_key = record.terminal_dependency_gate_key
         if not gate_key or gate_key not in gate_jobs:
             return None
         job_ids.append(gate_jobs[gate_key])
@@ -97,6 +119,6 @@ def terminal_gate_job_ids(
 
 
 def all_groups_have_terminal_dependencies(
-    pipeline_root: Path, state: dict[str, Any]
+    pipeline_root: Path, state: WorkflowState
 ) -> bool:
     return terminal_gate_job_ids(pipeline_root, state) is not None

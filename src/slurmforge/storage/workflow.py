@@ -5,7 +5,8 @@ from typing import Any
 
 from ..control_paths import workflow_status_path, workflow_state_path
 from ..io import SchemaVersion, read_json, utc_now, write_json
-from ..plans.train_eval import TRAIN_EVAL_PIPELINE_KIND, TrainEvalPipelinePlan
+from ..plans.train_eval import TrainEvalPipelinePlan
+from ..workflow_contract import TRAIN_EVAL_PIPELINE_KIND, WORKFLOW_PLANNED
 
 
 def default_workflow_state(plan: TrainEvalPipelinePlan) -> dict[str, Any]:
@@ -13,7 +14,7 @@ def default_workflow_state(plan: TrainEvalPipelinePlan) -> dict[str, Any]:
         "schema_version": SchemaVersion.WORKFLOW_STATE,
         "pipeline_id": plan.pipeline_id,
         "pipeline_kind": getattr(plan, "pipeline_kind", TRAIN_EVAL_PIPELINE_KIND),
-        "state": "planned",
+        "state": WORKFLOW_PLANNED,
         "current_stage": plan.stage_order[0] if plan.stage_order else None,
         "train_groups": {},
         "final_gate": {"state": "pending"},

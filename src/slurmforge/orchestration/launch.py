@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from ..control.initial_prepare import prepare_initial_pipeline_files
 from ..control.workflow import submit_initial_pipeline
-from ..emit.pipeline_gate import TRAIN_GROUP_GATE, write_pipeline_gate_submit_file
 from ..materialization.sourced import materialize_sourced_stage_batch
 from ..materialization.stage_batch import materialize_stage_batch
 from ..materialization.train_eval import materialize_train_eval_pipeline
@@ -93,14 +93,7 @@ def emit_train_eval_pipeline(
 ) -> TrainEvalPipelineExecutionResult:
     materialize_train_eval_pipeline(plan, spec_snapshot=spec.raw)
     if not submit:
-        if "train" in plan.stage_batches:
-            prepare_stage_submission(plan.stage_batches["train"])
-            for group in plan.stage_batches["train"].group_plans:
-                write_pipeline_gate_submit_file(
-                    plan,
-                    TRAIN_GROUP_GATE,
-                    group_id=group.group_id,
-                )
+        prepare_initial_pipeline_files(plan)
         return TrainEvalPipelineExecutionResult(root=plan.root_dir, mode="emit")
     result = submit_initial_pipeline(plan)
     return TrainEvalPipelineExecutionResult(

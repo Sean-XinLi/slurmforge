@@ -5,6 +5,7 @@ from pathlib import Path
 from ..slurm import SlurmClientProtocol
 from ..submission.generation import prepare_stage_submission
 from ..submission.ledger import submitted_group_job_ids
+from ..submission.models import PreparedSubmission
 from ..submission.submitter import submit_prepared_stage_batch
 from .state import record_workflow_event
 from .state_model import stage_key
@@ -16,6 +17,7 @@ def ensure_stage_submitted(
     *,
     client: SlurmClientProtocol,
     state_group_id: str | None = None,
+    prepared: PreparedSubmission | None = None,
 ) -> dict[str, str]:
     batch_root = Path(batch.submission_root)
     expected_group_ids = {group.group_id for group in batch.group_plans}
@@ -30,7 +32,7 @@ def ensure_stage_submitted(
         )
         return existing
 
-    prepared = prepare_stage_submission(batch)
+    prepared = prepared or prepare_stage_submission(batch)
     group_job_ids = submit_prepared_stage_batch(
         prepared, client=client, policy="recover_partial"
     )

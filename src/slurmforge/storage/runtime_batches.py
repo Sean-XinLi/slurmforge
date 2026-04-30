@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 from ..io import SchemaVersion
 from ..plans.stage import StageBatchPlan
 from .batch_registry import (
+    BatchRegistry,
+    BatchRegistryRecord,
     initialize_batch_registry,
     iter_batch_records,
     iter_batch_roots,
@@ -16,11 +18,14 @@ from .batch_registry import (
 from .paths import runtime_batches_path
 
 
-def read_runtime_batches(pipeline_root: Path) -> dict[str, Any]:
-    return read_batch_registry(runtime_batches_path(pipeline_root))
+def read_runtime_batches(pipeline_root: Path) -> BatchRegistry:
+    return read_batch_registry(
+        runtime_batches_path(pipeline_root),
+        schema_version=SchemaVersion.RUNTIME_BATCHES,
+    )
 
 
-def write_runtime_batches(pipeline_root: Path, registry: dict[str, Any]) -> None:
+def write_runtime_batches(pipeline_root: Path, registry: BatchRegistry) -> None:
     write_batch_registry(
         runtime_batches_path(pipeline_root),
         registry,
@@ -56,11 +61,19 @@ def upsert_runtime_batch(
 
 def iter_runtime_batch_records(
     pipeline_root: Path, *, stage: str | None = None
-) -> Iterable[dict[str, Any]]:
-    yield from iter_batch_records(runtime_batches_path(pipeline_root), stage=stage)
+) -> Iterable[BatchRegistryRecord]:
+    yield from iter_batch_records(
+        runtime_batches_path(pipeline_root),
+        schema_version=SchemaVersion.RUNTIME_BATCHES,
+        stage=stage,
+    )
 
 
 def iter_runtime_batch_roots(
     pipeline_root: Path, *, stage: str | None = None
 ) -> Iterable[Path]:
-    yield from iter_batch_roots(runtime_batches_path(pipeline_root), stage=stage)
+    yield from iter_batch_roots(
+        runtime_batches_path(pipeline_root),
+        schema_version=SchemaVersion.RUNTIME_BATCHES,
+        stage=stage,
+    )

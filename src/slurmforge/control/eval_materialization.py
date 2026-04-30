@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from ..io import SchemaVersion, write_json
 from ..materialization.stage_batch import (
@@ -9,7 +8,6 @@ from ..materialization.stage_batch import (
     materialize_stage_batch,
 )
 from ..planner.stage_batch import compile_stage_batch
-from ..plans.train_eval import TRAIN_GROUP_GATE
 from ..resolver.train_eval_pipeline import resolve_stage_inputs_for_train_eval_pipeline
 from ..root_model.snapshots import (
     refresh_stage_batch_status,
@@ -18,23 +16,30 @@ from ..root_model.snapshots import (
 from ..spec import load_experiment_spec_from_snapshot
 from ..storage.plan_reader import load_execution_stage_batch_plan
 from ..storage.runtime_batches import upsert_runtime_batch
+from ..workflow_contract import (
+    BATCH_ROLE_EVAL_SHARD,
+    EVAL_STAGE,
+    TRAIN_GROUP_GATE,
+    TRAIN_GROUP_EVAL_MATERIALIZED,
+    TRAIN_GROUP_EVAL_SKIPPED,
+)
 from .eval_blocking import mark_blocked_eval_runs
 from .eval_selection import eval_shard_root, group_run_definitions
 from .gate_ledger import gate_ledger_key
 from .project import project_root_from_pipeline
 from .state import record_workflow_event, save_workflow_state
-from .state_model import EVAL_STAGE, train_groups
+from .state_records import WorkflowState
 
 
 def ensure_eval_shard_materialized(
     pipeline_root: Path,
     plan,
-    state: dict[str, Any],
+    state: WorkflowState,
     group_id: str,
 ):
-    record = train_groups(state)[group_id]
+    record = state.train_groups[group_id]
     shard_root = eval_shard_root(plan, group_id)
-    record["eval_shard_root"] = str(shard_root)
+    record.eval_shard_root = str(shard_root)
     spec = load_experiment_spec_from_snapshot(
         pipeline_root,
         project_root=project_root_from_pipeline(pipeline_root),
@@ -57,7 +62,7 @@ def ensure_eval_shard_materialized(
     upsert_runtime_batch(
         pipeline_root,
         full_batch,
-        role="eval_shard",
+        role=BATCH_ROLE_EVAL_SHARD,
         shard_id=group_id,
         source_train_group_id=group_id,
     )
@@ -82,8 +87,8 @@ def ensure_eval_shard_materialized(
     refresh_train_eval_pipeline_status(pipeline_root)
 
     if not resolved.selected_runs:
-        record["state"] = "eval_skipped"
-        record["terminal_dependency_gate_key"] = gate_ledger_key(
+        record.state = TRAIN_GROUP_EVAL_SKIPPED
+        record.terminal_dependency_gate_key = gate_ledger_key(
             TRAIN_GROUP_GATE, group_id=group_id
         )
         save_workflow_state(pipeline_root, state)
@@ -112,7 +117,7 @@ def ensure_eval_shard_materialized(
         blocked_run_ids=blocked,
         pipeline_root=pipeline_root,
     )
-    record["state"] = "eval_materialized"
+    record.state = TRAIN_GROUP_EVAL_MATERIALIZED
     save_workflow_state(pipeline_root, state)
     record_workflow_event(
         pipeline_root,

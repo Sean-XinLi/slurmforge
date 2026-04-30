@@ -35,6 +35,11 @@ class StorageShapeTests(StageBatchSystemTestCase):
         self.assertTrue(Path("src/slurmforge/storage/batch_registry.py").exists())
         self.assertTrue(Path("src/slurmforge/storage/execution_catalog.py").exists())
         self.assertTrue(Path("src/slurmforge/storage/runtime_batches.py").exists())
+        registry_text = Path("src/slurmforge/storage/batch_registry.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("class BatchRegistryRecord", registry_text)
+        self.assertIn("class BatchRegistry", registry_text)
         self.assertTrue(Path("src/slurmforge/storage/plan_reader.py").exists())
         self.assertTrue(Path("src/slurmforge/storage/workflow.py").exists())
         self.assertTrue(Path("src/slurmforge/root_model/seed.py").exists())

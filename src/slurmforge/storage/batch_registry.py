@@ -1,37 +1,68 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
-from ..io import read_json, utc_now, write_json
+from ..io import read_json, require_schema, utc_now, write_json
 from ..plans.stage import StageBatchPlan
+from ..workflow_contract import TRAIN_EVAL_STAGE_ORDER
 
 
-def empty_batch_registry(pipeline_id: str, *, schema_version: int) -> dict[str, Any]:
-    return {
-        "schema_version": schema_version,
-        "pipeline_id": pipeline_id,
-        "updated_at": utc_now(),
-        "batches": [],
-    }
+@dataclass
+class BatchRegistryRecord:
+    stage_name: str
+    role: str
+    shard_id: str
+    stage_batch_root: str
+    batch_id: str
+    source_ref: str
+    source_train_group_id: str
+    run_ids: tuple[str, ...]
+    group_ids: tuple[str, ...]
+    updated_at: str
 
 
-def read_batch_registry(path: Path) -> dict[str, Any]:
+@dataclass
+class BatchRegistry:
+    schema_version: int
+    pipeline_id: str
+    updated_at: str
+    batches: list[BatchRegistryRecord] = field(default_factory=list)
+
+
+def empty_batch_registry(pipeline_id: str, *, schema_version: int) -> BatchRegistry:
+    return BatchRegistry(
+        schema_version=schema_version,
+        pipeline_id=pipeline_id,
+        updated_at=utc_now(),
+        batches=[],
+    )
+
+
+def read_batch_registry(path: Path, *, schema_version: int) -> BatchRegistry:
     if not path.exists():
         raise FileNotFoundError(f"pipeline batch registry does not exist: {path}")
     payload = read_json(path)
-    if not isinstance(payload.get("batches"), list):
-        payload["batches"] = []
-    return payload
+    version = require_schema(
+        payload, name="pipeline_batch_registry", version=schema_version
+    )
+    return BatchRegistry(
+        schema_version=version,
+        pipeline_id=str(payload["pipeline_id"]),
+        updated_at=str(payload["updated_at"]),
+        batches=[
+            batch_registry_record_from_dict(dict(item))
+            for item in payload["batches"]
+        ],
+    )
 
 
 def write_batch_registry(
-    path: Path, registry: dict[str, Any], *, schema_version: int
+    path: Path, registry: BatchRegistry, *, schema_version: int
 ) -> None:
-    registry["schema_version"] = schema_version
-    registry["updated_at"] = utc_now()
-    if not isinstance(registry.get("batches"), list):
-        registry["batches"] = []
+    registry.schema_version = schema_version
+    registry.updated_at = utc_now()
     write_json(path, registry)
 
 
@@ -55,36 +86,32 @@ def upsert_batch_record(
     source_train_group_id: str = "",
 ) -> None:
     try:
-        registry = read_batch_registry(path)
+        registry = read_batch_registry(path, schema_version=schema_version)
     except FileNotFoundError:
         registry = empty_batch_registry("", schema_version=schema_version)
 
     root = str(Path(batch.submission_root).resolve())
-    key = {
-        "stage_name": batch.stage_name,
-        "role": role,
-        "shard_id": shard_id,
-        "stage_batch_root": root,
-    }
-    record = {
-        **key,
-        "batch_id": batch.batch_id,
-        "source_ref": batch.source_ref,
-        "source_train_group_id": source_train_group_id,
-        "run_ids": list(batch.selected_runs),
-        "group_ids": [group.group_id for group in batch.group_plans],
-        "updated_at": utc_now(),
-    }
-    registry["batches"] = sorted(
+    record = BatchRegistryRecord(
+        stage_name=batch.stage_name,
+        role=role,
+        shard_id=shard_id,
+        stage_batch_root=root,
+        batch_id=batch.batch_id,
+        source_ref=batch.source_ref,
+        source_train_group_id=source_train_group_id,
+        run_ids=tuple(batch.selected_runs),
+        group_ids=tuple(group.group_id for group in batch.group_plans),
+        updated_at=utc_now(),
+    )
+    registry.batches = sorted(
         [
             item
-            for item in registry.get("batches", [])
+            for item in registry.batches
             if not (
-                isinstance(item, dict)
-                and item.get("stage_name") == key["stage_name"]
-                and item.get("role") == key["role"]
-                and item.get("shard_id") == key["shard_id"]
-                and item.get("stage_batch_root") == key["stage_batch_root"]
+                item.stage_name == record.stage_name
+                and item.role == record.role
+                and item.shard_id == record.shard_id
+                and item.stage_batch_root == record.stage_batch_root
             )
         ]
         + [record],
@@ -94,29 +121,44 @@ def upsert_batch_record(
 
 
 def iter_batch_records(
-    path: Path, *, stage: str | None = None
-) -> Iterable[dict[str, Any]]:
-    registry = read_batch_registry(path)
-    for item in registry.get("batches", []):
-        if not isinstance(item, dict):
+    path: Path, *, schema_version: int, stage: str | None = None
+) -> Iterable[BatchRegistryRecord]:
+    registry = read_batch_registry(path, schema_version=schema_version)
+    for item in registry.batches:
+        if stage is not None and item.stage_name != stage:
             continue
-        if stage is not None and item.get("stage_name") != stage:
-            continue
-        yield dict(item)
+        yield item
 
 
-def iter_batch_roots(path: Path, *, stage: str | None = None) -> Iterable[Path]:
-    for record in iter_batch_records(path, stage=stage):
-        root = record.get("stage_batch_root")
-        if root:
-            yield Path(str(root)).resolve()
+def iter_batch_roots(
+    path: Path, *, schema_version: int, stage: str | None = None
+) -> Iterable[Path]:
+    for record in iter_batch_records(
+        path, schema_version=schema_version, stage=stage
+    ):
+        yield Path(record.stage_batch_root).resolve()
 
 
-def _batch_record_sort_key(item: dict[str, Any]) -> tuple[int, str, str, str]:
-    stage_order = {"train": 0, "eval": 1}
+def batch_registry_record_from_dict(payload: dict[str, Any]) -> BatchRegistryRecord:
+    return BatchRegistryRecord(
+        stage_name=str(payload["stage_name"]),
+        role=str(payload["role"]),
+        shard_id=str(payload.get("shard_id") or ""),
+        stage_batch_root=str(payload["stage_batch_root"]),
+        batch_id=str(payload["batch_id"]),
+        source_ref=str(payload["source_ref"]),
+        source_train_group_id=str(payload.get("source_train_group_id") or ""),
+        run_ids=tuple(str(item) for item in payload["run_ids"]),
+        group_ids=tuple(str(item) for item in payload["group_ids"]),
+        updated_at=str(payload["updated_at"]),
+    )
+
+
+def _batch_record_sort_key(item: BatchRegistryRecord) -> tuple[int, str, str, str]:
+    stage_order = {stage: index for index, stage in enumerate(TRAIN_EVAL_STAGE_ORDER)}
     return (
-        stage_order.get(str(item.get("stage_name") or ""), 99),
-        str(item.get("role") or ""),
-        str(item.get("shard_id") or ""),
-        str(item.get("stage_batch_root") or ""),
+        stage_order.get(item.stage_name, 99),
+        item.role,
+        item.shard_id,
+        item.stage_batch_root,
     )

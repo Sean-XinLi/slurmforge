@@ -8,7 +8,7 @@ from ..emit.pipeline_gate import (
     write_pipeline_gate_barrier_file,
     write_pipeline_gate_submit_file,
 )
-from ..plans.train_eval import (
+from ..workflow_contract import (
     EVAL_SHARD_GATE,
     FINAL_GATE,
     TRAIN_GROUP_GATE,

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from ..slurm import SlurmClientProtocol
 from .gate_ledger import gate_ledger_key, submit_gate_once
 from .state import record_workflow_event, save_workflow_state
 from .state_model import submitted_gate_job_ids
+from .state_records import WorkflowState
 
 
 def submit_control_gate(
     pipeline_root: Path,
-    state: dict[str, Any],
+    state: WorkflowState,
     plan,
     gate: str,
     *,

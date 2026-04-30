@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..plans.train_eval import (
+from ..plans.train_eval import TrainEvalPipelinePlan
+from ..workflow_contract import (
     EVAL_SHARD_GATE,
     FINAL_GATE,
     PIPELINE_GATES,
     TRAIN_GROUP_GATE,
-    TrainEvalPipelinePlan,
 )
 from .sbatch_helpers import _environment_lines, _job_name, _q
 from .stage_render.headers import render_control_job_headers

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..storage.plan_reader import run_definitions_from_stage_batch
-from .state_model import EVAL_STAGE, TRAIN_STAGE
+from ..workflow_contract import EVAL_STAGE, TRAIN_STAGE
 from .train_group import group_plan
 
 

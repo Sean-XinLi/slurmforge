@@ -189,3 +189,21 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                 ):
                     violations.append(f"{path}:{node.lineno} imports storage paths")
         self.assertEqual(violations, [])
+
+    def test_train_eval_runtime_contract_has_single_constant_source(self) -> None:
+        root = Path("src/slurmforge")
+        self.assertTrue((root / "workflow_contract.py").exists())
+        violations: list[str] = []
+        for package in ("control", "orchestration", "planner", "storage"):
+            for path in sorted((root / package).rglob("*.py")):
+                text = path.read_text(encoding="utf-8")
+                for value in (
+                    '"pipeline_stage"',
+                    '"pipeline_entry"',
+                    '"eval_shard"',
+                    '"streaming"',
+                    '"final_gate_submitted"',
+                ):
+                    if value in text:
+                        violations.append(f"{path}:{value}")
+        self.assertEqual(violations, [])

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...workflow_contract import TRAIN_EVAL_PIPELINE_KIND
 from ..train_eval import (
-    TRAIN_EVAL_PIPELINE_KIND,
     TrainEvalControlPlan,
     TrainEvalPipelinePlan,
 )

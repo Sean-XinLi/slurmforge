@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from ..plans.train_eval import EVAL_SHARD_GATE, FINAL_GATE, TRAIN_GROUP_GATE
+from ..workflow_contract import EVAL_SHARD_GATE, FINAL_GATE, TRAIN_GROUP_GATE
 from .workflow import advance_pipeline_once
 
 

@@ -73,8 +73,10 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             "final_gate.py",
             "gate_ledger.py",
             "gates.py",
+            "initial_prepare.py",
             "initial_submit.py",
             "stage_submit.py",
+            "state_records.py",
             "train_transition.py",
             "train_group.py",
             "workflow.py",
@@ -84,6 +86,12 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
         workflow_text = (control_root / "workflow.py").read_text(encoding="utf-8")
         self.assertNotIn("deliver_notification", workflow_text)
         self.assertNotIn("materialize_stage_batch", workflow_text)
+        for path in sorted(control_root.glob("*.py")):
+            if path.name in {"gate_ledger.py", "state_records.py"}:
+                continue
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn('state["', text, path.name)
+            self.assertNotIn('record["', text, path.name)
 
     def test_notification_finalizer_runtime_is_not_submission_runtime(self) -> None:
         submission_finalizer = Path("src/slurmforge/submission/finalizer.py").read_text(

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-STAGE_TRAIN = "train"
-STAGE_EVAL = "eval"
+from ..workflow_contract import EVAL_STAGE, TRAIN_STAGE
+
+
+STAGE_TRAIN = TRAIN_STAGE
+STAGE_EVAL = EVAL_STAGE
 SUPPORTED_STAGE_KEYS = frozenset({STAGE_TRAIN, STAGE_EVAL})
 
 TEMPLATE_TRAIN_EVAL = "train-eval"

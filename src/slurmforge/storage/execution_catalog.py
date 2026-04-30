@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 from ..io import SchemaVersion
 from ..plans.stage import StageBatchPlan
+from ..workflow_contract import BATCH_ROLE_PIPELINE_STAGE
 from .batch_registry import (
+    BatchRegistry,
+    BatchRegistryRecord,
     initialize_batch_registry,
     iter_batch_records,
     iter_batch_roots,
@@ -16,11 +19,14 @@ from .batch_registry import (
 from .paths import stage_catalog_path
 
 
-def read_stage_catalog(pipeline_root: Path) -> dict[str, Any]:
-    return read_batch_registry(stage_catalog_path(pipeline_root))
+def read_stage_catalog(pipeline_root: Path) -> BatchRegistry:
+    return read_batch_registry(
+        stage_catalog_path(pipeline_root),
+        schema_version=SchemaVersion.STAGE_CATALOG,
+    )
 
 
-def write_stage_catalog(pipeline_root: Path, catalog: dict[str, Any]) -> None:
+def write_stage_catalog(pipeline_root: Path, catalog: BatchRegistry) -> None:
     write_batch_registry(
         stage_catalog_path(pipeline_root),
         catalog,
@@ -40,7 +46,7 @@ def upsert_catalog_batch(
     pipeline_root: Path,
     batch: StageBatchPlan,
     *,
-    role: str = "pipeline_stage",
+    role: str = BATCH_ROLE_PIPELINE_STAGE,
     shard_id: str = "",
     source_train_group_id: str = "",
 ) -> None:
@@ -56,11 +62,19 @@ def upsert_catalog_batch(
 
 def iter_catalog_batch_records(
     pipeline_root: Path, *, stage: str | None = None
-) -> Iterable[dict[str, Any]]:
-    yield from iter_batch_records(stage_catalog_path(pipeline_root), stage=stage)
+) -> Iterable[BatchRegistryRecord]:
+    yield from iter_batch_records(
+        stage_catalog_path(pipeline_root),
+        schema_version=SchemaVersion.STAGE_CATALOG,
+        stage=stage,
+    )
 
 
 def iter_catalog_batch_roots(
     pipeline_root: Path, *, stage: str | None = None
 ) -> Iterable[Path]:
-    yield from iter_batch_roots(stage_catalog_path(pipeline_root), stage=stage)
+    yield from iter_batch_roots(
+        stage_catalog_path(pipeline_root),
+        schema_version=SchemaVersion.STAGE_CATALOG,
+        stage=stage,
+    )

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from ..notifications.delivery import deliver_notification
 from ..root_model.notifications import load_notification_summary_input
@@ -10,22 +9,24 @@ from ..storage.workflow import write_workflow_status
 from .gate_ledger import submitted_gate_records
 from .state import record_workflow_event, save_workflow_state
 from .state_model import submitted_stage_job_ids
+from .state_records import WorkflowState, workflow_state_to_dict
 
 
 def complete_pipeline(
-    pipeline_root: Path, state: dict[str, Any], *, notification_plan
+    pipeline_root: Path, state: WorkflowState, *, notification_plan
 ) -> str:
     final_state = _pipeline_terminal_state(pipeline_root)
-    state["state"] = final_state
-    state["current_stage"] = None
+    state.state = final_state
+    state.current_stage = None
     save_workflow_state(pipeline_root, state)
+    state_payload = workflow_state_to_dict(state)
     write_workflow_status(
         pipeline_root,
         final_state,
         gate_jobs=submitted_gate_records(pipeline_root),
         stage_jobs=submitted_stage_job_ids(pipeline_root),
-        train_groups=state.get("train_groups") or {},
-        final_gate=state.get("final_gate") or {},
+        train_groups=state_payload["train_groups"],
+        final_gate=state_payload["final_gate"],
     )
     record = deliver_notification(
         pipeline_root,
