@@ -104,6 +104,8 @@ A train/eval pipeline root contains:
       train_group_001_gate.sbatch
       eval_shard_group_001_gate.sbatch
       final_gate.sbatch
+      *_barrier_001.sbatch          # optional dependency fan-in barriers
+    logs/
   execution/
     stage_catalog.json
     runtime_batches.json
