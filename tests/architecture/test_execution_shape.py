@@ -64,44 +64,89 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
     def test_train_eval_control_runtime_is_split_by_responsibility(self) -> None:
         control_root = Path("src/slurmforge/control")
         self.assertFalse((control_root / "eval_shard.py").exists())
-        for name in (
-            "eval_blocking.py",
+        for removed in (
+            "auto_advance.py",
             "eval_materialization.py",
-            "eval_reconcile.py",
             "eval_selection.py",
             "eval_transition.py",
             "final_gate.py",
-            "gate_ledger.py",
+            "control_submissions.py",
+            "stage_runtime.py",
+            "train_group.py",
+            "train_transition.py",
+        ):
+            self.assertFalse((control_root / removed).exists())
+        for name in (
+            "dependencies.py",
+            "dispatch_budget.py",
+            "dispatch_materialization.py",
+            "dispatch_pack.py",
+            "dispatch_queue.py",
+            "dispatch_submit.py",
+            "finalization.py",
+            "control_submission_ledger.py",
+            "control_submission_records.py",
+            "control_submission_submit.py",
             "gates.py",
             "initial_prepare.py",
             "initial_submit.py",
+            "instance_reconcile.py",
             "stage_submit.py",
-            "state_records.py",
-            "train_transition.py",
-            "train_group.py",
+            "terminal_notification.py",
             "workflow.py",
-            "terminal.py",
         ):
             self.assertTrue((control_root / name).exists())
+        storage_root = Path("src/slurmforge/storage")
+        for name in (
+            "workflow_state_constants.py",
+            "workflow_state_factory.py",
+            "workflow_state_models.py",
+            "workflow_state_mutations.py",
+            "workflow_state_records.py",
+            "workflow_state_serde.py",
+            "workflow_state_validation.py",
+        ):
+            self.assertTrue((storage_root / name).exists())
+        workflow_state_facade = (storage_root / "workflow_state_records.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertLess(len(workflow_state_facade.splitlines()), 60)
+        self.assertNotIn("@dataclass", workflow_state_facade)
         workflow_text = (control_root / "workflow.py").read_text(encoding="utf-8")
         self.assertNotIn("deliver_notification", workflow_text)
         self.assertNotIn("materialize_stage_batch", workflow_text)
         for path in sorted(control_root.glob("*.py")):
-            if path.name in {"gate_ledger.py", "state_records.py"}:
+            if path.name in {
+                "control_submission_records.py",
+            }:
                 continue
             text = path.read_text(encoding="utf-8")
             self.assertNotIn('state["', text, path.name)
             self.assertNotIn('record["', text, path.name)
 
-    def test_notification_finalizer_runtime_is_not_submission_runtime(self) -> None:
-        submission_finalizer = Path("src/slurmforge/submission/finalizer.py").read_text(
+    def test_status_view_is_split_into_read_model_and_formatter(self) -> None:
+        orchestration_root = Path("src/slurmforge/orchestration")
+        for name in ("status_read_model.py", "status_format.py", "status_view.py"):
+            self.assertTrue((orchestration_root / name).exists())
+        status_view = (orchestration_root / "status_view.py").read_text(
             encoding="utf-8"
         )
-        self.assertNotIn("deliver_notification", submission_finalizer)
-        self.assertNotIn("load_notification_summary_input", submission_finalizer)
-        self.assertNotIn("def run_finalizer", submission_finalizer)
-        runtime = Path("src/slurmforge/notifications/finalizer_runtime.py").read_text(
+        self.assertNotIn("read_workflow_status", status_view)
+        self.assertNotIn("reconcile_root_submissions", status_view)
+        self.assertNotIn('workflow_status["', status_view)
+        self.assertNotIn("workflow_status.get", status_view)
+
+    def test_notifications_use_slurm_mail_submission_runtime(self) -> None:
+        submission_notifications = Path(
+            "src/slurmforge/submission/notifications.py"
+        ).read_text(
             encoding="utf-8"
         )
-        self.assertIn("def run_finalizer", runtime)
-        self.assertIn("deliver_notification", runtime)
+        self.assertNotIn("deliver_notification", submission_notifications)
+        self.assertNotIn("load_notification_summary_input", submission_notifications)
+        service = Path("src/slurmforge/submission/notification_mail.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("mail_user", service)
+        self.assertIn("SlurmSubmitOptions", service)
+        self.assertFalse(Path("src/slurmforge/notifications/finalizer_runtime.py").exists())

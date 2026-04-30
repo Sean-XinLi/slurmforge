@@ -54,3 +54,27 @@ class StorageShapeTests(StageBatchSystemTestCase):
         self.assertTrue(Path("src/slurmforge/materialization/stage_batch.py").exists())
         self.assertTrue(Path("src/slurmforge/materialization/train_eval.py").exists())
         self.assertTrue(Path("src/slurmforge/materialization/sourced.py").exists())
+
+    def test_strict_record_readers_do_not_default_missing_fields(self) -> None:
+        strict_readers = (
+            "src/slurmforge/control/control_submission_ledger.py",
+            "src/slurmforge/control/control_submission_records.py",
+            "src/slurmforge/notifications/records.py",
+            "src/slurmforge/plans/serde/outputs.py",
+            "src/slurmforge/plans/serde/resources.py",
+            "src/slurmforge/plans/serde/runtime.py",
+            "src/slurmforge/plans/serde/train_eval.py",
+            "src/slurmforge/status/reconcile_observations.py",
+            "src/slurmforge/status/serde.py",
+            "src/slurmforge/storage/batch_materialization_records.py",
+            "src/slurmforge/storage/batch_registry.py",
+            "src/slurmforge/storage/workflow_state_serde.py",
+            "src/slurmforge/storage/workflow_status_records.py",
+            "src/slurmforge/submission/ledger_records.py",
+        )
+        violations = [
+            path
+            for path in strict_readers
+            if "payload.get(" in Path(path).read_text(encoding="utf-8")
+        ]
+        self.assertEqual(violations, [])

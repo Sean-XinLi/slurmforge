@@ -38,7 +38,7 @@ Every successful stage instance has `stage_outputs.json`:
 ```json
 {
   "schema_version": 1,
-  "stage_instance_id": "run_001.train",
+  "stage_instance_id": "train/run_001",
   "outputs": {
     "checkpoint": {
       "kind": "file",
@@ -50,7 +50,7 @@ Every successful stage instance has `stage_outputs.json`:
       "source_digest": "sha256...",
       "managed_digest": "sha256...",
       "verified": true,
-      "producer_stage_instance_id": "run_001.train",
+      "producer_stage_instance_id": "train/run_001",
       "producer_attempt_id": "0001",
       "selection_reason": "latest_step"
     },
@@ -64,7 +64,7 @@ Every successful stage instance has `stage_outputs.json`:
       "managed_digest": "sha256...",
       "verified": true,
       "value": 0.98,
-      "producer_stage_instance_id": "run_001.eval",
+      "producer_stage_instance_id": "eval/run_001",
       "producer_attempt_id": "0001",
       "selection_reason": "json_path:$.accuracy"
     },
@@ -73,7 +73,7 @@ Every successful stage instance has `stage_outputs.json`:
       "path": "/abs/path/attempts/0001/artifacts/files/eval_manifest.json",
       "source_path": "/abs/path/eval/manifest.json",
       "managed": true,
-      "producer_stage_instance_id": "run_001.eval",
+      "producer_stage_instance_id": "eval/run_001",
       "producer_attempt_id": "0001",
       "selection_reason": "manifest_file"
     }
@@ -90,7 +90,7 @@ Every successful attempt writes an artifact manifest:
 ```json
 {
   "schema_version": 1,
-  "stage_instance_id": "run_001.train",
+  "stage_instance_id": "train/run_001",
   "attempt_id": "0001",
   "artifacts": [
     {

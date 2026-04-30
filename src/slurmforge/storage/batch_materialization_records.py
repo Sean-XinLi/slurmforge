@@ -3,7 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..errors import RecordContractError
 from ..io import SchemaVersion, read_json, require_schema, utc_now, write_json
+from ..record_fields import required_nullable_string, required_string
+
+MATERIALIZATION_PLANNED = "planned"
+MATERIALIZATION_VERIFYING_INPUTS = "verifying_inputs"
+MATERIALIZATION_READY = "ready"
+MATERIALIZATION_BLOCKED = "blocked"
+MATERIALIZATION_STATES = (
+    MATERIALIZATION_PLANNED,
+    MATERIALIZATION_VERIFYING_INPUTS,
+    MATERIALIZATION_READY,
+    MATERIALIZATION_BLOCKED,
+)
 
 
 @dataclass(frozen=True)
@@ -30,15 +43,23 @@ def materialization_status_from_dict(payload: dict) -> MaterializationStatusReco
     )
     return MaterializationStatusRecord(
         schema_version=version,
-        batch_id=str(payload["batch_id"]),
-        stage_name=str(payload["stage_name"]),
-        state=str(payload.get("state") or "planned"),
-        failure_class=None
-        if payload.get("failure_class") in (None, "")
-        else str(payload.get("failure_class")),
-        reason=str(payload.get("reason") or ""),
-        verified_at=str(payload.get("verified_at") or ""),
-        submit_manifest_path=str(payload.get("submit_manifest_path") or ""),
+        batch_id=required_string(
+            payload, "batch_id", label="materialization_status", non_empty=True
+        ),
+        stage_name=required_string(
+            payload, "stage_name", label="materialization_status", non_empty=True
+        ),
+        state=_materialization_state(payload),
+        failure_class=required_nullable_string(
+            payload, "failure_class", label="materialization_status"
+        ),
+        reason=required_string(payload, "reason", label="materialization_status"),
+        verified_at=required_string(
+            payload, "verified_at", label="materialization_status"
+        ),
+        submit_manifest_path=required_string(
+            payload, "submit_manifest_path", label="materialization_status"
+        ),
     )
 
 
@@ -74,3 +95,12 @@ def write_materialization_status(
     )
     write_json(materialization_status_path(batch_root), record)
     return record
+
+
+def _materialization_state(payload: dict) -> str:
+    state = required_string(
+        payload, "state", label="materialization_status", non_empty=True
+    )
+    if state not in MATERIALIZATION_STATES:
+        raise RecordContractError(f"Unsupported materialization status state: {state}")
+    return state

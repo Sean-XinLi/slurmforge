@@ -4,18 +4,14 @@ from pathlib import Path
 
 from ..io import SchemaVersion, utc_now
 from ..plans.stage import StageBatchPlan
-from ..outputs.records import stage_outputs_path
-from ..slurm import (
-    SlurmClientProtocol,
-    failure_class_for_slurm_state,
-    stage_state_for_slurm_state,
-)
+from ..slurm import SlurmClientProtocol
 from .machine import commit_stage_status
 from .models import StageStatusRecord, TERMINAL_STATES
 from .reader import read_stage_status
 from .reconcile_attempts import scheduler_attempt
-from .reconcile_observations import append_scheduler_observation, missing_output_expired
-from .reconcile_rules import master_fallback
+from .reconcile_decision import decide_stage_status, scheduler_stage_state
+from .reconcile_observations import append_scheduler_observation
+from .slurm_observations import observe_group_slurm_state, observed_task_state
 
 
 def reconcile_stage_batch_with_slurm(
@@ -33,18 +29,10 @@ def reconcile_stage_batch_with_slurm(
         job_id = group_job_ids.get(group.group_id)
         if not job_id:
             continue
-        job_states = client.query_observed_jobs([job_id])
-        task_states: dict[int, object] = {}
-        prefix = f"{job_id}_"
-        for observed_job_id, observed_state in job_states.items():
-            if observed_state.array_task_id is None:
-                continue
-            if observed_state.array_job_id == job_id or observed_job_id.startswith(
-                prefix
-            ):
-                task_states[observed_state.array_task_id] = observed_state
-        fallback_state = master_fallback(
-            job_states, job_id, group_size=group.array_size
+        observation = observe_group_slurm_state(
+            client=client,
+            job_id=job_id,
+            group_size=group.array_size,
         )
         for task_index, stage_instance_id in enumerate(group.stage_instance_ids):
             instance = instances_by_id[stage_instance_id]
@@ -52,7 +40,7 @@ def reconcile_stage_batch_with_slurm(
             current = read_stage_status(run_dir)
             if current is not None and current.state in TERMINAL_STATES:
                 continue
-            slurm_state = task_states.get(task_index) or fallback_state
+            slurm_state = observed_task_state(observation, task_index)
             if slurm_state is None:
                 continue
             append_scheduler_observation(
@@ -71,7 +59,7 @@ def reconcile_stage_batch_with_slurm(
                     "observed_at": utc_now(),
                 },
             )
-            stage_state = stage_state_for_slurm_state(slurm_state.state)
+            stage_state = scheduler_stage_state(slurm_state)
             if stage_state is None:
                 continue
             latest_attempt_id = None
@@ -82,27 +70,12 @@ def reconcile_stage_batch_with_slurm(
                     slurm_state=slurm_state,
                     terminal=stage_state in TERMINAL_STATES,
                 )
-            if stage_state == "success" and not stage_outputs_path(run_dir).exists():
-                if missing_output_expired(
-                    run_dir,
-                    slurm_state=slurm_state.state,
-                    grace_seconds=missing_output_grace_seconds,
-                ):
-                    stage_state = "failed"
-                    failure_class = "missing_attempt_result"
-                    reason = f"Slurm job {slurm_state.job_id} completed but no stage_outputs.json was written"
-                else:
-                    stage_state = "running"
-                    failure_class = None
-                    reason = (
-                        f"Slurm job {slurm_state.job_id} completed; waiting for stage_outputs.json "
-                        f"for up to {missing_output_grace_seconds}s"
-                    )
-            else:
-                failure_class = failure_class_for_slurm_state(slurm_state.state)
-                reason = f"Slurm job {slurm_state.job_id} state={slurm_state.state}"
-                if slurm_state.reason:
-                    reason = f"{reason} reason={slurm_state.reason}"
+            decision = decide_stage_status(
+                run_dir=run_dir,
+                slurm_state=slurm_state,
+                initial_stage_state=stage_state,
+                missing_output_grace_seconds=missing_output_grace_seconds,
+            )
             commit_stage_status(
                 run_dir,
                 StageStatusRecord(
@@ -110,10 +83,10 @@ def reconcile_stage_batch_with_slurm(
                     stage_instance_id=instance.stage_instance_id,
                     run_id=instance.run_id,
                     stage_name=instance.stage_name,
-                    state=stage_state,
+                    state=decision.stage_state,
                     latest_attempt_id=latest_attempt_id,
-                    failure_class=failure_class,
-                    reason=reason,
+                    failure_class=decision.failure_class,
+                    reason=decision.reason,
                 ),
                 source="slurm_reconcile",
             )

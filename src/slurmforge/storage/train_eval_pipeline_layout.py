@@ -55,8 +55,8 @@ def persist_train_eval_pipeline_layout(
                 root,
                 batch,
                 role=BATCH_ROLE_PIPELINE_ENTRY,
-                shard_id="",
-                source_train_group_id="",
+                dispatch_id="",
+                source_dispatch_id="",
             )
     write_lineage_index(root, build_train_eval_pipeline_lineage(plan))
     return root

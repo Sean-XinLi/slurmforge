@@ -4,21 +4,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
+from ..errors import RecordContractError
 from ..io import read_json, require_schema, utc_now, write_json
 from ..plans.stage import StageBatchPlan
 from ..workflow_contract import TRAIN_EVAL_STAGE_ORDER
+from ..record_fields import required_array, required_string
 
 
 @dataclass
 class BatchRegistryRecord:
     stage_name: str
     role: str
-    shard_id: str
+    dispatch_id: str
     stage_batch_root: str
     batch_id: str
     source_ref: str
-    source_train_group_id: str
+    source_dispatch_id: str
     run_ids: tuple[str, ...]
+    stage_instance_ids: tuple[str, ...]
     group_ids: tuple[str, ...]
     updated_at: str
 
@@ -49,11 +52,15 @@ def read_batch_registry(path: Path, *, schema_version: int) -> BatchRegistry:
     )
     return BatchRegistry(
         schema_version=version,
-        pipeline_id=str(payload["pipeline_id"]),
-        updated_at=str(payload["updated_at"]),
+        pipeline_id=required_string(
+            payload, "pipeline_id", label="pipeline_batch_registry"
+        ),
+        updated_at=required_string(
+            payload, "updated_at", label="pipeline_batch_registry", non_empty=True
+        ),
         batches=[
             batch_registry_record_from_dict(dict(item))
-            for item in payload["batches"]
+            for item in _batch_records(payload)
         ],
     )
 
@@ -82,8 +89,8 @@ def upsert_batch_record(
     *,
     schema_version: int,
     role: str,
-    shard_id: str = "",
-    source_train_group_id: str = "",
+    dispatch_id: str = "",
+    source_dispatch_id: str = "",
 ) -> None:
     try:
         registry = read_batch_registry(path, schema_version=schema_version)
@@ -94,12 +101,15 @@ def upsert_batch_record(
     record = BatchRegistryRecord(
         stage_name=batch.stage_name,
         role=role,
-        shard_id=shard_id,
+        dispatch_id=dispatch_id,
         stage_batch_root=root,
         batch_id=batch.batch_id,
         source_ref=batch.source_ref,
-        source_train_group_id=source_train_group_id,
+        source_dispatch_id=source_dispatch_id,
         run_ids=tuple(batch.selected_runs),
+        stage_instance_ids=tuple(
+            instance.stage_instance_id for instance in batch.stage_instances
+        ),
         group_ids=tuple(group.group_id for group in batch.group_plans),
         updated_at=utc_now(),
     )
@@ -110,7 +120,7 @@ def upsert_batch_record(
             if not (
                 item.stage_name == record.stage_name
                 and item.role == record.role
-                and item.shard_id == record.shard_id
+                and item.dispatch_id == record.dispatch_id
                 and item.stage_batch_root == record.stage_batch_root
             )
         ]
@@ -141,16 +151,41 @@ def iter_batch_roots(
 
 def batch_registry_record_from_dict(payload: dict[str, Any]) -> BatchRegistryRecord:
     return BatchRegistryRecord(
-        stage_name=str(payload["stage_name"]),
-        role=str(payload["role"]),
-        shard_id=str(payload.get("shard_id") or ""),
-        stage_batch_root=str(payload["stage_batch_root"]),
-        batch_id=str(payload["batch_id"]),
-        source_ref=str(payload["source_ref"]),
-        source_train_group_id=str(payload.get("source_train_group_id") or ""),
-        run_ids=tuple(str(item) for item in payload["run_ids"]),
-        group_ids=tuple(str(item) for item in payload["group_ids"]),
-        updated_at=str(payload["updated_at"]),
+        stage_name=required_string(
+            payload, "stage_name", label="pipeline_batch_registry record", non_empty=True
+        ),
+        role=required_string(
+            payload, "role", label="pipeline_batch_registry record", non_empty=True
+        ),
+        dispatch_id=required_string(
+            payload, "dispatch_id", label="pipeline_batch_registry record"
+        ),
+        stage_batch_root=required_string(
+            payload,
+            "stage_batch_root",
+            label="pipeline_batch_registry record",
+            non_empty=True,
+        ),
+        batch_id=required_string(
+            payload, "batch_id", label="pipeline_batch_registry record", non_empty=True
+        ),
+        source_ref=required_string(
+            payload, "source_ref", label="pipeline_batch_registry record", non_empty=True
+        ),
+        source_dispatch_id=required_string(
+            payload, "source_dispatch_id", label="pipeline_batch_registry record"
+        ),
+        run_ids=_required_string_array(payload, "run_ids"),
+        stage_instance_ids=tuple(
+            _required_string_array(payload, "stage_instance_ids")
+        ),
+        group_ids=_required_string_array(payload, "group_ids"),
+        updated_at=required_string(
+            payload,
+            "updated_at",
+            label="pipeline_batch_registry record",
+            non_empty=True,
+        ),
     )
 
 
@@ -159,6 +194,31 @@ def _batch_record_sort_key(item: BatchRegistryRecord) -> tuple[int, str, str, st
     return (
         stage_order.get(item.stage_name, 99),
         item.role,
-        item.shard_id,
+        item.dispatch_id,
         item.stage_batch_root,
     )
+
+
+def _batch_records(payload: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    records = []
+    for item in required_array(payload, "batches", label="pipeline_batch_registry"):
+        if not isinstance(item, dict):
+            raise RecordContractError("pipeline_batch_registry.batches items must be objects")
+        records.append(dict(item))
+    return tuple(records)
+
+
+def _required_string_array(
+    payload: dict[str, Any], field_name: str
+) -> tuple[str, ...]:
+    values = required_array(
+        payload, field_name, label="pipeline_batch_registry record"
+    )
+    result = []
+    for item in values:
+        if not isinstance(item, str):
+            raise RecordContractError(
+                f"pipeline_batch_registry record.{field_name} items must be strings"
+            )
+        result.append(item)
+    return tuple(result)

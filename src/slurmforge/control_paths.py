@@ -27,5 +27,5 @@ def workflow_traceback_path(pipeline_root: Path) -> Path:
     return control_dir(pipeline_root) / "workflow_traceback.log"
 
 
-def gate_ledger_path(pipeline_root: Path) -> Path:
-    return control_dir(pipeline_root) / "gate_ledger.json"
+def control_submissions_path(pipeline_root: Path) -> Path:
+    return control_dir(pipeline_root) / "control_submissions.json"

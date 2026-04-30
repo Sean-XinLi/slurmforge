@@ -18,10 +18,26 @@ def parse_dispatch(raw: Any) -> DispatchSpec:
         raise ConfigContractError(
             f"`dispatch.overflow_policy` must be {options_sentence('dispatch.overflow_policy')}"
         )
+    release_policy = str(
+        data.get("release_policy") or default_for("dispatch.release_policy")
+    )
+    if release_policy not in options_for("dispatch.release_policy"):
+        raise ConfigContractError(
+            f"`dispatch.release_policy` must be {options_sentence('dispatch.release_policy')}"
+        )
     return DispatchSpec(
         max_available_gpus=int(
             data.get("max_available_gpus", default_max_available_gpus)
             or default_max_available_gpus
         ),
         overflow_policy=policy,
+        release_policy=release_policy,
+        window_size=int(
+            data.get("window_size", default_for("dispatch.window_size"))
+            or default_for("dispatch.window_size")
+        ),
+        window_seconds=int(
+            data.get("window_seconds", default_for("dispatch.window_seconds"))
+            or default_for("dispatch.window_seconds")
+        ),
     )

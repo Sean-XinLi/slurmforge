@@ -64,21 +64,15 @@ artifact_store:
 
 notifications:
   email:
-    # Enables email summary notifications for terminal workflow events.
+    # Enables Slurm-native email notifications for terminal workflow events.
     enabled: false
-    # Recipients for email notifications when email is enabled.
-    to: []
-    # Options: batch_finished, train_eval_pipeline_finished. Terminal workflow events that trigger email summaries.
-    "on":
+    # Recipients for Slurm-native email notifications when email is enabled.
+    recipients: []
+    # Options: batch_finished, train_eval_pipeline_finished. Terminal workflow events that trigger Slurm mail jobs.
+    events:
       - batch_finished
-    # Options: summary. Controls email content shape.
-    mode: summary
-    # Sender address used by email delivery.
-    from: "slurmforge@localhost"
-    # Local sendmail-compatible binary used to deliver email.
-    sendmail: /usr/sbin/sendmail
-    # Prefix added to SlurmForge notification email subjects.
-    subject_prefix: SlurmForge
+    # Options: afterany, afterok, afternotok. Slurm dependency condition used by notification jobs.
+    when: afterany
 
 runs:
   # Options: single, grid, cases, matrix. Controls whether the config plans one run or expands a sweep.
@@ -260,14 +254,11 @@ artifact_store:
 notifications:
   email:
     enabled: true
-    to:
+    recipients:
       - ml-team@example.com
-    'on':
+    events:
       - train_eval_pipeline_finished
-    mode: summary
-    from: slurmforge@example.com
-    sendmail: /usr/sbin/sendmail
-    subject_prefix: SlurmForge
+    when: afterany
 runs:
   type: matrix
   cases:
@@ -519,6 +510,9 @@ This table is generated from `slurmforge.config_contract.models.ConfigField`. St
 | `runs.type` | enum | no | common | single | `single`, `grid`, `cases`, `matrix` | Controls whether the config plans one run or expands a sweep. | Keep single for the starter; switch to grid, cases, or matrix when you need run expansion. |
 | `dispatch.max_available_gpus` | value | no | intermediate | 1 |  | GPU budget used to serialize Slurm array groups when a plan exceeds available GPUs. | Set this to the practical cluster budget you want this workflow to consume. |
 | `dispatch.overflow_policy` | enum | no | intermediate | serialize_groups | `serialize_groups`, `error`, `best_effort` | Controls planner behavior when run groups exceed the declared GPU budget. | Use error for strict admission control, or best_effort when the scheduler should absorb overflow. |
+| `dispatch.release_policy` | enum | no | intermediate | per_run | `per_run`, `per_group`, `per_stage`, `windowed` | Controls when downstream stage instances become eligible for dispatch. | Use per_run for streaming eval, per_stage for all-train-then-eval behavior, or per_group/windowed for batched release. |
+| `dispatch.window_seconds` | integer | no | intermediate | 0 |  | Maximum seconds a ready downstream stage instance waits before windowed dispatch. | Use this with release_policy=windowed when slow trickle completion should still flush eval work. |
+| `dispatch.window_size` | integer | no | intermediate | 1 |  | Number of ready downstream stage instances that trigger a windowed dispatch. | Use this with release_policy=windowed to batch streaming eval submissions. |
 | `orchestration.control` | value | no | advanced | partition=null, cpus=1, mem=2G, time_limit=00:10:00 |  | Slurm resources for short-lived CPU-only pipeline control jobs. | Change this when gate or notification jobs need a different control queue, time limit, or environment. |
 | `orchestration.control.cpus` | integer | no | advanced | 1 |  | CPU count requested by short-lived pipeline control jobs. | Increase this only if gate reconciliation or planning overhead requires it. |
 | `orchestration.control.environment` | value | no | advanced | default |  | Environment profile loaded before pipeline control jobs run. | Change this when gate jobs need cluster modules or setup scripts. |
@@ -587,13 +581,10 @@ This table is generated from `slurmforge.config_contract.models.ConfigField`. St
 | `stages.eval.inputs.checkpoint` | value | no | common | template-specific |  | Checkpoint input consumed by the eval stage. | For train-eval keep upstream_output; for eval-checkpoint replace the sample external path. |
 | `stages.eval.outputs.accuracy` | value | no | common | eval/metrics.json $.accuracy |  | Declared accuracy metric read from eval/metrics.json. | Change this if evaluation writes a different metric file or JSON path. |
 | `stages.train.outputs.checkpoint` | value | no | common | checkpoints/**/*.pt |  | Declared checkpoint contract produced by the train stage. | Change the discovery glob if your training code writes checkpoints somewhere else. |
-| `notifications.email.enabled` | value | no | advanced | false |  | Enables email summary notifications for terminal workflow events. | Enable after sendmail works on the cluster and recipient addresses are configured. |
-| `notifications.email.from` | value | no | advanced | slurmforge@localhost |  | Sender address used by email delivery. | Change this to the approved sender identity for your cluster. |
-| `notifications.email.mode` | enum | no | advanced | summary | `summary` | Controls email content shape. | Keep summary unless a future notification mode is added. |
-| `notifications.email.on` | enum | no | advanced | batch_finished | `batch_finished`, `train_eval_pipeline_finished` | Terminal workflow events that trigger email summaries. | Use batch_finished for stage batches and train_eval_pipeline_finished for streaming pipelines. |
-| `notifications.email.sendmail` | path | no | advanced | /usr/sbin/sendmail |  | Local sendmail-compatible binary used to deliver email. | Change this if the cluster exposes sendmail at a non-default path. |
-| `notifications.email.subject_prefix` | value | no | advanced | SlurmForge |  | Prefix added to SlurmForge notification email subjects. | Change this to identify a project, team, or cluster in inboxes. |
-| `notifications.email.to` | value | no | advanced | [] |  | Recipients for email notifications when email is enabled. | Set this before enabling notifications. |
+| `notifications.email.enabled` | value | no | advanced | false |  | Enables Slurm-native email notifications for terminal workflow events. | Enable after Slurm mail is configured on the cluster and recipient addresses are configured. |
+| `notifications.email.events` | enum | no | advanced | batch_finished | `batch_finished`, `train_eval_pipeline_finished` | Terminal workflow events that trigger Slurm mail jobs. | Use batch_finished for stage batches and train_eval_pipeline_finished for streaming pipelines. |
+| `notifications.email.recipients` | value | no | advanced | [] |  | Recipients for Slurm-native email notifications when email is enabled. | Set this before enabling notifications. |
+| `notifications.email.when` | enum | no | advanced | afterany | `afterany`, `afterok`, `afternotok` | Slurm dependency condition used by notification jobs. | Keep afterany for completion notifications, or use afterok/afternotok for success/failure-only notifications. |
 <!-- CONFIG_CONTRACT_REFERENCE_END -->
 
 ## Runtime
@@ -604,9 +595,9 @@ This table is generated from `slurmforge.config_contract.models.ConfigField`. St
 
 ## Notifications
 
-Notifications are disabled unless `notifications.email.enabled` is true. When enabled, `notifications.email.to` must contain at least one email address and `notifications.email.on` must contain one or more supported terminal workflow events.
+Notifications are disabled unless `notifications.email.enabled` is true. When enabled, `notifications.email.recipients` must contain at least one email address and `notifications.email.events` must contain one or more supported terminal workflow events. `notifications.email.when` controls the Slurm dependency condition used by the notification job.
 
-`batch_finished` is emitted by stage-batch finalizer jobs. `train_eval_pipeline_finished` is emitted by the final train/eval control gate when the whole pipeline reaches a terminal state.
+`batch_finished` is emitted by stage-batch notification jobs. `train_eval_pipeline_finished` is emitted by a terminal aggregation control action that submits one Slurm-native notification job depending on the submitted train/eval stage group jobs.
 
 ## Resources And Sizing
 

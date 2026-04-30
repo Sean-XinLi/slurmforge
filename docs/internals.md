@@ -18,10 +18,10 @@ This document captures the internal contracts that keep planning, submission, ex
 - Public package facades are limited to `spec`, `starter`, `contracts`, `slurm`, and `io`. Internal packages keep empty facades and callers import role modules directly.
 - Nested internal package facades are allowed only as explicit local subsystem entrypoints, for example `plans.serde`, `planner.payloads`, `emit.stage_render`, `outputs.discovery`, and `resolver.explicit`.
 - `materialization` owns workflow-level materialization: persisting a planned root layout, seeding planned status records, refreshing root snapshots, and materializing sourced or selected stage batches.
-- `storage` owns persisted layout, storage paths, batch materialization records, derived root reservation, source contracts, workflow/control files, execution indexes, and plan readers. It does not seed status records, refresh root read models, or own workflow-level materialization.
+- `storage` owns persisted layout, storage paths, batch materialization records, derived root reservation, source contracts, workflow/control files, workflow state/status record contracts, execution indexes, and plan readers. It does not seed status records, refresh root read models, or own workflow-level materialization.
 - `status` owns per-stage status/attempt records and scheduler reconciliation. Reconcile internals are split between workflow, attempt reconstruction, scheduler observations, and reconciliation rules.
 - `root_model` owns root detection, root refs, run/pipeline aggregation, root snapshots, notification snapshots, and planned status seeding after storage layout is written.
-- `control.workflow` owns train/eval pipeline progression through short-lived gates. It resolves downstream inputs from upstream outputs, materializes per-group eval shards, submits follow-up gates, and records durable workflow state.
+- `control.workflow` owns train/eval pipeline progression through short-lived controller invocations. It reconciles stage instances, resolves dependency edges, dispatches ready instances, submits instance and catch-up gates, and records durable workflow state.
 
 Persisted file shapes are specified in [Record Contract](record-contract.md).
 
@@ -72,22 +72,24 @@ Train/eval pipelines use short-lived control jobs, not a long-running orchestrat
 
 `control/control_plan.json` is the static control plan used by gate jobs.
 
-`control/workflow_state.json` is the durable workflow state machine for train/eval progression.
+`control/workflow_state.json` is the durable workflow state machine for train/eval progression. Its schema is owned by `storage.workflow_state_records`, initialized through `storage.workflow_state_factory`, and consumed by `control`; `storage` never imports controller modules to build or validate this file.
 
-`control/workflow_status.json` is the mutable status read model for users and `sforge status`.
+`control/workflow_status.json` is the typed status read model for users and `sforge status`. It contains read-model fields only: workflow state/reason, projected stage job ids, and projected control jobs. It does not duplicate workflow instances, dependencies, dispatch queue, submissions, or terminal aggregation from `workflow_state.json`.
 
-`control/gate_ledger.json` is the authoritative ledger for train-group, eval-shard, and final control gate submissions. It records `submitting` before `sbatch`, `submitted` after a scheduler job id is known, and `uncertain` when a retry would risk duplicate control jobs.
+`control/control_submissions.json` is the authoritative ledger for stage-instance gates, dispatch catch-up gates, and terminal notification control jobs. It records `submitting` before `sbatch`, `submitted` after scheduler job ids are known, `failed` when no scheduler job was created and retry is safe, and `uncertain` when a retry would risk duplicate control jobs. Records are self-validating: kind, state, target key, sbatch paths, scheduler job ids, and failure reasons must agree before the ledger can be read as a valid control state.
 
 `execution/stage_catalog.json` is the catalog of planned pipeline stage batch roots. It includes train and eval stage plans even when eval is not yet submitted, so resubmit and inspection commands can reason about the full declared pipeline.
 
-`execution/runtime_batches.json` is the runtime registry of batch roots that participate in the current execution. It starts with the train entry batch and gains one eval shard per terminal train group. Status and reconcile read this registry instead of recursively scanning `stage_batches/**`.
+`execution/runtime_batches.json` is the runtime registry of batch roots that participate in the current execution. It starts with the train entry batch and gains one dispatch batch for each submitted downstream projection. Status and reconcile read this registry instead of recursively scanning `stage_batches/**`.
 
-Each gate resolves the next declared inputs, binds `upstream_output` from successful upstream `stage_outputs.json`, materializes only the relevant eval shard, and marks unresolved required inputs as `blocked`.
+Each controller invocation reconciles runtime status, resolves dependency edges from successful upstream `stage_outputs.json`, materializes only the ready downstream dispatch projection, and marks unresolved required inputs as `blocked`.
+
+Status rendering is split into read-model construction and formatting. `orchestration.status_read_model` owns root detection, optional reconcile, workflow status loading, and aggregate status collection. `orchestration.status_format` owns CLI text rendering. `orchestration.status_view` is only the thin public wrapper.
 
 ## Notifications
 
 Notification summaries are derived from the same status read models as `sforge status`.
 
-Direct `sforge train`, `sforge eval`, and `sforge resubmit` submit one Slurm finalizer job after terminal stage array groups and send one batch summary when configured.
+Direct `sforge train`, `sforge eval`, and `sforge resubmit` submit one Slurm mail notification job after terminal stage array groups and send one batch summary when configured.
 
-`sforge run` sends one train/eval pipeline summary from the final control gate after the full pipeline reaches a terminal state. Pipeline-submitted stage batches do not send separate batch summaries unless they are submitted directly.
+`sforge run` sends one train/eval pipeline summary from terminal aggregation after the full pipeline reaches a terminal state. Terminal aggregation stores the workflow terminal summary and the notification control key; scheduler job ids live in `control/control_submissions.json`. Pipeline-submitted stage batches do not send separate batch summaries unless they are submitted directly.

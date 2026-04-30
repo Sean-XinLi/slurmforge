@@ -48,7 +48,7 @@ def _manifest_path(batch_root: Path) -> Path:
 
 def _notification_enabled(batch: StageBatchPlan, event: str) -> bool:
     email = batch.notification_plan.email
-    return email.enabled and event in set(email.events)
+    return email.enabled and bool(email.recipients) and event in set(email.events)
 
 
 def write_stage_notification_submit_file(

@@ -8,7 +8,7 @@ from ...config_contract.option_sets import (
     ARTIFACT_STRATEGY_HARDLINK,
     DISPATCH_POLICY_SERIALIZE_GROUPS,
     EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED,
-    EMAIL_MODE_SUMMARY,
+    EMAIL_WHEN_AFTERANY,
     GPU_SIZING_ESTIMATOR_HEURISTIC,
     LAUNCHER_MODE_MULTI_NODE,
     LAUNCHER_SINGLE,
@@ -103,12 +103,9 @@ def _advanced_notifications() -> dict[str, Any]:
     return {
         "email": {
             "enabled": True,
-            "to": ["ml-team@example.com"],
-            "on": [EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED],
-            "mode": EMAIL_MODE_SUMMARY,
-            "from": "slurmforge@example.com",
-            "sendmail": "/usr/sbin/sendmail",
-            "subject_prefix": "SlurmForge",
+            "recipients": ["ml-team@example.com"],
+            "events": [EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED],
+            "when": EMAIL_WHEN_AFTERANY,
         }
     }
 

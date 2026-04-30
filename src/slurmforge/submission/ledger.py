@@ -8,12 +8,17 @@ from ..errors import ConfigContractError
 from ..io import (
     SchemaVersion,
     read_json,
-    require_schema,
     to_jsonable,
     utc_now,
     write_json,
 )
 from .models import GroupSubmissionRecord, SubmissionLedger, SubmitGeneration
+from .ledger_records import (
+    GROUP_JOB_STATES,
+    submission_ledger_from_dict,
+    validate_ledger_matches_generation,
+    validate_submission_ledger,
+)
 
 
 def submissions_dir(batch_root: Path) -> Path:
@@ -36,50 +41,15 @@ def append_submission_event(batch_root: Path, event: str, **payload: Any) -> Non
         handle.write(json.dumps(to_jsonable(record), sort_keys=True) + "\n")
 
 
-def _group_from_dict(payload: dict[str, Any]) -> GroupSubmissionRecord:
-    return GroupSubmissionRecord(
-        group_id=str(payload["group_id"]),
-        sbatch_path=str(payload["sbatch_path"]),
-        dependency=None
-        if payload.get("dependency") in (None, "")
-        else str(payload.get("dependency")),
-        scheduler_job_id=None
-        if payload.get("scheduler_job_id") in (None, "")
-        else str(payload.get("scheduler_job_id")),
-        state=str(payload.get("state") or "planned"),
-        submitted_at=None
-        if payload.get("submitted_at") in (None, "")
-        else str(payload.get("submitted_at")),
-        reason=str(payload.get("reason") or ""),
-    )
-
-
-def _ledger_from_dict(payload: dict[str, Any]) -> SubmissionLedger:
-    version = require_schema(
-        payload, name="submission_ledger", version=SchemaVersion.SUBMISSION_LEDGER
-    )
-    groups_raw = dict(payload.get("groups") or {})
-    return SubmissionLedger(
-        schema_version=version,
-        batch_id=str(payload["batch_id"]),
-        stage_name=str(payload["stage_name"]),
-        generation_id=str(payload["generation_id"]),
-        state=str(payload.get("state") or "planned"),
-        groups={
-            str(group_id): _group_from_dict(dict(group))
-            for group_id, group in groups_raw.items()
-        },
-    )
-
-
 def read_submission_ledger(batch_root: Path) -> SubmissionLedger | None:
     path = ledger_path(batch_root)
     if not path.exists():
         return None
-    return _ledger_from_dict(read_json(path))
+    return submission_ledger_from_dict(read_json(path))
 
 
 def write_submission_ledger(batch_root: Path, ledger: SubmissionLedger) -> None:
+    validate_submission_ledger(ledger)
     write_json(ledger_path(batch_root), ledger)
 
 
@@ -112,6 +82,7 @@ def initialize_submission_ledger(
                     group_id,
                     GroupSubmissionRecord(group_id=group_id, sbatch_path=sbatch_path),
                 )
+            validate_ledger_matches_generation(existing, generation)
             write_submission_ledger(batch_root, existing)
             return existing
 
@@ -140,7 +111,7 @@ def submitted_group_job_ids(batch_root: Path) -> dict[str, str]:
     return {
         group_id: str(group.scheduler_job_id)
         for group_id, group in ledger.groups.items()
-        if group.scheduler_job_id and group.state in {"submitted", "adopted"}
+        if group.scheduler_job_id and group.state in GROUP_JOB_STATES
     }
 
 

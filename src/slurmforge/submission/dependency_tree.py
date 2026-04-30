@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import ConfigContractError
+from ..slurm import SlurmSubmitOptions
 
 
 MAX_DEPENDENCY_LENGTH = 3500
@@ -54,9 +55,8 @@ def dependency_sink_group_ids(batch) -> tuple[str, ...]:
     return tuple(sinks or sorted(group_ids))
 
 
-def submit_dependent_job_with_dependency_tree(
+def submit_dependency_barriers(
     *,
-    target_path: Path,
     dependency_job_ids: tuple[str, ...],
     client: Any,
     barrier_path_factory: Callable[[int], Path],
@@ -82,13 +82,38 @@ def submit_dependent_job_with_dependency_tree(
             barrier_index += 1
             barrier_id = client.submit(
                 barrier_path,
-                dependency=dependency_expression(chunk, dependency_type=dependency_type),
+                options=SlurmSubmitOptions(
+                    dependency=dependency_expression(
+                        chunk, dependency_type=dependency_type
+                    )
+                ),
             )
             barrier_job_ids.append(barrier_id)
             next_level.append(barrier_id)
         current = tuple(next_level)
+    return dependency_expression(current, dependency_type=dependency_type), tuple(
+        barrier_job_ids
+    )
+
+
+def submit_dependent_job_with_dependency_tree(
+    *,
+    target_path: Path,
+    dependency_job_ids: tuple[str, ...],
+    client: Any,
+    barrier_path_factory: Callable[[int], Path],
+    dependency_type: str = "afterany",
+    max_dependency_length: int = MAX_DEPENDENCY_LENGTH,
+) -> tuple[str, tuple[str, ...]]:
+    dependency, barrier_job_ids = submit_dependency_barriers(
+        dependency_job_ids=dependency_job_ids,
+        client=client,
+        barrier_path_factory=barrier_path_factory,
+        dependency_type=dependency_type,
+        max_dependency_length=max_dependency_length,
+    )
     target_job_id = client.submit(
         target_path,
-        dependency=dependency_expression(current, dependency_type=dependency_type),
+        options=SlurmSubmitOptions(dependency=dependency),
     )
     return target_job_id, tuple(barrier_job_ids)

@@ -21,6 +21,13 @@ SLURM_TERMINAL_STATES = (
 
 
 @dataclass(frozen=True)
+class SlurmSubmitOptions:
+    dependency: str = ""
+    mail_user: str = ""
+    mail_type: str = ""
+
+
+@dataclass(frozen=True)
 class SlurmJobState:
     job_id: str
     state: str

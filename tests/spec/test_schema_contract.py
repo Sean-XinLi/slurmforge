@@ -101,30 +101,39 @@ class SchemaContractTests(StageBatchSystemTestCase):
             payload["notifications"] = {
                 "email": {
                     "enabled": True,
-                    "to": ["you@example.com"],
-                    "on": ["batch_finished", "train_eval_pipeline_finished"],
-                    "mode": "summary",
+                    "recipients": ["you@example.com"],
+                    "events": ["batch_finished", "train_eval_pipeline_finished"],
+                    "when": "afterany",
                 }
             }
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
             spec = load_experiment_spec(cfg_path)
             self.assertTrue(spec.notifications.email.enabled)
-            self.assertEqual(spec.notifications.email.to, ("you@example.com",))
+            self.assertEqual(
+                spec.notifications.email.recipients, ("you@example.com",)
+            )
             self.assertEqual(
                 spec.notifications.email.events,
                 ("batch_finished", "train_eval_pipeline_finished"),
             )
+            self.assertEqual(spec.notifications.email.when, "afterany")
 
-            payload["notifications"]["email"]["to"] = []
+            payload["notifications"]["email"]["recipients"] = []
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
-            with self.assertRaisesRegex(Exception, "notifications.email.to"):
+            with self.assertRaisesRegex(Exception, "notifications.email.recipients"):
                 load_experiment_spec(cfg_path)
 
-            payload["notifications"]["email"]["to"] = ["you@example.com"]
-            payload["notifications"]["email"]["on"] = []
+            payload["notifications"]["email"]["recipients"] = ["you@example.com"]
+            payload["notifications"]["email"]["events"] = []
             cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
-            with self.assertRaisesRegex(Exception, "notifications.email.on"):
+            with self.assertRaisesRegex(Exception, "notifications.email.events"):
+                load_experiment_spec(cfg_path)
+
+            payload["notifications"]["email"]["events"] = ["batch_finished"]
+            payload["notifications"]["email"]["when"] = "afterbad"
+            cfg_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+            with self.assertRaisesRegex(Exception, "notifications.email.when"):
                 load_experiment_spec(cfg_path)
 
     def test_auto_gpu_sizing_contract_is_strict(self) -> None:

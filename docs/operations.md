@@ -98,12 +98,13 @@ A train/eval pipeline root contains:
     control_plan.json
     workflow_state.json
     workflow_status.json
-    gate_ledger.json
+    control_submissions.json
     events.jsonl
     gates/
-      train_group_001_gate.sbatch
-      eval_shard_group_001_gate.sbatch
-      final_gate.sbatch
+      train_initial_group_001_instance_gate.sbatch
+      dispatch_catchup_train_initial_gate.sbatch
+      eval_<dispatch_id>_group_001_instance_gate.sbatch
+      dispatch_catchup_eval_<dispatch_id>_gate.sbatch
       *_barrier_001.sbatch          # optional dependency fan-in barriers
     logs/
   execution/

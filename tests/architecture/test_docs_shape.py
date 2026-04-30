@@ -40,6 +40,14 @@ class DocsShapeTests(StageBatchSystemTestCase):
             internals,
         )
 
+    def test_docs_use_current_stage_instance_id_format(self) -> None:
+        docs_text = "\n".join(
+            path.read_text(encoding="utf-8") for path in Path("docs").rglob("*.md")
+        )
+        self.assertNotIn("<run_id>.<stage_name>", docs_text)
+        self.assertNotIn("run_001.train", docs_text)
+        self.assertNotIn("run_001.eval", docs_text)
+
     def test_starter_protocol_literals_in_docs_are_generated(self) -> None:
         docs_text = "\n".join(
             _strip_generated_blocks(path.read_text(encoding="utf-8"))

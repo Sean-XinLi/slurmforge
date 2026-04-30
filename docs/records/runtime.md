@@ -79,7 +79,7 @@ Every executable stage instance writes `input_verification.json` before sbatch g
 ```json
 {
   "schema_version": 1,
-  "stage_instance_id": "run_001.eval",
+  "stage_instance_id": "eval/run_001",
   "run_id": "run_001",
   "stage_name": "eval",
   "phase": "submit",

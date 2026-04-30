@@ -69,4 +69,7 @@ def compile_train_eval_pipeline_plan(
         spec_snapshot_digest=spec.spec_snapshot_digest,
         pipeline_kind=TRAIN_EVAL_PIPELINE_KIND,
         notification_plan=notification_payload(spec),
+        release_policy=spec.dispatch.release_policy,
+        dispatch_window_size=spec.dispatch.window_size,
+        dispatch_window_seconds=spec.dispatch.window_seconds,
     )

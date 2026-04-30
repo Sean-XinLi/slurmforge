@@ -19,6 +19,10 @@ def validate_experiment_spec(spec: ExperimentSpec, *, check_paths: bool = True) 
     validate_notifications_contract(spec)
     if spec.dispatch.max_available_gpus < 0:
         raise ConfigContractError("`dispatch.max_available_gpus` must be >= 0")
+    if spec.dispatch.window_size < 1:
+        raise ConfigContractError("`dispatch.window_size` must be >= 1")
+    if spec.dispatch.window_seconds < 0:
+        raise ConfigContractError("`dispatch.window_seconds` must be >= 0")
     validate_runtime_contract(spec)
     _validate_artifact_store_contract(spec)
     for stage in spec.enabled_stages.values():

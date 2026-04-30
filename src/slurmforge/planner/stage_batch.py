@@ -132,7 +132,7 @@ def _compile_stage_instances(
             stage=stage,
             input_bindings_by_run=input_bindings_by_run,
         )
-        stage_instance_id = f"{run.run_id}.{stage.name}"
+        stage_instance_id = f"{stage.name}/{run.run_id}"
         instances.append(
             StageInstancePlan(
                 stage_instance_id=stage_instance_id,

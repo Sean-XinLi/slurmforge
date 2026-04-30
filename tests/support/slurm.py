@@ -1,20 +1,36 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
-from slurmforge.slurm import SlurmJobState, normalize_slurm_state
+from slurmforge.slurm import SlurmJobState, SlurmSubmitOptions, normalize_slurm_state
+
+
+@dataclass(frozen=True)
+class FakeSlurmSubmission:
+    path: Path
+    options: SlurmSubmitOptions
+    job_id: str
+
+    @property
+    def dependency(self) -> str:
+        return self.options.dependency
 
 
 class FakeSlurmClient:
     def __init__(self) -> None:
         self._next_job_id = 1000
-        self.submissions: list[tuple[Path, str | None, str]] = []
+        self.submissions: list[FakeSlurmSubmission] = []
         self.job_states: dict[str, SlurmJobState] = {}
 
-    def submit(self, path: Path, *, dependency: str | None = None) -> str:
+    def submit(
+        self, path: Path, *, options: SlurmSubmitOptions | None = None
+    ) -> str:
         self._next_job_id += 1
         job_id = str(self._next_job_id)
-        self.submissions.append((path, dependency, job_id))
+        self.submissions.append(
+            FakeSlurmSubmission(path, options or SlurmSubmitOptions(), job_id)
+        )
         self.job_states[job_id] = SlurmJobState(job_id=job_id, state="PENDING")
         return job_id
 

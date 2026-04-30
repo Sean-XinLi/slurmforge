@@ -24,7 +24,7 @@ def default_stage_input_bindings(
             resolution = {
                 "kind": "upstream_output",
                 "state": "awaiting_upstream_output",
-                "producer_stage_instance_id": f"{run.run_id}.{upstream_stage}",
+                "producer_stage_instance_id": f"{upstream_stage}/{run.run_id}",
                 "output_name": output_name,
             }
         elif source.kind == "external_path":

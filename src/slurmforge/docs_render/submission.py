@@ -46,7 +46,7 @@ def render_submission_binding_json() -> str:
     checkpoint_path = f"/abs/path/{CHECKPOINT_DIR}/step_12000.pt"
     payload = {
         "schema_version": 1,
-        "stage_instance_id": f"run_001.{STAGE_EVAL}",
+        "stage_instance_id": f"{STAGE_EVAL}/run_001",
         "bindings": {
             CHECKPOINT_INPUT_NAME: {
                 "source": {
@@ -69,7 +69,7 @@ def render_submission_binding_json() -> str:
                     "kind": INPUT_SOURCE_UPSTREAM_OUTPUT,
                     "producer_root": f"/abs/path/{STAGE_TRAIN}_batch",
                     "producer_run_dir": f"/abs/path/{STAGE_TRAIN}_batch/runs/run_001",
-                    "producer_stage_instance_id": f"run_001.{STAGE_TRAIN}",
+                    "producer_stage_instance_id": f"{STAGE_TRAIN}/run_001",
                     "producer_run_id": "run_001",
                     "producer_stage_name": STAGE_TRAIN,
                     "output_name": CHECKPOINT_OUTPUT_NAME,

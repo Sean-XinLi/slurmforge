@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ..errors import RecordContractError
 from ..io import (
     SchemaVersion,
     read_json,
@@ -12,7 +13,10 @@ from ..io import (
     utc_now,
     write_json,
 )
-from .models import NotificationDeliveryRecord
+from ..record_fields import required_string, required_string_tuple
+from .models import NotificationSubmissionRecord
+
+NOTIFICATION_STATES = ("submitted", "failed", "uncertain")
 
 
 def notifications_dir(root: Path) -> Path:
@@ -23,7 +27,9 @@ def notification_records_dir(root: Path) -> Path:
     return notifications_dir(root) / "records"
 
 
-def notification_record_path(root: Path, event: str, backend: str = "email") -> Path:
+def notification_record_path(
+    root: Path, event: str, backend: str = "slurm_mail"
+) -> Path:
     safe_event = event.replace("/", "_")
     safe_backend = backend.replace("/", "_")
     return notification_records_dir(root) / f"{safe_event}.{safe_backend}.json"
@@ -41,40 +47,87 @@ def append_notification_event(root: Path, event: str, **payload: Any) -> None:
         handle.write(json.dumps(to_jsonable(record), sort_keys=True) + "\n")
 
 
-def notification_delivery_record_from_dict(
+def notification_submission_record_from_dict(
     payload: dict[str, Any],
-) -> NotificationDeliveryRecord:
-    require_schema(
-        payload, name="notification_delivery", version=SchemaVersion.NOTIFICATION
+) -> NotificationSubmissionRecord:
+    version = require_schema(
+        payload, name="notification_submission", version=SchemaVersion.NOTIFICATION
     )
-    return NotificationDeliveryRecord(
-        event=str(payload["event"]),
-        root_kind=str(payload["root_kind"]),
-        root=str(payload["root"]),
-        backend=str(payload["backend"]),
-        state=str(payload["state"]),
-        recipients=tuple(str(item) for item in payload.get("recipients", ())),
-        subject=str(payload.get("subject") or ""),
-        sent_at=str(payload.get("sent_at") or ""),
-        reason=str(payload.get("reason") or ""),
-        scheduler_job_id=str(payload.get("scheduler_job_id") or ""),
-        sbatch_path=str(payload.get("sbatch_path") or ""),
-        barrier_job_ids=tuple(str(item) for item in payload.get("barrier_job_ids", ())),
-        dependency_job_ids=tuple(
-            str(item) for item in payload.get("dependency_job_ids", ())
+    record = NotificationSubmissionRecord(
+        schema_version=version,
+        event=required_string(
+            payload, "event", label="notification", non_empty=True
         ),
-        submitted_at=str(payload.get("submitted_at") or ""),
+        root_kind=required_string(
+            payload, "root_kind", label="notification", non_empty=True
+        ),
+        root=required_string(payload, "root", label="notification", non_empty=True),
+        backend=required_string(
+            payload, "backend", label="notification", non_empty=True
+        ),
+        state=required_string(payload, "state", label="notification", non_empty=True),
+        recipients=required_string_tuple(
+            payload, "recipients", label="notification", non_empty_items=True
+        ),
+        scheduler_job_ids=required_string_tuple(
+            payload, "scheduler_job_ids", label="notification"
+        ),
+        sbatch_paths=required_string_tuple(
+            payload, "sbatch_paths", label="notification"
+        ),
+        barrier_job_ids=required_string_tuple(
+            payload, "barrier_job_ids", label="notification"
+        ),
+        dependency_job_ids=required_string_tuple(
+            payload, "dependency_job_ids", label="notification"
+        ),
+        dependency_type=required_string(
+            payload, "dependency_type", label="notification", non_empty=True
+        ),
+        mail_type=required_string(
+            payload, "mail_type", label="notification", non_empty=True
+        ),
+        submitted_at=required_string(payload, "submitted_at", label="notification"),
+        reason=required_string(payload, "reason", label="notification"),
     )
+    validate_notification_submission_record(record)
+    return record
 
 
 def read_notification_record(
-    root: Path, event: str, backend: str = "email"
-) -> NotificationDeliveryRecord | None:
+    root: Path, event: str, backend: str = "slurm_mail"
+) -> NotificationSubmissionRecord | None:
     path = notification_record_path(root, event, backend)
     if not path.exists():
         return None
-    return notification_delivery_record_from_dict(read_json(path))
+    return notification_submission_record_from_dict(read_json(path))
 
 
-def write_notification_record(root: Path, record: NotificationDeliveryRecord) -> None:
+def write_notification_record(root: Path, record: NotificationSubmissionRecord) -> None:
+    validate_notification_submission_record(record)
     write_json(notification_record_path(root, record.event, record.backend), record)
+
+
+def validate_notification_submission_record(record: NotificationSubmissionRecord) -> None:
+    if record.schema_version != SchemaVersion.NOTIFICATION:
+        raise RecordContractError("notification record schema_version is invalid")
+    if record.state not in NOTIFICATION_STATES:
+        raise RecordContractError(f"Unsupported notification state: {record.state}")
+    for field_name in ("event", "root_kind", "root", "backend"):
+        if not getattr(record, field_name):
+            raise RecordContractError(f"notification.{field_name} is required")
+    if not record.recipients or any(not recipient for recipient in record.recipients):
+        raise RecordContractError("notification.recipients must be non-empty strings")
+    if not record.dependency_type:
+        raise RecordContractError("notification.dependency_type is required")
+    if not record.mail_type:
+        raise RecordContractError("notification.mail_type is required")
+    if record.state == "submitted":
+        if not record.scheduler_job_ids:
+            raise RecordContractError(
+                "submitted notification requires scheduler_job_ids"
+            )
+        if not record.sbatch_paths:
+            raise RecordContractError("submitted notification requires sbatch_paths")
+    if record.state in {"failed", "uncertain"} and not record.reason:
+        raise RecordContractError(f"{record.state} notification requires reason")
