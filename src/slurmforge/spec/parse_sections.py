@@ -7,7 +7,7 @@ from typing import Any
 import yaml
 
 from ..config_contract.workflows import STAGE_EVAL, STAGE_TRAIN
-from ..config_schema import (
+from ..config_contract.keys import (
     allowed_stage_keys,
     allowed_top_level_keys,
     reject_unknown_config_keys,

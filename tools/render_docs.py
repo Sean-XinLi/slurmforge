@@ -23,12 +23,19 @@ def main(argv: list[str] | None = None) -> int:
         render_quickstart_doc,
         render_submission_doc,
     )
+    from slurmforge.starter.config_examples import (
+        render_advanced_example,
+        render_starter_example,
+    )
 
     renderers: tuple[tuple[Path, Callable[[str], str]], ...] = (
         (
             CONFIG_DOC,
             lambda current: render_config_doc(
-                current, path=CONFIG_DOC, project_root=ROOT
+                current,
+                path=CONFIG_DOC,
+                starter_example=render_starter_example(ROOT),
+                advanced_example=render_advanced_example(),
             ),
         ),
         (

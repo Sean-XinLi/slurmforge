@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ...config_contract.registry import default_for
 from ...contracts import InputInjection, InputSource
 from ...contracts.outputs import StageOutputContract
 from .common import JsonObject
@@ -10,13 +9,10 @@ from .entry import EntrySpec
 from .resources import ResourceSpec
 from .sizing import StageGpuSizingSpec
 
-DEFAULT_STAGE_LAUNCHER_TYPE = default_for("stages.*.launcher.type")
-DEFAULT_STAGE_RUNTIME = default_for("stages.*.runtime")
-
 
 @dataclass(frozen=True)
 class LauncherSpec:
-    type: str = DEFAULT_STAGE_LAUNCHER_TYPE
+    type: str = ""
     options: JsonObject = field(default_factory=dict)
 
 
@@ -43,7 +39,7 @@ class StageSpec:
     entry: EntrySpec
     resources: ResourceSpec
     launcher: LauncherSpec = field(default_factory=LauncherSpec)
-    runtime: str = DEFAULT_STAGE_RUNTIME
+    runtime: str = ""
     environment: str = ""
     gpu_sizing: StageGpuSizingSpec | None = None
     before: tuple[BeforeStepSpec, ...] = ()

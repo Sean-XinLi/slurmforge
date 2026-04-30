@@ -5,8 +5,8 @@ from functools import lru_cache
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..config_contract.workflows import SUPPORTED_STAGE_KEYS
-from .fields import CONFIG_FIELDS
+from .registry import CONFIG_FIELDS
+from .workflows import SUPPORTED_STAGE_KEYS
 
 _STAGE_KEYS = SUPPORTED_STAGE_KEYS
 _DYNAMIC_PARENT_KEYS = frozenset(

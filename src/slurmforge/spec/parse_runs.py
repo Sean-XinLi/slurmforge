@@ -10,7 +10,7 @@ from ..config_contract.option_sets import (
     RUN_SINGLE,
 )
 from ..config_contract.registry import default_for, options_for, options_sentence
-from ..config_schema import reject_unknown_config_keys
+from ..config_contract.keys import reject_unknown_config_keys
 from ..errors import ConfigContractError
 from .models import RunVariantSpec, RunsSpec
 from .parse_common import optional_mapping, require_mapping

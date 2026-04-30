@@ -7,7 +7,7 @@ from ...config_contract.option_sets import (
     INPUT_SOURCE_UPSTREAM_OUTPUT,
 )
 from ...config_contract.registry import default_for, options_for, options_sentence
-from ...config_schema import reject_unknown_config_keys
+from ...config_contract.keys import reject_unknown_config_keys
 from ...contracts import InputInjection, InputSource
 from ...errors import ConfigContractError
 from ..models import StageInputSpec

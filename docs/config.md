@@ -229,14 +229,6 @@ project: resnet
 experiment: ablation_matrix
 storage:
   root: /shared/runs
-hardware:
-  gpu_types:
-    a100_80gb:
-      memory_gb: 80
-      usable_memory_fraction: 0.9
-      max_gpus_per_node: 8
-      slurm:
-        constraint: a100
 environments:
   default:
     modules:
@@ -260,11 +252,6 @@ runtime:
         min_version: '3.10'
       env:
         TOKENIZERS_PARALLELISM: 'false'
-sizing:
-  gpu:
-    defaults:
-      safety_factor: 1.15
-      round_to: 1
 artifact_store:
   strategy: hardlink
   fallback_strategy: copy
@@ -320,15 +307,13 @@ stages:
     enabled: true
     environment: default
     runtime: default
-    before:
-      - name: prepare_cache
-        run: mkdir -p "$HF_HOME"
     entry:
       type: python_script
       script: train.py
       workdir: .
       args:
         epochs: 5
+        lr: 0.001
         batch_size: 64
     launcher:
       type: torchrun
@@ -343,24 +328,17 @@ stages:
         - --cpu-bind=cores
     resources:
       partition: gpu
-      account: research
-      qos: normal
-      time_limit: 06:00:00
-      gpu_type: a100_80gb
       nodes: 2
       gpus_per_node: auto
       cpus_per_task: 16
       mem: 128G
+      time_limit: 06:00:00
+      account: research
+      qos: normal
+      gpu_type: a100_80gb
       constraint: a100
       extra_sbatch_args:
         - --exclusive
-    gpu_sizing:
-      estimator: heuristic
-      target_memory_gb: 120
-      min_gpus_per_job: 2
-      max_gpus_per_job: 16
-      safety_factor: 1.2
-      round_to: 2
     outputs:
       checkpoint:
         kind: file
@@ -369,11 +347,19 @@ stages:
           globs:
             - checkpoints/**/*.pt
           select: latest_step
+    before:
+      - name: prepare_cache
+        run: mkdir -p "$HF_HOME"
+    gpu_sizing:
+      estimator: heuristic
+      target_memory_gb: 120
+      min_gpus_per_job: 2
+      max_gpus_per_job: 16
+      safety_factor: 1.2
+      round_to: 2
   eval:
     kind: eval
     enabled: true
-    depends_on:
-      - train
     environment: default
     runtime: default
     entry:
@@ -386,12 +372,20 @@ stages:
       type: single
     resources:
       partition: gpu
-      time_limit: 01:00:00
-      gpu_type: a100_80gb
       nodes: 1
       gpus_per_node: 1
       cpus_per_task: 4
       mem: 32G
+      time_limit: 01:00:00
+      gpu_type: a100_80gb
+    outputs:
+      accuracy:
+        kind: metric
+        file: eval/metrics.json
+        json_path: $.accuracy
+        required: true
+    depends_on:
+      - train
     inputs:
       checkpoint:
         source:
@@ -404,12 +398,19 @@ stages:
           flag: checkpoint_path
           env: SFORGE_INPUT_CHECKPOINT
           mode: path
-    outputs:
-      accuracy:
-        kind: metric
-        required: true
-        file: eval/metrics.json
-        json_path: $.accuracy
+hardware:
+  gpu_types:
+    a100_80gb:
+      memory_gb: 80
+      usable_memory_fraction: 0.9
+      max_gpus_per_node: 8
+      slurm:
+        constraint: a100
+sizing:
+  gpu:
+    defaults:
+      safety_factor: 1.15
+      round_to: 1
 ```
 <!-- CONFIG_ADVANCED_EXAMPLE_END -->
 
@@ -479,9 +480,9 @@ sforge validate --config experiment.yaml --set stages.train.entry.args.lr=0.001
 
 ## Field Reference
 
-This table is generated from `slurmforge.config_schema.ConfigField`. Starter READMEs intentionally do not duplicate this full reference; `sforge init` writes a template-scoped `CONFIG.sforge.md` instead.
+This table is generated from `slurmforge.config_contract.models.ConfigField`. Starter READMEs intentionally do not duplicate this full reference; `sforge init` writes a template-scoped `CONFIG.sforge.md` instead.
 
-<!-- CONFIG_SCHEMA_REFERENCE_START -->
+<!-- CONFIG_CONTRACT_REFERENCE_START -->
 | Field | Type | Required | Level | Default | Options | Meaning | When To Change |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `experiment` | value | yes | common | baseline |  | Names this experiment inside the project namespace. | Change this for each baseline, ablation, sweep, or production run family. |
@@ -593,7 +594,7 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `notifications.email.sendmail` | path | no | advanced | /usr/sbin/sendmail |  | Local sendmail-compatible binary used to deliver email. | Change this if the cluster exposes sendmail at a non-default path. |
 | `notifications.email.subject_prefix` | value | no | advanced | SlurmForge |  | Prefix added to SlurmForge notification email subjects. | Change this to identify a project, team, or cluster in inboxes. |
 | `notifications.email.to` | value | no | advanced | [] |  | Recipients for email notifications when email is enabled. | Set this before enabling notifications. |
-<!-- CONFIG_SCHEMA_REFERENCE_END -->
+<!-- CONFIG_CONTRACT_REFERENCE_END -->
 
 ## Runtime
 

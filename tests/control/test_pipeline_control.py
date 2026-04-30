@@ -38,7 +38,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
         self,
     ) -> None:
         from slurmforge.control.workflow import submit_initial_pipeline
-        from slurmforge.plans.train_eval import TRAIN_GROUP_GATE
+        from slurmforge.workflow_contract import TRAIN_GROUP_GATE
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -86,7 +86,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
     def test_train_group_gate_streams_eval_shard_and_queues_final_gate(self) -> None:
         from slurmforge.control.workflow import advance_pipeline_once
         from slurmforge.control.workflow import submit_initial_pipeline
-        from slurmforge.plans.train_eval import TRAIN_GROUP_GATE
+        from slurmforge.workflow_contract import TRAIN_GROUP_GATE
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -213,8 +213,8 @@ class PipelineControlTests(StageBatchSystemTestCase):
         from slurmforge.control.workflow import advance_pipeline_once
         from slurmforge.control.workflow import submit_initial_pipeline
         from slurmforge.notifications.records import read_notification_record
-        from slurmforge.plans.train_eval import EVAL_SHARD_GATE, FINAL_GATE
-        from slurmforge.plans.train_eval import TRAIN_GROUP_GATE
+        from slurmforge.workflow_contract import EVAL_SHARD_GATE, FINAL_GATE
+        from slurmforge.workflow_contract import TRAIN_GROUP_GATE
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:

@@ -8,7 +8,7 @@ from ..config_contract.default_values import (
     DEFAULT_RUNTIME_NAME,
 )
 from ..config_contract.registry import default_for
-from ..config_schema import reject_unknown_config_keys
+from ..config_contract.keys import reject_unknown_config_keys
 from ..errors import ConfigContractError
 from .models import (
     ControlSpec,

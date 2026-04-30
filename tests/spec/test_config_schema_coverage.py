@@ -8,7 +8,7 @@ from tests.support.case import StageBatchSystemTestCase
 
 class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
     def test_schema_has_no_duplicate_or_removed_paths(self) -> None:
-        from slurmforge.config_schema import all_fields
+        from slurmforge.config_contract.registry import all_fields
 
         paths = [field.path for field in all_fields()]
         duplicates = sorted({path for path in paths if paths.count(path) > 1})
@@ -19,7 +19,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         self.assertNotIn("stages.*.launcher.master_port", paths)
 
     def test_generated_config_reference_lists_every_schema_field(self) -> None:
-        from slurmforge.config_schema import all_fields
+        from slurmforge.config_contract.registry import all_fields
 
         config_doc = Path("docs/config.md").read_text(encoding="utf-8")
         missing = [
@@ -28,8 +28,8 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         self.assertEqual(missing, [])
 
     def test_schema_carries_required_and_enum_contracts(self) -> None:
-        from slurmforge.config_schema import all_fields
         from slurmforge.config_contract.registry import OPTIONS_BY_PATH
+        from slurmforge.config_contract.registry import all_fields
 
         by_path = {field.path: field for field in all_fields()}
         required_counts = Counter(field.required for field in all_fields())
@@ -58,7 +58,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         self.assertEqual(enum_mismatches, {})
 
     def test_key_registry_exposes_current_config_surface(self) -> None:
-        from slurmforge.config_schema import (
+        from slurmforge.config_contract.keys import (
             allowed_keys,
             allowed_stage_keys,
             allowed_top_level_keys,
@@ -121,7 +121,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         self.assertTrue(is_dynamic_parent("stages.train.entry.args"))
 
     def test_key_registry_has_no_raw_list_item_children(self) -> None:
-        from slurmforge.config_schema import allowed_keys
+        from slurmforge.config_contract.keys import allowed_keys
 
         self.assertNotIn("before[]", allowed_keys("stages.train"))
         self.assertNotIn("cases[]", allowed_keys("runs"))

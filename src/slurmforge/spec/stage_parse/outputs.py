@@ -4,7 +4,7 @@ from typing import Any
 
 from ...config_contract.option_sets import OUTPUT_KIND_FILE
 from ...config_contract.registry import default_for, options_for, options_sentence
-from ...config_schema import reject_unknown_config_keys
+from ...config_contract.keys import reject_unknown_config_keys
 from ...contracts.output_selectors import normalize_output_selector
 from ...contracts.outputs import (
     FileOutputDiscoveryRule,

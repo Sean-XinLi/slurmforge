@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from .models import ConfigField
-from .query import all_fields, fields_for_template, first_edit_fields_for_template
+from ..config_contract.models import ConfigField
+from ..config_contract.registry import (
+    all_fields,
+    fields_for_template,
+    first_edit_fields_for_template,
+)
 
 SECTION_ORDER = (
     "Identity",

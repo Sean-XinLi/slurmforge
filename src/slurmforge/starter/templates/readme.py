@@ -15,7 +15,7 @@ from ...config_contract.workflows import (
     TEMPLATE_TRAIN_EVAL,
     TEMPLATE_TRAIN_ONLY,
 )
-from ...config_schema import render_first_edit_list
+from ...docs_render.config_reference import render_first_edit_list
 from ..models import InitRequest, StarterCommandSet, StarterReadmePlan
 
 DEFAULT_STORAGE_ROOT = default_for("storage.root")

@@ -5,7 +5,7 @@ from typing import Any
 
 from ..config_contract.default_values import AUTO_VALUE
 from ..config_contract.registry import default_for
-from ..config_schema import reject_unknown_config_keys
+from ..config_contract.keys import reject_unknown_config_keys
 from .models import (
     GpuSizingDefaultsSpec,
     GpuTypeSpec,

@@ -4,7 +4,7 @@ import copy
 from typing import Any
 
 from ...config_contract.registry import default_for
-from ...config_schema import reject_unknown_config_keys
+from ...config_contract.keys import reject_unknown_config_keys
 from ..models import LauncherSpec
 from ..parse_common import optional_mapping
 

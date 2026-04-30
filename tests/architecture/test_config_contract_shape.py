@@ -14,7 +14,7 @@ class ConfigContractShapeTests(StageBatchSystemTestCase):
         self.assertTrue((contract_root / "fields").exists())
         self.assertFalse((contract_root / "defaults.py").exists())
         self.assertFalse((contract_root / "options.py").exists())
-        self.assertFalse(Path("src/slurmforge/config_schema/sections").exists())
+        self.assertFalse(Path("src/slurmforge/config_schema").exists())
 
         violations: list[str] = []
         for path in sorted(Path("src/slurmforge").rglob("*.py")):
@@ -26,7 +26,7 @@ class ConfigContractShapeTests(StageBatchSystemTestCase):
                         (
                             "config_contract.defaults",
                             "config_contract.options",
-                            "config_schema.sections",
+                            "config_schema",
                         )
                     ):
                         violations.append(f"{path}:{module}")
@@ -36,20 +36,21 @@ class ConfigContractShapeTests(StageBatchSystemTestCase):
                             (
                                 "config_contract.defaults",
                                 "config_contract.options",
-                                "config_schema.sections",
+                                "config_schema",
                             )
                         ):
                             violations.append(f"{path}:{alias.name}")
         self.assertEqual(violations, [])
 
-    def test_config_schema_reads_fields_from_contract_registry(self) -> None:
-        schema_fields = Path("src/slurmforge/config_schema/fields.py").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("config_contract.registry", schema_fields)
-        self.assertNotIn(
-            "CONFIG_FIELDS: Final[tuple[ConfigField, ...]] = (", schema_fields
-        )
+    def test_config_contract_owns_field_queries_and_key_registry(self) -> None:
+        contract_root = Path("src/slurmforge/config_contract")
+        registry = (contract_root / "registry.py").read_text(encoding="utf-8")
+        keys = (contract_root / "keys.py").read_text(encoding="utf-8")
+
+        self.assertIn("def fields_for_template", registry)
+        self.assertIn("def comment_for", registry)
+        self.assertIn("def reject_unknown_config_keys", keys)
+        self.assertIn("CONFIG_FIELDS", keys)
 
     def test_default_values_are_non_field_constants(self) -> None:
         allowed = {
@@ -81,6 +82,19 @@ class ConfigContractShapeTests(StageBatchSystemTestCase):
             if "default_for(" in text:
                 violations.append(str(path))
         self.assertEqual(violations, [])
+
+    def test_spec_models_do_not_read_config_defaults(self) -> None:
+        violations: list[str] = []
+        for path in sorted(Path("src/slurmforge/spec/models").glob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            if "config_contract.registry" in text or "default_for(" in text:
+                violations.append(str(path))
+        self.assertEqual(violations, [])
+
+    def test_plan_models_do_not_reexport_workflow_gates(self) -> None:
+        text = Path("src/slurmforge/plans/train_eval.py").read_text(encoding="utf-8")
+        for name in ("TRAIN_GROUP_GATE", "EVAL_SHARD_GATE", "FINAL_GATE"):
+            self.assertNotIn(name, text)
 
     def test_control_and_stage_partition_defaults_are_explicit(self) -> None:
         from slurmforge.config_contract.registry import default_for, field_by_path

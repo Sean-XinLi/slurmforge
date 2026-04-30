@@ -62,12 +62,14 @@ class StarterShapeTests(StageBatchSystemTestCase):
         }
         self.assertIn("advanced_example_config", advanced_functions)
         self.assertNotIn("dedent(", advanced_source)
+        self.assertIn("base_config", advanced_source)
+        self.assertIn("train_stage", advanced_source)
+        self.assertIn("eval_stage_from_train", advanced_source)
 
     def test_starter_io_contract_values_have_single_source(self) -> None:
         constant_owner = Path("src/slurmforge/config_contract/starter_io.py")
         self.assertTrue(constant_owner.exists())
         for path in (
-            Path("src/slurmforge/starter/examples/advanced.py"),
             Path("src/slurmforge/starter/templates/readme.py"),
             Path("src/slurmforge/starter/templates/script_render.py"),
             Path("src/slurmforge/starter/templates/stage_specs.py"),
@@ -109,7 +111,7 @@ class StarterShapeTests(StageBatchSystemTestCase):
         self.assertFalse(
             Path("src/slurmforge/config_contract/fields/stage_io_generic.py").exists()
         )
-        self.assertFalse(Path("src/slurmforge/config_schema/sections").exists())
+        self.assertFalse(Path("src/slurmforge/config_schema").exists())
 
         self.assertIn("stage_io_base", stage_io.read_text(encoding="utf-8"))
         self.assertIn("stage_io_starter", stage_io.read_text(encoding="utf-8"))

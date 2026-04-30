@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from ...config_contract.registry import default_for
-from ...config_schema import reject_unknown_config_keys
+from ...config_contract.keys import reject_unknown_config_keys
 from ...errors import ConfigContractError
 from ..models import StageGpuSizingSpec
 from ..parse_common import require_mapping
