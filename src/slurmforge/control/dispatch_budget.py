@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..workflow_contract import EVAL_STAGE
-from .state_records import (
+from ..storage.workflow_state_records import (
     DISPATCH_ACTIVE_STATES,
     INSTANCE_RUNNING,
     INSTANCE_SUBMITTED,

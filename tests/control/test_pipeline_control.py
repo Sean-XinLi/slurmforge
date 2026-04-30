@@ -818,6 +818,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
         from slurmforge.control.workflow import submit_initial_pipeline
         from slurmforge.notifications.records import read_notification_record
         from tests.support.slurm import FakeSlurmClient
+        from tests.support.workflow_records import read_workflow_status_record
 
         class FailingNotificationSlurm(FakeSlurmClient):
             def submit(self, path, *, options=None):
@@ -888,18 +889,16 @@ class PipelineControlTests(StageBatchSystemTestCase):
             workflow_state = json.loads(
                 (pipeline_root / "control" / "workflow_state.json").read_text()
             )
-            workflow_status = json.loads(
-                (pipeline_root / "control" / "workflow_status.json").read_text()
-            )
+            workflow_status = read_workflow_status_record(pipeline_root)
             notification_key = "terminal_notification:train_eval_pipeline_finished"
             self.assertEqual(workflow_state["terminal_aggregation"]["state"], "failed")
             self.assertEqual(
-                workflow_status["control_jobs"][notification_key]["state"],
+                workflow_status.control_jobs[notification_key].state,
                 "failed",
             )
             self.assertIn(
                 "mail scheduler unavailable",
-                workflow_status["control_jobs"][notification_key]["reason"],
+                workflow_status.control_jobs[notification_key].reason,
             )
 
             recovery_client = FakeSlurmClient()
@@ -918,6 +917,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
         from slurmforge.control.workflow import advance_pipeline_once
         from slurmforge.control.workflow import submit_initial_pipeline
         from tests.support.slurm import FakeSlurmClient
+        from tests.support.workflow_records import read_workflow_status_record
 
         class PartiallyFailingNotificationSlurm(FakeSlurmClient):
             def submit(self, path, *, options=None):
@@ -998,9 +998,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
             control_submissions = json.loads(
                 (pipeline_root / "control" / "control_submissions.json").read_text()
             )
-            workflow_status = json.loads(
-                (pipeline_root / "control" / "workflow_status.json").read_text()
-            )
+            workflow_status = read_workflow_status_record(pipeline_root)
             notification_key = "terminal_notification:train_eval_pipeline_finished"
             self.assertEqual(
                 workflow_state["terminal_aggregation"]["state"],
@@ -1019,15 +1017,11 @@ class PipelineControlTests(StageBatchSystemTestCase):
                 1,
             )
             self.assertEqual(
-                workflow_status["control_jobs"][notification_key]["state"],
+                workflow_status.control_jobs[notification_key].state,
                 "uncertain",
             )
             self.assertEqual(
-                len(
-                    workflow_status["control_jobs"][notification_key][
-                        "scheduler_job_ids"
-                    ]
-                ),
+                len(workflow_status.control_jobs[notification_key].scheduler_job_ids),
                 1,
             )
             submissions_before = len(client.submissions)

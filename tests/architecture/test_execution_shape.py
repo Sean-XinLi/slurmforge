@@ -92,18 +92,19 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             "initial_submit.py",
             "instance_reconcile.py",
             "stage_submit.py",
-            "state_records.py",
             "terminal_notification.py",
             "workflow.py",
         ):
             self.assertTrue((control_root / name).exists())
+        storage_root = Path("src/slurmforge/storage")
+        for name in ("workflow_state_factory.py", "workflow_state_records.py"):
+            self.assertTrue((storage_root / name).exists())
         workflow_text = (control_root / "workflow.py").read_text(encoding="utf-8")
         self.assertNotIn("deliver_notification", workflow_text)
         self.assertNotIn("materialize_stage_batch", workflow_text)
         for path in sorted(control_root.glob("*.py")):
             if path.name in {
                 "control_submission_records.py",
-                "state_records.py",
             }:
                 continue
             text = path.read_text(encoding="utf-8")

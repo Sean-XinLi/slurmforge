@@ -18,12 +18,13 @@ from .control_submission_submit import (
 from .gates import submit_control_gate
 from .stage_submit import ensure_stage_submitted
 from .state import record_workflow_event
-from .state_records import (
+from ..storage.workflow_state_records import (
     DISPATCH_SUBMITTED,
     DispatchGroupSubmissionState,
     INSTANCE_SUBMITTED,
     DispatchSubmissionState,
     WorkflowState,
+    dequeue_instances,
     set_submission,
 )
 
@@ -119,6 +120,7 @@ def record_dispatch_submission(
         job_id, task_id = jobs_by_instance.get(instance_id, ("", ""))
         instance.scheduler_job_id = job_id
         instance.scheduler_array_task_id = task_id
+    dequeue_instances(state, set(submission.instance_ids))
 
 
 def submit_dispatch_gates(

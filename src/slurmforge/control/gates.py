@@ -19,7 +19,7 @@ from .control_submission_submit import (
     submit_control_once,
 )
 from .state import record_workflow_event, save_workflow_state
-from .state_records import WorkflowState
+from ..storage.workflow_state_records import WorkflowState
 
 
 def submit_control_gate(

@@ -11,7 +11,11 @@ from ..storage.plan_reader import run_definitions_from_stage_batch
 from ..storage.runtime_batches import upsert_runtime_batch
 from ..workflow_contract import BATCH_ROLE_DISPATCH, EVAL_STAGE
 from .project import project_root_from_pipeline
-from .state_records import INSTANCE_BLOCKED, WorkflowState, dequeue_instances
+from ..storage.workflow_state_records import (
+    INSTANCE_BLOCKED,
+    WorkflowState,
+    dequeue_instances,
+)
 
 
 @dataclass(frozen=True)

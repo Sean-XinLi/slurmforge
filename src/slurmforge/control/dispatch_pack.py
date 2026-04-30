@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from ..io import content_digest
 from ..workflow_contract import EVAL_STAGE, TRAIN_STAGE
-from .state_records import INSTANCE_READY, RELEASE_WINDOWED, WorkflowState
+from ..storage.workflow_state_records import INSTANCE_READY, RELEASE_WINDOWED, WorkflowState
 
 
 def ready_instance_ids(

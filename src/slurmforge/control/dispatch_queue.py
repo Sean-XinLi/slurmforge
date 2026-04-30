@@ -16,7 +16,7 @@ from .dispatch_pack import (
 from .dispatch_submit import submit_dispatch
 from .instance_reconcile import sync_materialized_statuses
 from .state import record_workflow_event
-from .state_records import (
+from ..storage.workflow_state_records import (
     DISPATCH_ROLE_DISPATCH,
     DISPATCH_ROLE_INITIAL,
     WorkflowState,

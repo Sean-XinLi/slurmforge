@@ -18,7 +18,7 @@ This document captures the internal contracts that keep planning, submission, ex
 - Public package facades are limited to `spec`, `starter`, `contracts`, `slurm`, and `io`. Internal packages keep empty facades and callers import role modules directly.
 - Nested internal package facades are allowed only as explicit local subsystem entrypoints, for example `plans.serde`, `planner.payloads`, `emit.stage_render`, `outputs.discovery`, and `resolver.explicit`.
 - `materialization` owns workflow-level materialization: persisting a planned root layout, seeding planned status records, refreshing root snapshots, and materializing sourced or selected stage batches.
-- `storage` owns persisted layout, storage paths, batch materialization records, derived root reservation, source contracts, workflow/control files, execution indexes, and plan readers. It does not seed status records, refresh root read models, or own workflow-level materialization.
+- `storage` owns persisted layout, storage paths, batch materialization records, derived root reservation, source contracts, workflow/control files, workflow state/status record contracts, execution indexes, and plan readers. It does not seed status records, refresh root read models, or own workflow-level materialization.
 - `status` owns per-stage status/attempt records and scheduler reconciliation. Reconcile internals are split between workflow, attempt reconstruction, scheduler observations, and reconciliation rules.
 - `root_model` owns root detection, root refs, run/pipeline aggregation, root snapshots, notification snapshots, and planned status seeding after storage layout is written.
 - `control.workflow` owns train/eval pipeline progression through short-lived controller invocations. It reconciles stage instances, resolves dependency edges, dispatches ready instances, submits instance and catch-up gates, and records durable workflow state.
@@ -72,7 +72,7 @@ Train/eval pipelines use short-lived control jobs, not a long-running orchestrat
 
 `control/control_plan.json` is the static control plan used by gate jobs.
 
-`control/workflow_state.json` is the durable workflow state machine for train/eval progression.
+`control/workflow_state.json` is the durable workflow state machine for train/eval progression. Its schema is owned by `storage.workflow_state_records`, initialized through `storage.workflow_state_factory`, and consumed by `control`; `storage` never imports controller modules to build or validate this file.
 
 `control/workflow_status.json` is the typed status read model for users and `sforge status`. Its `control_jobs` projection includes every control submission record, including `failed` and `uncertain` records without scheduler job ids, so operators can see why a gate or notification did not produce a Slurm job.
 

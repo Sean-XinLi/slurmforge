@@ -3,7 +3,7 @@ from __future__ import annotations
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..io import utc_now
 from ..workflow_contract import TRAIN_STAGE
-from .state_records import (
+from ..storage.workflow_state_records import (
     DEPENDENCY_BLOCKED,
     DEPENDENCY_READY,
     DEPENDENCY_RESOLVED,

@@ -119,6 +119,7 @@ Train/eval pipeline root:
 - Train/eval pipeline execution is driven by short-lived control gates.
 - Train/eval pipeline dependency progression is contract-driven: the control gate resolves the target stage's declared inputs from successful upstream stage outputs, not from train/eval-specific code paths.
 - Workflow state is durable but orchestration-only; control job ids are recorded in `control/control_submissions.json`, and pipeline stage job read models are projected from workflow dispatch submissions.
+- `control/workflow_state.json` is a strict typed storage contract. Required top-level fields, stage instances, dependency edges, dispatch queue entries, dispatch submissions, terminal aggregation, enum states, key/id matches, and cross-record references are validated on every read and write. Missing fields or legacy loose dict shapes are invalid.
 - `control/workflow_status.json` is a strict typed read model. It projects every control submission record into `control_jobs`, not only submitted records. `sforge status` shows all scheduler job ids for submitted control jobs and shows `state(reason)` for failed or uncertain records without job ids.
 - Stage submission is manifest-driven; submit code never glob-submits stale root-level sbatch files.
 - `submissions/ledger.json` is the scheduler job-id source of truth for direct `train`, `eval`, `run`, `resubmit`, and `status --reconcile`. Train/eval pipeline status projects stage jobs from workflow dispatch submissions.

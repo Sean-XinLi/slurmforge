@@ -15,7 +15,7 @@ from .terminal_notification import (
     terminal_notification_control_key,
 )
 from .state_model import set_workflow_status
-from .state_records import (
+from ..storage.workflow_state_records import (
     INSTANCE_BLOCKED,
     INSTANCE_FAILED,
     INSTANCE_TERMINAL_STATES,
