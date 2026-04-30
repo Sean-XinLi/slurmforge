@@ -12,6 +12,7 @@ from ..storage.plan_reader import load_execution_stage_batch_plan
 from .state_records import (
     DISPATCH_ACTIVE_STATES,
     DISPATCH_FAILED,
+    DISPATCH_SUBMITTED,
     DISPATCH_TERMINAL,
     INSTANCE_BLOCKED,
     INSTANCE_FAILED,
@@ -47,14 +48,8 @@ def reconcile_instances(
                 missing_output_grace_seconds=missing_output_grace_seconds,
             )
         _sync_batch_statuses(state, batch, submission)
-        if _submission_terminal(state, submission):
-            submission.state = DISPATCH_TERMINAL
-        elif any(
-            state.instances[instance_id].state == INSTANCE_FAILED
-            for instance_id in submission.instance_ids
-            if instance_id in state.instances
-        ):
-            submission.state = DISPATCH_FAILED
+        _sync_group_states(state, submission)
+        _sync_submission_state(submission)
     return state
 
 
@@ -154,13 +149,32 @@ def _apply_status(record, status_state: str, run_dir: Path, reason: str) -> None
         record.reason = reason or f"terminal status `{status_state}`"
 
 
-def _submission_terminal(
-    state: WorkflowState, submission: DispatchSubmissionState
-) -> bool:
-    if not submission.instance_ids:
-        return False
-    return all(
-        state.instances[instance_id].state in INSTANCE_TERMINAL_STATES
-        for instance_id in submission.instance_ids
-        if instance_id in state.instances
-    )
+def _sync_group_states(state: WorkflowState, submission: DispatchSubmissionState) -> None:
+    for group in submission.groups.values():
+        records = [
+            state.instances[instance_id]
+            for instance_id in group.stage_instance_ids
+            if instance_id in state.instances
+        ]
+        if not records:
+            continue
+        if any(record.state == INSTANCE_FAILED for record in records):
+            group.state = DISPATCH_FAILED
+            continue
+        if all(record.state in INSTANCE_TERMINAL_STATES for record in records):
+            group.state = DISPATCH_TERMINAL
+            continue
+        group.state = DISPATCH_SUBMITTED
+
+
+def _sync_submission_state(submission: DispatchSubmissionState) -> None:
+    if not submission.groups:
+        return
+    group_states = [group.state for group in submission.groups.values()]
+    if any(state == DISPATCH_FAILED for state in group_states):
+        submission.state = DISPATCH_FAILED
+        return
+    if all(state == DISPATCH_TERMINAL for state in group_states):
+        submission.state = DISPATCH_TERMINAL
+        return
+    submission.state = DISPATCH_SUBMITTED

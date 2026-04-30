@@ -95,10 +95,7 @@ class TerminalAggregationState:
     state: str = "pending"
     workflow_terminal_state: str = ""
     reason: str = ""
-    dependency_job_ids: tuple[str, ...] = ()
-    notification_job_ids: tuple[str, ...] = ()
-    notification_barrier_job_ids: tuple[str, ...] = ()
-    submitted_at: str = ""
+    notification_control_key: str = ""
     completed_at: str = ""
 
 
@@ -155,19 +152,9 @@ def workflow_state_from_dict(payload: dict[str, Any]) -> WorkflowState:
                 terminal_aggregation.get("workflow_terminal_state") or ""
             ),
             reason=str(terminal_aggregation.get("reason") or ""),
-            dependency_job_ids=tuple(
-                str(item) for item in terminal_aggregation.get("dependency_job_ids") or ()
+            notification_control_key=str(
+                terminal_aggregation.get("notification_control_key") or ""
             ),
-            notification_job_ids=tuple(
-                str(item)
-                for item in terminal_aggregation.get("notification_job_ids") or ()
-            ),
-            notification_barrier_job_ids=tuple(
-                str(item)
-                for item in terminal_aggregation.get("notification_barrier_job_ids")
-                or ()
-            ),
-            submitted_at=str(terminal_aggregation.get("submitted_at") or ""),
             completed_at=str(terminal_aggregation.get("completed_at") or ""),
         ),
         release_policy=release_policy,

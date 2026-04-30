@@ -56,8 +56,8 @@ def print_train_eval_pipeline_execution_result(
             for key, value in result.control_job_ids.items()
             if key.startswith("stage_instance_gate:train_initial:")
         }
-        for control_key, job_id in sorted(train_controls.items()):
-            print(f"[OK] submitted {control_key}: {job_id}")
+        for control_key, job_ids in sorted(train_controls.items()):
+            print(f"[OK] submitted {control_key}: {','.join(job_ids)}")
         print(f"[OK] pipeline_root={result.root}")
         return
     print(f"[OK] emitted train/eval streaming pipeline: {result.root}")

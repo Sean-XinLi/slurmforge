@@ -89,6 +89,7 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             "instance_reconcile.py",
             "stage_submit.py",
             "state_records.py",
+            "terminal_notification.py",
             "workflow.py",
         ):
             self.assertTrue((control_root / name).exists())

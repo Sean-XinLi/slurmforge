@@ -76,7 +76,7 @@ Train/eval pipelines use short-lived control jobs, not a long-running orchestrat
 
 `control/workflow_status.json` is the mutable status read model for users and `sforge status`.
 
-`control/control_submissions.json` is the authoritative ledger for stage-instance gates, dispatch catch-up gates, and terminal notification control jobs. It records `submitting` before `sbatch`, `submitted` after scheduler job ids are known, and `uncertain` when a retry would risk duplicate control jobs.
+`control/control_submissions.json` is the authoritative ledger for stage-instance gates, dispatch catch-up gates, and terminal notification control jobs. It records `submitting` before `sbatch`, `submitted` after scheduler job ids are known, `failed` when no scheduler job was created and retry is safe, and `uncertain` when a retry would risk duplicate control jobs.
 
 `execution/stage_catalog.json` is the catalog of planned pipeline stage batch roots. It includes train and eval stage plans even when eval is not yet submitted, so resubmit and inspection commands can reason about the full declared pipeline.
 
@@ -90,4 +90,4 @@ Notification summaries are derived from the same status read models as `sforge s
 
 Direct `sforge train`, `sforge eval`, and `sforge resubmit` submit one Slurm mail notification job after terminal stage array groups and send one batch summary when configured.
 
-`sforge run` sends one train/eval pipeline summary from terminal aggregation after the full pipeline reaches a terminal state. Pipeline-submitted stage batches do not send separate batch summaries unless they are submitted directly.
+`sforge run` sends one train/eval pipeline summary from terminal aggregation after the full pipeline reaches a terminal state. Terminal aggregation stores the workflow terminal summary and the notification control key; scheduler job ids live in `control/control_submissions.json`. Pipeline-submitted stage batches do not send separate batch summaries unless they are submitted directly.

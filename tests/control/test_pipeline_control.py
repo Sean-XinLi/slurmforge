@@ -176,6 +176,12 @@ class PipelineControlTests(StageBatchSystemTestCase):
             workflow_state = json.loads(
                 (Path(plan.root_dir) / "control" / "workflow_state.json").read_text()
             )
+            events = [
+                json.loads(line)
+                for line in (
+                    Path(plan.root_dir) / "control" / "events.jsonl"
+                ).read_text(encoding="utf-8").splitlines()
+            ]
             self.assertEqual(result.state, "streaming")
             self.assertEqual(len(client.submissions), 6)
             self.assertEqual(
@@ -189,6 +195,14 @@ class PipelineControlTests(StageBatchSystemTestCase):
                     ],
                     "planned",
                 )
+            self.assertTrue(
+                any(
+                    event["event"] == "controller_advance_started"
+                    and event["hint_stage_instance_id"]
+                    == first_train.stage_instance_id
+                    for event in events
+                )
+            )
 
     def test_failed_train_instance_blocks_matching_eval_only(self) -> None:
         from slurmforge.control.workflow import advance_pipeline_once
@@ -243,6 +257,10 @@ class PipelineControlTests(StageBatchSystemTestCase):
                 ],
                 "blocked",
             )
+            train_submission = workflow_state["submissions"]["train_initial"]
+            train_group_state = next(iter(train_submission["groups"].values()))["state"]
+            self.assertEqual(train_group_state, "failed")
+            self.assertEqual(train_submission["state"], "failed")
 
     def test_per_group_release_waits_for_whole_dispatch_group(self) -> None:
         from slurmforge.control.workflow import advance_pipeline_once
@@ -420,6 +438,60 @@ class PipelineControlTests(StageBatchSystemTestCase):
             shutil.rmtree(Path(state.submissions["train_initial"].root))
             self.assertEqual(active_budgeted_gpus(state), 2)
 
+    def test_pipeline_result_stage_jobs_do_not_require_stage_submission_ledger(
+        self,
+    ) -> None:
+        from slurmforge.control.state import load_workflow_state
+        from slurmforge.control.state_model import result_from_state
+        from slurmforge.control.workflow import submit_initial_pipeline
+        from slurmforge.submission.ledger import ledger_path
+        from tests.support.slurm import FakeSlurmClient
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(
+                write_demo_project(
+                    root,
+                    extra=_with_current_python(
+                        apply_overlay(
+                            _grid_runs(1),
+                            {"dispatch": {"max_available_gpus": 1}},
+                        )
+                    ),
+                )
+            )
+            plan = compile_train_eval_pipeline_plan(spec)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
+            client = FakeSlurmClient()
+            submit_initial_pipeline(plan, client=client)
+            ledger_path(Path(plan.stage_batches["train"].submission_root)).unlink()
+
+            state = load_workflow_state(Path(plan.root_dir), plan)
+            result = result_from_state(Path(plan.root_dir), state)
+
+            self.assertEqual(
+                result.submitted_stage_job_ids["train"],
+                {"group_001": client.submissions[0].job_id},
+            )
+
+    def test_malformed_control_submission_ledger_is_rejected(self) -> None:
+        from slurmforge.control.control_submissions import (
+            read_control_submission_ledger,
+        )
+        from slurmforge.errors import RecordContractError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            pipeline_root = Path(tmp)
+            control_dir = pipeline_root / "control"
+            control_dir.mkdir()
+            (control_dir / "control_submissions.json").write_text(
+                json.dumps({"schema_version": 1, "submissions": []}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(RecordContractError):
+                read_control_submission_ledger(pipeline_root)
+
     def test_train_submission_reuses_partial_stage_submission_without_duplicate(
         self,
     ) -> None:
@@ -484,7 +556,10 @@ class PipelineControlTests(StageBatchSystemTestCase):
                             "notifications": {
                                 "email": {
                                     "enabled": True,
-                                    "recipients": ["you@example.com"],
+                                    "recipients": [
+                                        "you@example.com",
+                                        "ops@example.com",
+                                    ],
                                     "events": ["train_eval_pipeline_finished"],
                                     "when": "afterany",
                                 }
@@ -526,7 +601,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
             self.assertEqual(execute_stage_task(eval_root, 1, 0), 0)
             client.set_array_task_state(eval_job_id, 0, "COMPLETED")
 
-            advance_pipeline_once(
+            result = advance_pipeline_once(
                 pipeline_root,
                 hint=_stage_finished(
                     plan.stage_batches["eval"].stage_instances[0].stage_instance_id
@@ -554,24 +629,47 @@ class PipelineControlTests(StageBatchSystemTestCase):
                 for submission in client.submissions
                 if submission.path.name == "notify_train_eval_pipeline_finished.sbatch"
             ]
-            self.assertEqual(len(notify_submissions), 1)
+            self.assertEqual(len(notify_submissions), 2)
             self.assertEqual(notify_submissions[0].options.mail_user, "you@example.com")
+            self.assertEqual(notify_submissions[1].options.mail_user, "ops@example.com")
             self.assertEqual(notify_submissions[0].options.mail_type, "END")
             record = read_notification_record(
                 pipeline_root, "train_eval_pipeline_finished"
             )
             assert record is not None
-            self.assertEqual(record.scheduler_job_ids, (notify_submissions[0].job_id,))
+            notification_job_ids = tuple(
+                submission.job_id for submission in notify_submissions
+            )
+            self.assertEqual(record.scheduler_job_ids, notification_job_ids)
             terminal_aggregation = workflow_state["terminal_aggregation"]
+            notification_key = "terminal_notification:train_eval_pipeline_finished"
             self.assertEqual(terminal_aggregation["workflow_terminal_state"], "success")
             self.assertEqual(terminal_aggregation["state"], "submitted")
             self.assertEqual(
-                terminal_aggregation["notification_job_ids"],
-                [notify_submissions[0].job_id],
+                terminal_aggregation["notification_control_key"],
+                notification_key,
             )
-            self.assertIn(
-                "terminal_notification:train_eval_pipeline_finished",
-                control_submissions["submissions"],
+            self.assertNotIn("notification_job_ids", terminal_aggregation)
+            self.assertIn(notification_key, control_submissions["submissions"])
+            self.assertEqual(
+                control_submissions["submissions"][notification_key][
+                    "scheduler_job_ids"
+                ],
+                list(notification_job_ids),
+            )
+            self.assertEqual(
+                result.submitted_control_job_ids[notification_key],
+                notification_job_ids,
+            )
+            terminal_eval_submission = next(
+                item
+                for item in workflow_state["submissions"].values()
+                if item["stage_name"] == "eval"
+            )
+            self.assertEqual(terminal_eval_submission["state"], "terminal")
+            self.assertEqual(
+                next(iter(terminal_eval_submission["groups"].values()))["state"],
+                "terminal",
             )
 
     def test_terminal_notification_failed_state_can_recover_on_next_advance(
@@ -662,3 +760,110 @@ class PipelineControlTests(StageBatchSystemTestCase):
             assert record is not None
             self.assertEqual(record.state, "submitted")
             self.assertEqual(record.scheduler_job_ids, ("1001",))
+
+    def test_terminal_notification_partial_submit_is_uncertain_and_not_retried(
+        self,
+    ) -> None:
+        from slurmforge.control.workflow import advance_pipeline_once
+        from slurmforge.control.workflow import submit_initial_pipeline
+        from tests.support.slurm import FakeSlurmClient
+
+        class PartiallyFailingNotificationSlurm(FakeSlurmClient):
+            def submit(self, path, *, options=None):
+                if (
+                    path.name == "notify_train_eval_pipeline_finished.sbatch"
+                    and options is not None
+                    and options.mail_user == "ops@example.com"
+                ):
+                    raise RuntimeError("second recipient failed")
+                return super().submit(path, options=options)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(
+                write_demo_project(
+                    root,
+                    extra=_with_current_python(
+                        {
+                            "notifications": {
+                                "email": {
+                                    "enabled": True,
+                                    "recipients": [
+                                        "you@example.com",
+                                        "ops@example.com",
+                                    ],
+                                    "events": ["train_eval_pipeline_finished"],
+                                    "when": "afterany",
+                                }
+                            }
+                        }
+                    ),
+                )
+            )
+            plan = compile_train_eval_pipeline_plan(spec)
+            materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
+            pipeline_root = Path(plan.root_dir)
+            client = PartiallyFailingNotificationSlurm()
+            submit_initial_pipeline(plan, client=client)
+            train_job_id = client.submissions[0].job_id
+            train_root = Path(plan.stage_batches["train"].submission_root)
+            self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
+            client.set_array_task_state(train_job_id, 0, "COMPLETED")
+
+            advance_pipeline_once(
+                pipeline_root,
+                hint=_stage_finished(
+                    plan.stage_batches["train"].stage_instances[0].stage_instance_id
+                ),
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            workflow_state = json.loads(
+                (pipeline_root / "control" / "workflow_state.json").read_text()
+            )
+            eval_submission = next(
+                item
+                for item in workflow_state["submissions"].values()
+                if item["stage_name"] == "eval"
+            )
+            eval_root = Path(eval_submission["root"])
+            eval_job_id = next(iter(eval_submission["groups"].values()))[
+                "scheduler_job_id"
+            ]
+            self.assertEqual(execute_stage_task(eval_root, 1, 0), 0)
+            client.set_array_task_state(eval_job_id, 0, "COMPLETED")
+
+            advance_pipeline_once(
+                pipeline_root,
+                hint=_stage_finished(
+                    plan.stage_batches["eval"].stage_instances[0].stage_instance_id
+                ),
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            workflow_state = json.loads(
+                (pipeline_root / "control" / "workflow_state.json").read_text()
+            )
+            control_submissions = json.loads(
+                (pipeline_root / "control" / "control_submissions.json").read_text()
+            )
+            notification_key = "terminal_notification:train_eval_pipeline_finished"
+            self.assertEqual(
+                workflow_state["terminal_aggregation"]["state"],
+                "uncertain",
+            )
+            self.assertEqual(
+                control_submissions["submissions"][notification_key]["state"],
+                "uncertain",
+            )
+            self.assertEqual(
+                len(
+                    control_submissions["submissions"][notification_key][
+                        "scheduler_job_ids"
+                    ]
+                ),
+                1,
+            )
+            submissions_before = len(client.submissions)
+            advance_pipeline_once(pipeline_root, client=client)
+            self.assertEqual(len(client.submissions), submissions_before)

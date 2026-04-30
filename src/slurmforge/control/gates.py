@@ -35,7 +35,7 @@ def submit_control_gate(
     key = _control_gate_key(gate, target_id=target_id)
     existing_job_ids = submitted_control_job_ids(pipeline_root)
     if key in existing_job_ids:
-        return existing_job_ids[key]
+        return existing_job_ids[key][0]
     gate_path = write_pipeline_gate_submit_file(plan, gate, target_id=target_id)
     record = submit_control_once(
         pipeline_root,

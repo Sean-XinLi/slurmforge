@@ -17,8 +17,8 @@ def handle_pipeline_resume(args: argparse.Namespace) -> None:
         for stage_name, job_ids in sorted(result.submitted_stage_job_ids.items()):
             print(f"[OK] stage={stage_name} jobs={','.join(job_ids.values())}")
     if result.submitted_control_job_ids:
-        for key, job_id in sorted(result.submitted_control_job_ids.items()):
-            print(f"[OK] control={key} job={job_id}")
+        for key, job_ids in sorted(result.submitted_control_job_ids.items()):
+            print(f"[OK] control={key} jobs={','.join(job_ids)}")
     print(f"[OK] pipeline_root={result.pipeline_root}")
 
 

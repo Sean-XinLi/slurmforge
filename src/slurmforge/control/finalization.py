@@ -10,7 +10,10 @@ from ..workflow_contract import (
     WORKFLOW_FAILED,
     WORKFLOW_SUCCESS,
 )
-from .notifications import submit_pipeline_terminal_notification
+from .terminal_notification import (
+    submit_pipeline_terminal_notification,
+    terminal_notification_control_key,
+)
 from .state_model import set_workflow_status
 from .state_records import (
     INSTANCE_BLOCKED,
@@ -41,22 +44,19 @@ def finalize_if_terminal(
     state.terminal_aggregation.workflow_terminal_state = terminal_state
     state.terminal_aggregation.reason = _terminal_reason(state, terminal_state)
     state.terminal_aggregation.completed_at = utc_now()
-    state.terminal_aggregation.dependency_job_ids = _terminal_dependency_job_ids(state)
     notification = submit_pipeline_terminal_notification(
         pipeline_root,
         plan,
-        dependency_job_ids=state.terminal_aggregation.dependency_job_ids,
+        dependency_job_ids=_terminal_dependency_job_ids(state),
         client=client,
         max_dependency_length=max_dependency_length,
     )
     if notification is not None:
-        state.terminal_aggregation.notification_job_ids = notification.scheduler_job_ids
-        state.terminal_aggregation.notification_barrier_job_ids = (
-            notification.barrier_job_ids
-        )
-        state.terminal_aggregation.submitted_at = notification.submitted_at
         state.terminal_aggregation.state = notification.state
-    elif not state.terminal_aggregation.notification_job_ids:
+        state.terminal_aggregation.notification_control_key = (
+            terminal_notification_control_key()
+        )
+    elif not state.terminal_aggregation.notification_control_key:
         state.terminal_aggregation.state = "disabled"
     if notification is not None and notification.state != "submitted":
         state.terminal_aggregation.reason = notification.reason

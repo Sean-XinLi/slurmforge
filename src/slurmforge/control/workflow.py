@@ -22,7 +22,7 @@ from .dispatch_queue import dispatch_ready_instances
 from .finalization import finalize_if_terminal
 from .initial_submit import submit_initial_pipeline_locked
 from .instance_reconcile import reconcile_instances
-from .state import load_workflow_state, save_workflow_state
+from .state import load_workflow_state, record_workflow_event, save_workflow_state
 from .state_model import PipelineAdvanceResult, result_from_state, set_workflow_status
 
 
@@ -73,6 +73,12 @@ def advance_pipeline_once(
         plan = load_train_eval_pipeline_plan(root)
         state = load_workflow_state(root, plan)
         _validate_advance_hint(hint)
+        record_workflow_event(
+            root,
+            "controller_advance_started",
+            **_hint_payload(hint),
+            workflow_state_before=state.state,
+        )
         if state.state in WORKFLOW_TERMINAL_STATES:
             if state.terminal_aggregation.state in {"pending", "failed"}:
                 finalize_if_terminal(
@@ -83,6 +89,12 @@ def advance_pipeline_once(
                     max_dependency_length=max_dependency_length,
                 )
                 save_workflow_state(root, state)
+            record_workflow_event(
+                root,
+                "controller_advance_completed",
+                **_hint_payload(hint),
+                workflow_state_after=state.state,
+            )
             return result_from_state(root, state)
         try:
             reconcile_instances(
@@ -120,6 +132,12 @@ def advance_pipeline_once(
                     WORKFLOW_STREAMING,
                     reason="workflow reconciled; ready instances dispatched",
                 )
+            record_workflow_event(
+                root,
+                "controller_advance_completed",
+                **_hint_payload(hint),
+                workflow_state_after=state.state,
+            )
             return result_from_state(root, state)
         except Exception as exc:
             write_exception_diagnostic(workflow_traceback_path(root), exc)
@@ -138,3 +156,12 @@ def _validate_advance_hint(hint: AdvanceHint | None) -> None:
         raise ConfigContractError(
             "`--stage-instance-id` is required for stage-instance-finished events"
         )
+
+
+def _hint_payload(hint: AdvanceHint | None) -> dict[str, str]:
+    if hint is None:
+        return {"hint_event": "", "hint_stage_instance_id": ""}
+    return {
+        "hint_event": hint.event,
+        "hint_stage_instance_id": hint.stage_instance_id,
+    }
