@@ -12,6 +12,7 @@ class InternalFacadeImportTests(StageBatchSystemTestCase):
         blocked = {
             "slurmforge.cli",
             "slurmforge.control",
+            "slurmforge.docs_render",
             "slurmforge.emit",
             "slurmforge.executor",
             "slurmforge.inputs",

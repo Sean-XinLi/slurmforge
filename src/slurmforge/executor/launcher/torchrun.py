@@ -6,11 +6,6 @@ from ...config_contract.option_sets import LAUNCHER_MODE_MULTI_NODE
 from ...config_contract.registry import default_for
 from ...plans.launcher import LauncherPlan
 
-DEFAULT_LAUNCHER_MODE = default_for("stages.*.launcher.mode")
-DEFAULT_RENDEZVOUS_BACKEND = default_for("stages.*.launcher.rendezvous.backend")
-DEFAULT_RENDEZVOUS_ENDPOINT = default_for("stages.*.launcher.rendezvous.endpoint")
-DEFAULT_RENDEZVOUS_PORT = default_for("stages.*.launcher.rendezvous.port")
-
 
 def torchrun_python_script_command(
     *,
@@ -19,7 +14,7 @@ def torchrun_python_script_command(
     script_args: list[str],
     launcher: LauncherPlan,
 ) -> tuple[list[str] | str, bool]:
-    if str(launcher.mode or DEFAULT_LAUNCHER_MODE) == LAUNCHER_MODE_MULTI_NODE:
+    if str(launcher.mode or default_for("stages.*.launcher.mode")) == LAUNCHER_MODE_MULTI_NODE:
         return _torchrun_multi_node_command(
             python_bin=python_bin,
             script=script,
@@ -48,16 +43,22 @@ def _torchrun_multi_node_command(
     launcher: LauncherPlan,
 ) -> str:
     rendezvous = launcher.rendezvous
-    backend = DEFAULT_RENDEZVOUS_BACKEND if rendezvous is None else rendezvous.backend
+    backend = (
+        default_for("stages.*.launcher.rendezvous.backend")
+        if rendezvous is None
+        else rendezvous.backend
+    )
+    default_endpoint = default_for("stages.*.launcher.rendezvous.endpoint")
     endpoint = (
-        DEFAULT_RENDEZVOUS_ENDPOINT if rendezvous is None else rendezvous.endpoint
+        default_endpoint if rendezvous is None else rendezvous.endpoint
     )
     port = int(
-        (None if rendezvous is None else rendezvous.port) or DEFAULT_RENDEZVOUS_PORT
+        (None if rendezvous is None else rendezvous.port)
+        or default_for("stages.*.launcher.rendezvous.port")
     )
     nnodes = int(launcher.nnodes or 1)
     nproc_per_node = int(launcher.nproc_per_node or 1)
-    if endpoint == DEFAULT_RENDEZVOUS_ENDPOINT:
+    if endpoint == default_endpoint:
         endpoint_expr = '"${MASTER_ADDR}:${MASTER_PORT}"'
         prelude = [
             f"MASTER_PORT={shlex.quote(str(port))}",

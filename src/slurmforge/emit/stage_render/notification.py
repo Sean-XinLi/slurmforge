@@ -10,8 +10,6 @@ from ...plans.stage import StageBatchPlan
 from ..sbatch_helpers import _environment_lines, _job_name, _q
 from .headers import render_control_job_headers
 
-DEFAULT_PYTHON_BIN = default_for("runtime.executor.python.bin")
-
 
 def _submit_root(batch: StageBatchPlan) -> Path:
     return Path(batch.submission_root) / "submit"
@@ -32,7 +30,7 @@ def _finalizer_environment(batch: StageBatchPlan) -> EnvironmentPlan:
 def _finalizer_python_bin(batch: StageBatchPlan) -> str:
     runtime_plan = _finalizer_plan(batch).runtime_plan
     if runtime_plan is None:
-        return DEFAULT_PYTHON_BIN
+        return default_for("runtime.executor.python.bin")
     return runtime_plan.executor.python.bin
 
 

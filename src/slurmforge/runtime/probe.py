@@ -10,9 +10,6 @@ from ..config_contract.registry import default_for
 from ..errors import RuntimeContractError
 from ..io import SchemaVersion
 
-DEFAULT_PYTHON_BIN = default_for("runtime.executor.python.bin")
-DEFAULT_PYTHON_MIN_VERSION = default_for("runtime.executor.python.min_version")
-
 
 @dataclass(frozen=True)
 class RuntimeProbeRecord:
@@ -49,10 +46,15 @@ def _version_tuple(value: str) -> tuple[int, ...]:
 def probe_python_runtime(
     python_bin: str,
     *,
-    min_version: str = DEFAULT_PYTHON_MIN_VERSION,
+    min_version: str | None = None,
     runtime_role: str = "python",
     runtime_name: str = "",
 ) -> RuntimeProbeRecord:
+    required_min_version = str(
+        default_for("runtime.executor.python.min_version")
+        if min_version is None
+        else min_version
+    )
     resolved = (
         shutil.which(python_bin) if not python_bin.startswith("/") else python_bin
     )
@@ -60,7 +62,7 @@ def probe_python_runtime(
         return RuntimeProbeRecord(
             runtime_role=runtime_role,
             python_bin=python_bin,
-            min_version=min_version,
+            min_version=required_min_version,
             state="failed",
             runtime_name=runtime_name,
             reason=f"python binary was not found: {python_bin}",
@@ -81,7 +83,7 @@ def probe_python_runtime(
         return RuntimeProbeRecord(
             runtime_role=runtime_role,
             python_bin=python_bin,
-            min_version=min_version,
+            min_version=required_min_version,
             state="failed",
             runtime_name=runtime_name,
             executable=str(resolved),
@@ -91,7 +93,7 @@ def probe_python_runtime(
         return RuntimeProbeRecord(
             runtime_role=runtime_role,
             python_bin=python_bin,
-            min_version=min_version,
+            min_version=required_min_version,
             state="failed",
             runtime_name=runtime_name,
             executable=str(resolved),
@@ -101,18 +103,18 @@ def probe_python_runtime(
     version = str(payload["version"])
     state = (
         "verified"
-        if _version_tuple(version) >= _version_tuple(min_version)
+        if _version_tuple(version) >= _version_tuple(required_min_version)
         else "failed"
     )
     reason = (
         "verified"
         if state == "verified"
-        else f"python {version} is below required {min_version}"
+        else f"python {version} is below required {required_min_version}"
     )
     return RuntimeProbeRecord(
         runtime_role=runtime_role,
         python_bin=python_bin,
-        min_version=min_version,
+        min_version=required_min_version,
         state=state,
         runtime_name=runtime_name,
         python_version=version,
@@ -135,17 +137,20 @@ def _field(payload: Any, name: str, default: Any = None) -> Any:
 
 def probe_runtime_plan(runtime_plan: Any) -> tuple[RuntimeProbeRecord, ...]:
     probes: list[RuntimeProbeRecord] = []
+    default_python_bin = default_for("runtime.executor.python.bin")
+    default_min_version = default_for("runtime.executor.python.min_version")
     executor_plan = _section(runtime_plan, "executor") or runtime_plan
     executor_python = _section(executor_plan, "python")
     if executor_python:
         probes.append(
             probe_python_runtime(
                 str(
-                    _field(executor_python, "bin", DEFAULT_PYTHON_BIN)
-                    or DEFAULT_PYTHON_BIN
+                    _field(executor_python, "bin", default_python_bin)
+                    or default_python_bin
                 ),
                 min_version=str(
-                    _field(executor_python, "min_version", "3.10") or "3.10"
+                    _field(executor_python, "min_version", default_min_version)
+                    or default_min_version
                 ),
                 runtime_role="executor",
             )
@@ -156,9 +161,13 @@ def probe_runtime_plan(runtime_plan: Any) -> tuple[RuntimeProbeRecord, ...]:
         probes.append(
             probe_python_runtime(
                 str(
-                    _field(user_python, "bin", DEFAULT_PYTHON_BIN) or DEFAULT_PYTHON_BIN
+                    _field(user_python, "bin", default_python_bin)
+                    or default_python_bin
                 ),
-                min_version=str(_field(user_python, "min_version", "3.10") or "3.10"),
+                min_version=str(
+                    _field(user_python, "min_version", default_min_version)
+                    or default_min_version
+                ),
                 runtime_role="user",
                 runtime_name=str(_field(user_plan, "name", "default") or "default"),
             )

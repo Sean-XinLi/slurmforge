@@ -6,8 +6,8 @@ from pathlib import Path
 from tests.support.case import StageBatchSystemTestCase
 
 
-class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
-    def test_schema_has_no_duplicate_or_removed_paths(self) -> None:
+class ConfigContractCoverageTests(StageBatchSystemTestCase):
+    def test_contract_has_no_duplicate_or_removed_paths(self) -> None:
         from slurmforge.config_contract.registry import all_fields
 
         paths = [field.path for field in all_fields()]
@@ -18,7 +18,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         self.assertNotIn("environments.default.modules", paths)
         self.assertNotIn("stages.*.launcher.master_port", paths)
 
-    def test_generated_config_reference_lists_every_schema_field(self) -> None:
+    def test_generated_config_reference_lists_every_contract_field(self) -> None:
         from slurmforge.config_contract.registry import all_fields
 
         config_doc = Path("docs/config.md").read_text(encoding="utf-8")
@@ -27,7 +27,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
         ]
         self.assertEqual(missing, [])
 
-    def test_schema_carries_required_and_enum_contracts(self) -> None:
+    def test_contract_carries_required_and_enum_contracts(self) -> None:
         from slurmforge.config_contract.registry import OPTIONS_BY_PATH
         from slurmforge.config_contract.registry import all_fields
 

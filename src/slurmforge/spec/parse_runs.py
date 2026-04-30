@@ -9,13 +9,11 @@ from ..config_contract.option_sets import (
     RUN_MATRIX,
     RUN_SINGLE,
 )
-from ..config_contract.registry import default_for, options_for, options_sentence
 from ..config_contract.keys import reject_unknown_config_keys
+from ..config_contract.registry import default_for, options_for, options_sentence
 from ..errors import ConfigContractError
 from .models import RunVariantSpec, RunsSpec
 from .parse_common import optional_mapping, require_mapping
-
-DEFAULT_RUN_TYPE = default_for("runs.type")
 
 
 def parse_run_axes(
@@ -64,7 +62,7 @@ def parse_run_cases(
 
 def parse_runs(raw: Any) -> RunsSpec:
     if raw is None:
-        return RunsSpec(type=DEFAULT_RUN_TYPE)
+        return RunsSpec(type=default_for("runs.type"))
     data = require_mapping(raw, "runs")
     reject_unknown_config_keys(data, parent="runs")
     run_type = str(data.get("type") or "")
@@ -75,7 +73,7 @@ def parse_runs(raw: Any) -> RunsSpec:
     if run_type == RUN_SINGLE:
         if "axes" in data or "cases" in data:
             raise ConfigContractError("`runs.type=single` cannot define axes or cases")
-        return RunsSpec(type=DEFAULT_RUN_TYPE)
+        return RunsSpec(type=default_for("runs.type"))
     if run_type == RUN_GRID:
         if "cases" in data:
             raise ConfigContractError("`runs.type=grid` cannot define cases")

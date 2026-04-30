@@ -102,7 +102,7 @@ class StarterShapeTests(StageBatchSystemTestCase):
                     violations.append(f"{path} contains {literal}")
         self.assertEqual(violations, [])
 
-    def test_stage_io_schema_fields_are_layered(self) -> None:
+    def test_stage_io_contract_fields_are_layered(self) -> None:
         stage_io = Path("src/slurmforge/config_contract/fields/stage_io.py")
         base = Path("src/slurmforge/config_contract/fields/stage_io_base.py")
         starter = Path("src/slurmforge/config_contract/fields/stage_io_starter.py")

@@ -10,6 +10,7 @@ class FacadePolicyTests(StageBatchSystemTestCase):
         internal_packages = (
             "cli",
             "control",
+            "docs_render",
             "emit",
             "executor",
             "inputs",

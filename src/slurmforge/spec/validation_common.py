@@ -10,8 +10,6 @@ from ..errors import ConfigContractError
 from .models import ExperimentSpec, StageSpec
 from .run_paths import normalize_run_override_path
 
-DEFAULT_RENDEZVOUS_PORT = default_for("stages.*.launcher.rendezvous.port")
-
 
 def resolve_workdir(spec: ExperimentSpec, stage: StageSpec) -> Path:
     workdir = Path(stage.entry.workdir)
@@ -54,7 +52,7 @@ def explicit_int(raw: Any, *, field: str) -> int | None:
 def require_port(raw: Any, *, field: str) -> int:
     value = explicit_int(raw, field=field)
     if value is None:
-        value = DEFAULT_RENDEZVOUS_PORT
+        value = default_for("stages.*.launcher.rendezvous.port")
     if value < 1 or value > 65535:
         raise ConfigContractError(f"`{field}` must be between 1 and 65535")
     return value

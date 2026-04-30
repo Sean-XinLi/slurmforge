@@ -7,8 +7,8 @@ from ..config_contract.default_values import (
     DEFAULT_ENVIRONMENT_NAME,
     DEFAULT_RUNTIME_NAME,
 )
-from ..config_contract.registry import default_for
 from ..config_contract.keys import reject_unknown_config_keys
+from ..config_contract.registry import default_for
 from ..errors import ConfigContractError
 from .models import (
     ControlSpec,
@@ -22,15 +22,6 @@ from .models import (
 )
 from .parse_common import optional_mapping, require_mapping
 
-DEFAULT_CONTROL_CPUS = default_for("orchestration.control.cpus")
-DEFAULT_CONTROL_ENVIRONMENT = default_for("orchestration.control.environment")
-DEFAULT_CONTROL_MEM = default_for("orchestration.control.mem")
-DEFAULT_CONTROL_PARTITION = default_for("orchestration.control.partition")
-DEFAULT_CONTROL_TIME_LIMIT = default_for("orchestration.control.time_limit")
-DEFAULT_EXECUTOR_MODULE = default_for("runtime.executor.module")
-DEFAULT_PYTHON_MIN_VERSION = default_for("runtime.executor.python.min_version")
-
-
 def parse_python_runtime(raw: Any, *, name: str) -> PythonRuntimeSpec:
     data = require_mapping(raw, name)
     reject_unknown_config_keys(data, parent=name)
@@ -38,7 +29,10 @@ def parse_python_runtime(raw: Any, *, name: str) -> PythonRuntimeSpec:
         raise ConfigContractError(f"`{name}.bin` is required")
     return PythonRuntimeSpec(
         bin=str(data["bin"]),
-        min_version=str(data.get("min_version") or DEFAULT_PYTHON_MIN_VERSION),
+        min_version=str(
+            data.get("min_version")
+            or default_for("runtime.executor.python.min_version")
+        ),
     )
 
 
@@ -47,7 +41,9 @@ def parse_executor_runtime(raw: Any) -> ExecutorRuntimeSpec:
     reject_unknown_config_keys(data, parent="runtime.executor")
     return ExecutorRuntimeSpec(
         python=parse_python_runtime(data.get("python"), name="runtime.executor.python"),
-        executor_module=str(data.get("module") or DEFAULT_EXECUTOR_MODULE),
+        executor_module=str(
+            data.get("module") or default_for("runtime.executor.module")
+        ),
     )
 
 
@@ -137,26 +133,30 @@ def parse_orchestration(raw: Any) -> OrchestrationSpec:
     reject_unknown_config_keys(data, parent="orchestration")
     control = optional_mapping(data.get("control"), "orchestration.control")
     reject_unknown_config_keys(control, parent="orchestration.control")
+    default_control_partition = default_for("orchestration.control.partition")
+    default_control_mem = default_for("orchestration.control.mem")
+    default_control_time_limit = default_for("orchestration.control.time_limit")
+    default_control_environment = default_for("orchestration.control.environment")
     return OrchestrationSpec(
         control=ControlSpec(
             partition=(
-                DEFAULT_CONTROL_PARTITION
+                default_control_partition
                 if control.get("partition") in (None, "")
                 else str(control.get("partition"))
             ),
-            cpus=int(control.get("cpus", DEFAULT_CONTROL_CPUS)),
+            cpus=int(control.get("cpus", default_for("orchestration.control.cpus"))),
             mem=(
-                DEFAULT_CONTROL_MEM
+                default_control_mem
                 if control.get("mem") in (None, "")
                 else str(control.get("mem"))
             ),
             time_limit=(
-                DEFAULT_CONTROL_TIME_LIMIT
+                default_control_time_limit
                 if control.get("time_limit") in (None, "")
                 else str(control.get("time_limit"))
             ),
             environment=(
-                DEFAULT_CONTROL_ENVIRONMENT
+                default_control_environment
                 if control.get("environment") in (None, "")
                 else str(control.get("environment"))
             ),

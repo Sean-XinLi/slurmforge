@@ -91,6 +91,26 @@ class ConfigContractShapeTests(StageBatchSystemTestCase):
                 violations.append(str(path))
         self.assertEqual(violations, [])
 
+    def test_spec_layer_does_not_alias_config_defaults_at_import_time(self) -> None:
+        violations: list[str] = []
+        checked = [
+            *Path("src/slurmforge/spec").glob("*.py"),
+            *Path("src/slurmforge/spec/stage_parse").glob("*.py"),
+        ]
+        for path in sorted(checked):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in tree.body:
+                if not isinstance(node, ast.Assign):
+                    continue
+                if any(
+                    isinstance(child, ast.Call)
+                    and isinstance(child.func, ast.Name)
+                    and child.func.id == "default_for"
+                    for child in ast.walk(node)
+                ):
+                    violations.append(f"{path}:{node.lineno}")
+        self.assertEqual(violations, [])
+
     def test_plan_models_do_not_reexport_workflow_gates(self) -> None:
         text = Path("src/slurmforge/plans/train_eval.py").read_text(encoding="utf-8")
         for name in ("TRAIN_GROUP_GATE", "EVAL_SHARD_GATE", "FINAL_GATE"):

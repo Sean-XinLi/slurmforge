@@ -10,9 +10,6 @@ from ..bindings import binding_injected_value
 from .args import args_to_argv, flag
 from .command import command_entry_command, python_script_command
 
-DEFAULT_PYTHON_BIN = default_for("runtime.executor.python.bin")
-DEFAULT_STAGE_LAUNCHER_TYPE = default_for("stages.*.launcher.type")
-
 
 def build_shell_script(
     instance: StageInstancePlan, bindings: tuple[InputBinding, ...]
@@ -55,10 +52,12 @@ def _build_command(
         if injected_flag and injected is not None:
             extra_args.extend([flag(str(injected_flag)), injected])
     launcher = instance.launcher_plan
-    launcher_type = launcher.type or DEFAULT_STAGE_LAUNCHER_TYPE
+    launcher_type = launcher.type or default_for("stages.*.launcher.type")
     runtime_user = instance.runtime_plan.user
     python_bin = (
-        runtime_user.python.bin if runtime_user is not None else DEFAULT_PYTHON_BIN
+        runtime_user.python.bin
+        if runtime_user is not None
+        else default_for("runtime.executor.python.bin")
     )
     if entry.type == ENTRY_PYTHON_SCRIPT:
         return python_script_command(
