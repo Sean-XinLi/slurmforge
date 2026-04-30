@@ -7,7 +7,7 @@ from ..root_model.runs import collect_stage_statuses
 from ..root_model.snapshots import refresh_root_status
 from ..status.query import state_matches
 from ..storage.batch_materialization_records import read_materialization_status
-from ..storage.execution_index import iter_execution_batch_roots
+from ..storage.runtime_batches import iter_runtime_batch_roots
 from ..storage.workflow import read_workflow_status
 from ..submission.reconcile import reconcile_root_submissions
 
@@ -61,7 +61,7 @@ def render_status_lines(
             lines.append(
                 f"[STATUS] control state={workflow_state} jobs={job_id} reason={reason}"
             )
-        for stage_root in iter_execution_batch_roots(root):
+        for stage_root in iter_runtime_batch_roots(root):
             materialization = read_materialization_status(stage_root)
             if materialization is None:
                 continue

@@ -4,9 +4,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .gate_ledger import submitted_gate_records
-from .state import save_workflow_state
+from ..storage.runtime_batches import iter_runtime_batch_records
 from ..storage.workflow import write_workflow_status
+from ..submission.ledger import submitted_group_job_ids
+from .gate_ledger import submitted_gate_records
 
 
 TRAIN_STAGE = "train"
@@ -20,13 +21,6 @@ class PipelineAdvanceResult:
     submitted_stage_job_ids: dict[str, dict[str, str]] = field(default_factory=dict)
     submitted_gate_job_ids: dict[str, str] = field(default_factory=dict)
     completed: bool = False
-
-
-def submitted_stages(state: dict[str, Any]) -> dict[str, dict[str, str]]:
-    value = state.setdefault("submitted_stages", {})
-    if not isinstance(value, dict):
-        state["submitted_stages"] = {}
-    return state["submitted_stages"]
 
 
 def train_groups(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -52,17 +46,26 @@ def submitted_gate_job_ids(pipeline_root: Path) -> dict[str, str]:
     }
 
 
+def submitted_stage_job_ids(pipeline_root: Path) -> dict[str, dict[str, str]]:
+    stage_jobs: dict[str, dict[str, str]] = {}
+    for record in iter_runtime_batch_records(pipeline_root):
+        root = record.get("stage_batch_root")
+        if not root:
+            continue
+        job_ids = submitted_group_job_ids(Path(str(root)))
+        if not job_ids:
+            continue
+        stage_jobs[_stage_job_key(record)] = job_ids
+    return stage_jobs
+
+
 def result_from_state(
     pipeline_root: Path, state: dict[str, Any]
 ) -> PipelineAdvanceResult:
     return PipelineAdvanceResult(
         pipeline_root=str(pipeline_root),
         state=str(state.get("state") or "unknown"),
-        submitted_stage_job_ids={
-            stage: dict(job_ids)
-            for stage, job_ids in submitted_stages(state).items()
-            if isinstance(job_ids, dict)
-        },
+        submitted_stage_job_ids=submitted_stage_job_ids(pipeline_root),
         submitted_gate_job_ids=submitted_gate_job_ids(pipeline_root),
         completed=str(state.get("state") or "") in {"success", "failed", "blocked"},
     )
@@ -80,7 +83,7 @@ def set_workflow_status(
         status,
         reason=reason,
         gate_jobs=submitted_gate_records(pipeline_root),
-        submitted_stages=submitted_stages(state),
+        stage_jobs=submitted_stage_job_ids(pipeline_root),
         train_groups=train_groups(state),
         final_gate=final_gate_state(state),
     )
@@ -90,15 +93,7 @@ def stage_key(stage_name: str, *, group_id: str | None = None) -> str:
     return stage_name if group_id is None else f"{stage_name}:{group_id}"
 
 
-def record_stage_jobs(
-    pipeline_root: Path,
-    state: dict[str, Any],
-    stage_name: str,
-    group_job_ids: dict[str, str],
-    *,
-    group_id: str | None = None,
-) -> None:
-    submitted_stages(state)[stage_key(stage_name, group_id=group_id)] = dict(
-        group_job_ids
-    )
-    save_workflow_state(pipeline_root, state)
+def _stage_job_key(record: dict[str, Any]) -> str:
+    stage_name = str(record.get("stage_name") or "")
+    shard_id = str(record.get("shard_id") or "")
+    return stage_key(stage_name, group_id=shard_id or None)

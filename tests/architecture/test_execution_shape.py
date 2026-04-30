@@ -63,12 +63,19 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
 
     def test_train_eval_control_runtime_is_split_by_responsibility(self) -> None:
         control_root = Path("src/slurmforge/control")
+        self.assertFalse((control_root / "eval_shard.py").exists())
         for name in (
-            "eval_shard.py",
+            "eval_blocking.py",
+            "eval_materialization.py",
+            "eval_reconcile.py",
+            "eval_selection.py",
+            "eval_transition.py",
             "final_gate.py",
             "gate_ledger.py",
             "gates.py",
+            "initial_submit.py",
             "stage_submit.py",
+            "train_transition.py",
             "train_group.py",
             "workflow.py",
             "terminal.py",

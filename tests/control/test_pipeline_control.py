@@ -76,7 +76,6 @@ class PipelineControlTests(StageBatchSystemTestCase):
                     "pipeline_kind",
                     "state",
                     "current_stage",
-                    "submitted_stages",
                     "train_groups",
                     "final_gate",
                 },
@@ -119,8 +118,11 @@ class PipelineControlTests(StageBatchSystemTestCase):
             ledger = json.loads(
                 (pipeline_root / "control" / "gate_ledger.json").read_text()
             )
-            index = json.loads(
-                (pipeline_root / "execution" / "batches.json").read_text()
+            catalog = json.loads(
+                (pipeline_root / "execution" / "stage_catalog.json").read_text()
+            )
+            runtime_batches = json.loads(
+                (pipeline_root / "execution" / "runtime_batches.json").read_text()
             )
             workflow_state = json.loads(
                 (pipeline_root / "control" / "workflow_state.json").read_text()
@@ -135,18 +137,29 @@ class PipelineControlTests(StageBatchSystemTestCase):
             self.assertEqual(
                 [
                     (batch["stage_name"], batch["role"], batch["shard_id"])
-                    for batch in index["batches"]
+                    for batch in catalog["batches"]
+                ],
+                [
+                    ("train", "pipeline_stage", ""),
+                    ("eval", "pipeline_stage", ""),
+                ],
+            )
+            self.assertEqual(
+                [
+                    (batch["stage_name"], batch["role"], batch["shard_id"])
+                    for batch in runtime_batches["batches"]
                 ],
                 [
                     ("train", "pipeline_entry", ""),
                     ("eval", "eval_shard", "group_001"),
-                    ("eval", "pipeline_plan", ""),
                 ],
             )
             group = workflow_state["train_groups"]["group_001"]
             self.assertEqual(
                 group["terminal_dependency_gate_key"], "eval_shard:group_001"
             )
+            self.assertNotIn("train_job_id", group)
+            self.assertNotIn("eval_job_ids", group)
 
     def test_train_submission_reuses_partial_stage_submission_without_duplicate(
         self,

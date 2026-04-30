@@ -8,8 +8,8 @@ from ..root_model.detection import (
 )
 from ..slurm import SlurmClient, SlurmClientProtocol
 from ..status.reconcile import reconcile_stage_batch_with_slurm
-from ..storage.execution_index import iter_execution_batch_roots
 from ..storage.plan_reader import load_execution_stage_batch_plan
+from ..storage.runtime_batches import iter_runtime_batch_roots
 from .ledger import submitted_group_job_ids
 
 
@@ -49,7 +49,7 @@ def reconcile_root_submissions(
             )
         return
     if is_train_eval_pipeline_root(root):
-        for stage_root in iter_execution_batch_roots(root, status_scope=True):
+        for stage_root in iter_runtime_batch_roots(root):
             batch = load_execution_stage_batch_plan(stage_root)
             if stage is not None and batch.stage_name != stage:
                 continue

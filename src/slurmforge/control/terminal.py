@@ -9,6 +9,7 @@ from ..root_model.snapshots import refresh_train_eval_pipeline_status
 from ..storage.workflow import write_workflow_status
 from .gate_ledger import submitted_gate_records
 from .state import record_workflow_event, save_workflow_state
+from .state_model import submitted_stage_job_ids
 
 
 def complete_pipeline(
@@ -22,7 +23,7 @@ def complete_pipeline(
         pipeline_root,
         final_state,
         gate_jobs=submitted_gate_records(pipeline_root),
-        submitted_stages=state.get("submitted_stages") or {},
+        stage_jobs=submitted_stage_job_ids(pipeline_root),
         train_groups=state.get("train_groups") or {},
         final_gate=state.get("final_gate") or {},
     )

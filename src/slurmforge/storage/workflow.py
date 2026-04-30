@@ -15,7 +15,6 @@ def default_workflow_state(plan: TrainEvalPipelinePlan) -> dict[str, Any]:
         "pipeline_kind": getattr(plan, "pipeline_kind", TRAIN_EVAL_PIPELINE_KIND),
         "state": "planned",
         "current_stage": plan.stage_order[0] if plan.stage_order else None,
-        "submitted_stages": {},
         "train_groups": {},
         "final_gate": {"state": "pending"},
     }

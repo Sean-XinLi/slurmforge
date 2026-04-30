@@ -16,8 +16,13 @@ from pathlib import Path
 
 class InputResolutionTests(StageBatchSystemTestCase):
     def test_pipeline_dependency_resolution_is_contract_driven(self) -> None:
-        control_source = Path("src/slurmforge/control/eval_shard.py").read_text(
-            encoding="utf-8"
+        control_source = "\n".join(
+            Path(f"src/slurmforge/control/{name}").read_text(encoding="utf-8")
+            for name in (
+                "eval_materialization.py",
+                "eval_selection.py",
+                "train_transition.py",
+            )
         )
         self.assertNotIn("upstream_bindings_from_train_batch", control_source)
         self.assertNotIn('kind="eval"', control_source)

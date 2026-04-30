@@ -78,7 +78,9 @@ Train/eval pipelines use short-lived control jobs, not a long-running orchestrat
 
 `control/gate_ledger.json` is the authoritative ledger for train-group, eval-shard, and final control gate submissions. It records `submitting` before `sbatch`, `submitted` after a scheduler job id is known, and `uncertain` when a retry would risk duplicate control jobs.
 
-`execution/batches.json` is the authoritative index of materialized stage batch roots under a pipeline. Status and reconcile read this index instead of recursively scanning `stage_batches/**`.
+`execution/stage_catalog.json` is the catalog of planned pipeline stage batch roots. It includes train and eval stage plans even when eval is not yet submitted, so resubmit and inspection commands can reason about the full declared pipeline.
+
+`execution/runtime_batches.json` is the runtime registry of batch roots that participate in the current execution. It starts with the train entry batch and gains one eval shard per terminal train group. Status and reconcile read this registry instead of recursively scanning `stage_batches/**`.
 
 Each gate resolves the next declared inputs, binds `upstream_output` from successful upstream `stage_outputs.json`, materializes only the relevant eval shard, and marks unresolved required inputs as `blocked`.
 

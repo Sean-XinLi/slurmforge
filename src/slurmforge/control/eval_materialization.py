@@ -9,78 +9,21 @@ from ..materialization.stage_batch import (
     materialize_stage_batch,
 )
 from ..planner.stage_batch import compile_stage_batch
-from ..plans.train_eval import EVAL_SHARD_GATE, TRAIN_GROUP_GATE
+from ..plans.train_eval import TRAIN_GROUP_GATE
 from ..resolver.train_eval_pipeline import resolve_stage_inputs_for_train_eval_pipeline
 from ..root_model.snapshots import (
     refresh_stage_batch_status,
     refresh_train_eval_pipeline_status,
 )
-from ..slurm import SlurmClientProtocol
 from ..spec import load_experiment_spec_from_snapshot
-from ..status.machine import commit_stage_status
-from ..status.models import StageStatusRecord, TERMINAL_STATES
-from ..status.reader import read_stage_status
-from ..storage.execution_index import upsert_execution_batch
-from ..storage.plan_reader import (
-    load_execution_stage_batch_plan,
-    run_definitions_from_stage_batch,
-)
-from ..submission.reconcile import reconcile_batch_submission
+from ..storage.plan_reader import load_execution_stage_batch_plan
+from ..storage.runtime_batches import upsert_runtime_batch
+from .eval_blocking import mark_blocked_eval_runs
+from .eval_selection import eval_shard_root, group_run_definitions
 from .gate_ledger import gate_ledger_key
 from .project import project_root_from_pipeline
 from .state import record_workflow_event, save_workflow_state
-from .state_model import EVAL_STAGE, TRAIN_STAGE, train_groups
-from .train_group import group_plan
-
-
-def eval_shard_root(plan, group_id: str) -> Path:
-    return Path(plan.root_dir) / "stage_batches" / EVAL_STAGE / "shards" / group_id
-
-
-def group_run_definitions(plan, group_id: str):
-    train_group = group_plan(plan.stage_batches[TRAIN_STAGE], group_id)
-    run_ids = set(train_group.run_ids)
-    return tuple(
-        run
-        for run in run_definitions_from_stage_batch(plan.stage_batches[EVAL_STAGE])
-        if run.run_id in run_ids
-    )
-
-
-def mark_blocked_eval_runs(
-    shard_batch,
-    blocked_reasons: dict[str, str],
-    *,
-    selected_run_ids: set[str],
-) -> list[str]:
-    blocked: list[str] = []
-    root = Path(shard_batch.submission_root)
-    instances_by_run = {
-        instance.run_id: instance for instance in shard_batch.stage_instances
-    }
-    for run_id, instance in instances_by_run.items():
-        if run_id in selected_run_ids:
-            continue
-        blocked.append(run_id)
-        run_dir = root / instance.run_dir_rel
-        current = read_stage_status(run_dir)
-        if current is not None and current.state in TERMINAL_STATES:
-            continue
-        commit_stage_status(
-            run_dir,
-            StageStatusRecord(
-                schema_version=SchemaVersion.STATUS,
-                stage_instance_id=instance.stage_instance_id,
-                run_id=instance.run_id,
-                stage_name=instance.stage_name,
-                state="blocked",
-                failure_class="upstream_output_unavailable",
-                reason=blocked_reasons.get(run_id)
-                or "required upstream stage output was not available",
-            ),
-            source="pipeline_gate",
-        )
-    return sorted(blocked)
+from .state_model import EVAL_STAGE, train_groups
 
 
 def ensure_eval_shard_materialized(
@@ -111,7 +54,7 @@ def ensure_eval_shard_materialized(
         materialize_stage_batch(
             full_batch, spec_snapshot=spec.raw, pipeline_root=pipeline_root
         )
-    upsert_execution_batch(
+    upsert_runtime_batch(
         pipeline_root,
         full_batch,
         role="eval_shard",
@@ -179,19 +122,3 @@ def ensure_eval_shard_materialized(
         blocked_run_ids=blocked,
     )
     return selected_batch
-
-
-def reconcile_eval_shard(
-    pipeline_root: Path,
-    shard_root: Path,
-    *,
-    client: SlurmClientProtocol,
-    missing_output_grace_seconds: int,
-) -> None:
-    reconcile_batch_submission(
-        shard_root,
-        client=client,
-        missing_output_grace_seconds=missing_output_grace_seconds,
-    )
-    refresh_stage_batch_status(shard_root)
-    refresh_train_eval_pipeline_status(pipeline_root)

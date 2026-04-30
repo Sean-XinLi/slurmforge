@@ -12,6 +12,7 @@ from ..slurm import SlurmClientProtocol
 from ..status.models import TERMINAL_STATES
 from ..status.reader import read_stage_status
 from ..status.reconcile import reconcile_stage_batch_with_slurm
+from ..submission.ledger import submitted_group_job_ids
 from .state_model import submitted_gate_job_ids, train_groups
 
 
@@ -43,16 +44,22 @@ def group_terminal(batch, group_id: str) -> bool:
     )
 
 
-def initialize_train_groups(
-    state: dict[str, Any], train_batch, group_job_ids: dict[str, str]
-) -> None:
+def initialize_train_groups(state: dict[str, Any], train_batch) -> None:
     groups = train_groups(state)
     for group in train_batch.group_plans:
         record = groups.setdefault(group.group_id, {})
         record.setdefault("state", "train_submitted")
-        record["train_job_id"] = group_job_ids[group.group_id]
         record["run_ids"] = list(group.run_ids)
         record["stage_instance_ids"] = list(group.stage_instance_ids)
+
+
+def submitted_train_group_job_id(train_batch, group_id: str) -> str:
+    job_ids = submitted_group_job_ids(Path(train_batch.submission_root))
+    if group_id not in job_ids:
+        raise ConfigContractError(
+            f"Train group `{group_id}` has no submitted scheduler job id"
+        )
+    return job_ids[group_id]
 
 
 def reconcile_train_group(
@@ -60,13 +67,12 @@ def reconcile_train_group(
     train_batch,
     group_id: str,
     *,
-    train_job_id: str,
     client: SlurmClientProtocol,
     missing_output_grace_seconds: int,
 ) -> None:
     reconcile_stage_batch_with_slurm(
         train_batch,
-        group_job_ids={group_id: train_job_id},
+        group_job_ids={group_id: submitted_train_group_job_id(train_batch, group_id)},
         client=client,
         missing_output_grace_seconds=missing_output_grace_seconds,
     )

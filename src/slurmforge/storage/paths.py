@@ -37,8 +37,12 @@ def root_ref_path(run_dir: Path) -> Path:
     return Path(run_dir) / "root_ref.json"
 
 
-def execution_index_path(pipeline_root: Path) -> Path:
-    return Path(pipeline_root) / "execution" / "batches.json"
+def stage_catalog_path(pipeline_root: Path) -> Path:
+    return Path(pipeline_root) / "execution" / "stage_catalog.json"
+
+
+def runtime_batches_path(pipeline_root: Path) -> Path:
+    return Path(pipeline_root) / "execution" / "runtime_batches.json"
 
 
 def next_attempt_id(run_dir: Path) -> str:

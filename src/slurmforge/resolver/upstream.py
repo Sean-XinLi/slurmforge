@@ -11,7 +11,7 @@ from ..contracts import (
 )
 from ..errors import ConfigContractError
 from ..lineage.query import find_bound_input, iter_lineage_source_roots
-from ..root_model.runs import iter_stage_run_dirs
+from ..root_model.runs import iter_runtime_stage_run_dirs
 from ..outputs.records import load_stage_outputs
 from ..storage.plan_reader import plan_for_run_dir
 from .output_refs import (
@@ -58,7 +58,7 @@ def _find_upstream_output_direct(root: Path, lineage_ref: str) -> dict | None:
         return None
     producer, output_name = lineage_ref.split(":", 1)
     try:
-        run_dirs = tuple(iter_stage_run_dirs(root))
+        run_dirs = tuple(iter_runtime_stage_run_dirs(root))
     except ConfigContractError:
         return None
     for run_dir in run_dirs:

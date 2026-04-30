@@ -85,7 +85,8 @@ Train/eval pipeline root:
       eval_shard_group_001_gate.sbatch
       final_gate.sbatch
   execution/
-    batches.json
+    stage_catalog.json
+    runtime_batches.json
   notifications/
     records/
       train_eval_pipeline_finished.email.json

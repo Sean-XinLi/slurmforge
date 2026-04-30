@@ -11,7 +11,7 @@ from ..root_model.snapshots import (
 from ..slurm import SlurmClientProtocol
 from ..storage.plan_reader import load_stage_batch_plan
 from ..submission.reconcile import reconcile_batch_submission
-from .eval_shard import reconcile_eval_shard
+from .eval_reconcile import reconcile_eval_shard
 from .gates import submit_control_gate
 from .stage_runtime import batch_terminal
 from .state import save_workflow_state
