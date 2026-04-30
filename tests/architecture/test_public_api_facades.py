@@ -47,7 +47,6 @@ class PublicApiFacadeTests(StageBatchSystemTestCase):
             "EnvironmentPlan",
             "EnvironmentSourcePlan",
             "ExecutorRuntimePlan",
-            "FinalizerPlan",
             "GroupPlan",
             "LauncherPlan",
             "NotificationPlan",
@@ -82,10 +81,10 @@ class PublicApiFacadeTests(StageBatchSystemTestCase):
             "SubmitGeneration",
             "create_submit_generation",
             "dependency_for",
-            "finalizer_dependency_group_ids",
             "load_ready_prepared_submission",
             "mark_stage_batch_queued",
             "read_submission_ledger",
+            "submit_stage_batch_notification",
             "write_submission_ledger",
         }
         planner_internal = set()

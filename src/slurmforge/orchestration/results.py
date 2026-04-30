@@ -15,7 +15,7 @@ class StageBatchExecutionResult:
     mode: ExecutionMode
     submitted: bool = False
     scheduler_job_ids: dict[str, str] = field(default_factory=dict)
-    notification_job_id: str | None = None
+    notification_job_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,7 @@ class SourcedStageBatchExecutionResult:
     mode: ExecutionMode
     submitted: bool = False
     scheduler_job_ids: dict[str, str] = field(default_factory=dict)
-    notification_job_id: str | None = None
+    notification_job_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

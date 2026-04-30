@@ -7,7 +7,7 @@ from ..materialization.stage_batch import materialize_stage_batch
 from ..materialization.train_eval import materialize_train_eval_pipeline
 from ..plans.sources import SourcedStageBatchPlan
 from ..spec import ExperimentSpec
-from ..submission.finalizer import submit_stage_batch_finalizer
+from ..submission.notifications import submit_stage_batch_notification
 from ..submission.generation import prepare_stage_submission
 from ..submission.models import PreparedSubmission
 from ..submission.submitter import submit_prepared_stage_batch
@@ -48,16 +48,16 @@ def emit_sourced_stage_batch(
             mode="emit",
         )
     group_job_ids = _submit_materialized_stage_batch(prepared)
-    notification = submit_stage_batch_finalizer(concrete.batch, group_job_ids)
+    notification = submit_stage_batch_notification(concrete.batch, group_job_ids)
     return SourcedStageBatchExecutionResult(
         plan=concrete,
         root=concrete.batch.submission_root,
         mode="submit",
         submitted=True,
         scheduler_job_ids=group_job_ids,
-        notification_job_id=None
+        notification_job_ids=()
         if notification is None
-        else notification.scheduler_job_id,
+        else notification.scheduler_job_ids,
     )
 
 
@@ -68,15 +68,15 @@ def emit_stage_batch(
     if not submit:
         return StageBatchExecutionResult(root=batch.submission_root, mode="emit")
     group_job_ids = _submit_materialized_stage_batch(prepared)
-    notification = submit_stage_batch_finalizer(batch, group_job_ids)
+    notification = submit_stage_batch_notification(batch, group_job_ids)
     return StageBatchExecutionResult(
         root=batch.submission_root,
         mode="submit",
         submitted=True,
         scheduler_job_ids=group_job_ids,
-        notification_job_id=None
+        notification_job_ids=()
         if notification is None
-        else notification.scheduler_job_id,
+        else notification.scheduler_job_ids,
     )
 
 

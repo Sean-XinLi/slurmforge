@@ -23,9 +23,9 @@ class StageSbatchNotificationTests(StageBatchSystemTestCase):
                     "notifications": {
                         "email": {
                             "enabled": True,
-                            "to": ["you@example.com"],
-                            "on": ["batch_finished"],
-                            "mode": "summary",
+                            "recipients": ["you@example.com"],
+                            "events": ["batch_finished"],
+                            "when": "afterany",
                         }
                     },
                 },
@@ -40,6 +40,7 @@ class StageSbatchNotificationTests(StageBatchSystemTestCase):
             notify_path = Path(notifications[0]["sbatch_path"])
             self.assertTrue(notify_path.exists())
             notify_text = notify_path.read_text()
-            self.assertIn("slurmforge.notifications.finalizer_runtime", notify_text)
+            self.assertIn("[NOTIFY] event=${NOTIFICATION_EVENT}", notify_text)
+            self.assertNotIn("slurmforge.notifications.finalizer_runtime", notify_text)
             submit_text = Path(manifest["submit_script"]).read_text()
             self.assertNotIn("notify_batch_finished", submit_text)

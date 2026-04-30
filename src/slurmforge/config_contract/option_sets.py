@@ -52,7 +52,9 @@ DISPATCH_POLICY_BEST_EFFORT = "best_effort"
 
 EMAIL_EVENT_BATCH_FINISHED = "batch_finished"
 EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED = "train_eval_pipeline_finished"
-EMAIL_MODE_SUMMARY = "summary"
+EMAIL_WHEN_AFTERANY = "afterany"
+EMAIL_WHEN_AFTEROK = "afterok"
+EMAIL_WHEN_AFTERNOTOK = "afternotok"
 
 GPU_SIZING_ESTIMATOR_HEURISTIC = "heuristic"
 
@@ -161,7 +163,11 @@ EMAIL_EVENTS = (
     ),
 )
 
-EMAIL_MODES = (ConfigOption(EMAIL_MODE_SUMMARY, "Send a compact workflow summary."),)
+EMAIL_WHENS = (
+    ConfigOption(EMAIL_WHEN_AFTERANY, "Notify after upstream jobs finish in any state."),
+    ConfigOption(EMAIL_WHEN_AFTEROK, "Notify only after upstream jobs succeed."),
+    ConfigOption(EMAIL_WHEN_AFTERNOTOK, "Notify only after upstream jobs fail."),
+)
 
 GPU_SIZING_ESTIMATORS = (
     ConfigOption(

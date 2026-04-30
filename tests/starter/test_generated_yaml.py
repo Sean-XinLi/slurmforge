@@ -37,11 +37,11 @@ class GeneratedYamlTests(StageBatchSystemTestCase):
                     text,
                 )
                 self.assertIn(
-                    option_comment("notifications.email.on", indent=4).strip(),
+                    option_comment("notifications.email.events", indent=4).strip(),
                     text,
                 )
                 self.assertIn(
-                    option_comment("notifications.email.mode", indent=4).strip(),
+                    option_comment("notifications.email.when", indent=4).strip(),
                     text,
                 )
                 self.assertIn(
@@ -63,5 +63,5 @@ class GeneratedYamlTests(StageBatchSystemTestCase):
                 )
                 self.assertFalse(payload["notifications"]["email"]["enabled"])
                 self.assertEqual(
-                    payload["notifications"]["email"]["on"], ["batch_finished"]
+                    payload["notifications"]["email"]["events"], ["batch_finished"]
                 )

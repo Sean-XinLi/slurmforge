@@ -4,7 +4,6 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 from tests.helpers.overlays import apply_overlay
 from tests.support.case import StageBatchSystemTestCase
@@ -98,7 +97,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
             materialize_train_eval_pipeline_for_test(plan, spec_snapshot=spec.raw)
             client = FakeSlurmClient()
             submit_initial_pipeline(plan, client=client)
-            train_job_id = client.submissions[0][2]
+            train_job_id = client.submissions[0].job_id
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             client.set_array_task_state(train_job_id, 0, "COMPLETED")
@@ -202,9 +201,9 @@ class PipelineControlTests(StageBatchSystemTestCase):
             submit_initial_pipeline(plan, client=client)
 
             stage_submissions = [
-                path.name
-                for path, _, _ in client.submissions
-                if path.name.endswith(".sbatch")
+                submission.path.name
+                for submission in client.submissions
+                if submission.path.name.endswith(".sbatch")
             ]
             self.assertIn(f"{second_group}.sbatch", stage_submissions)
             self.assertNotIn(f"{first_group}.sbatch", stage_submissions)
@@ -226,9 +225,9 @@ class PipelineControlTests(StageBatchSystemTestCase):
                         "notifications": {
                             "email": {
                                 "enabled": True,
-                                "to": ["you@example.com"],
-                                "on": ["train_eval_pipeline_finished"],
-                                "mode": "summary",
+                                "recipients": ["you@example.com"],
+                                "events": ["train_eval_pipeline_finished"],
+                                "when": "afterany",
                             }
                         },
                     }
@@ -240,7 +239,7 @@ class PipelineControlTests(StageBatchSystemTestCase):
             pipeline_root = Path(plan.root_dir)
             client = FakeSlurmClient()
             submit_initial_pipeline(plan, client=client)
-            train_job_id = client.submissions[0][2]
+            train_job_id = client.submissions[0].job_id
             train_root = Path(plan.stage_batches["train"].submission_root)
             self.assertEqual(execute_stage_task(train_root, 1, 0), 0)
             client.set_array_task_state(train_job_id, 0, "COMPLETED")
@@ -255,9 +254,9 @@ class PipelineControlTests(StageBatchSystemTestCase):
                 pipeline_root / "stage_batches" / "eval" / "shards" / "group_001"
             )
             eval_job_id = next(
-                job_id
-                for path, _, job_id in client.submissions
-                if path.is_relative_to(eval_shard / "submit")
+                submission.job_id
+                for submission in client.submissions
+                if submission.path.is_relative_to(eval_shard / "submit")
             )
             self.assertEqual(execute_stage_task(eval_shard, 1, 0), 0)
             client.set_array_task_state(eval_job_id, 0, "COMPLETED")
@@ -269,33 +268,40 @@ class PipelineControlTests(StageBatchSystemTestCase):
                 missing_output_grace_seconds=0,
             )
 
-            sent: list[dict] = []
+            advance_pipeline_once(
+                pipeline_root,
+                gate=FINAL_GATE,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
+            advance_pipeline_once(
+                pipeline_root,
+                gate=FINAL_GATE,
+                client=client,
+                missing_output_grace_seconds=0,
+            )
 
-            def fake_send(**kwargs):
-                sent.append(kwargs)
-
-            with patch(
-                "slurmforge.notifications.delivery.send_email_summary",
-                side_effect=fake_send,
-            ):
-                advance_pipeline_once(
-                    pipeline_root,
-                    gate=FINAL_GATE,
-                    client=client,
-                    missing_output_grace_seconds=0,
-                )
-                advance_pipeline_once(
-                    pipeline_root,
-                    gate=FINAL_GATE,
-                    client=client,
-                    missing_output_grace_seconds=0,
-                )
-
-            self.assertEqual(len(sent), 1)
-            self.assertIn("SlurmForge train/eval pipeline finished", sent[0]["body"])
+            notify_submissions = [
+                submission
+                for submission in client.submissions
+                if submission.path.name == "notify_train_eval_pipeline_finished.sbatch"
+            ]
+            self.assertEqual(len(notify_submissions), 1)
+            final_gate_submission = next(
+                submission
+                for submission in client.submissions
+                if submission.path.name == "final_gate.sbatch"
+            )
+            self.assertEqual(
+                notify_submissions[0].options.dependency,
+                f"afterany:{final_gate_submission.job_id}",
+            )
+            self.assertEqual(notify_submissions[0].options.mail_user, "you@example.com")
+            self.assertEqual(notify_submissions[0].options.mail_type, "END")
             record = read_notification_record(
                 pipeline_root, "train_eval_pipeline_finished"
             )
             assert record is not None
-            self.assertEqual(record.state, "sent")
+            self.assertEqual(record.state, "submitted")
             self.assertEqual(record.recipients, ("you@example.com",))
+            self.assertEqual(record.scheduler_job_ids, (notify_submissions[0].job_id,))

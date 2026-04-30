@@ -37,7 +37,7 @@ def print_sourced_stage_batch_execution_result(
             mode=result.mode,
             submitted=result.submitted,
             scheduler_job_ids=result.scheduler_job_ids,
-            notification_job_id=result.notification_job_id,
+            notification_job_ids=result.notification_job_ids,
         ),
         noun=noun,
     )

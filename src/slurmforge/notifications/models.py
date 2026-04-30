@@ -36,19 +36,19 @@ class NotificationSummary:
 
 
 @dataclass(frozen=True)
-class NotificationDeliveryRecord:
+class NotificationSubmissionRecord:
     event: str
     root_kind: str
     root: str
     backend: str
     state: str
     recipients: tuple[str, ...] = ()
-    subject: str = ""
-    sent_at: str = ""
-    reason: str = ""
-    scheduler_job_id: str = ""
-    sbatch_path: str = ""
+    scheduler_job_ids: tuple[str, ...] = ()
+    sbatch_paths: tuple[str, ...] = ()
     barrier_job_ids: tuple[str, ...] = ()
     dependency_job_ids: tuple[str, ...] = ()
+    dependency_type: str = ""
+    mail_type: str = ""
     submitted_at: str = ""
+    reason: str = ""
     schema_version: int = SchemaVersion.NOTIFICATION

@@ -15,11 +15,11 @@ import tempfile
 from pathlib import Path
 
 
-class SubmitFinalizerTests(StageBatchSystemTestCase):
-    def test_batch_notification_finalizer_submits_after_terminal_groups(self) -> None:
+class SubmitNotificationTests(StageBatchSystemTestCase):
+    def test_batch_notification_submits_slurm_mail_after_terminal_groups(self) -> None:
         from slurmforge.notifications.records import read_notification_record
         from slurmforge.submission.dependency_tree import dependency_sink_group_ids
-        from slurmforge.submission.finalizer import submit_stage_batch_finalizer
+        from slurmforge.submission.notifications import submit_stage_batch_notification
         from tests.support.slurm import FakeSlurmClient
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -30,9 +30,9 @@ class SubmitFinalizerTests(StageBatchSystemTestCase):
                     "notifications": {
                         "email": {
                             "enabled": True,
-                            "to": ["you@example.com"],
-                            "on": ["batch_finished"],
-                            "mode": "summary",
+                            "recipients": ["you@example.com"],
+                            "events": ["batch_finished"],
+                            "when": "afterany",
                         }
                     },
                 },
@@ -45,19 +45,18 @@ class SubmitFinalizerTests(StageBatchSystemTestCase):
             client = FakeSlurmClient()
             group_job_ids = submit_prepared_stage_batch(prepared, client=client)
 
-            record = submit_stage_batch_finalizer(batch, group_job_ids, client=client)
+            record = submit_stage_batch_notification(batch, group_job_ids, client=client)
 
             assert record is not None
             self.assertEqual(record.state, "submitted")
-            self.assertEqual(record.scheduler_job_id, "1002")
+            self.assertEqual(record.scheduler_job_ids, ("1002",))
+            self.assertEqual(client.submissions[-1].path.name, "notify_batch_finished.sbatch")
             self.assertEqual(
-                client.submissions[-1][0].name, "notify_batch_finished.sbatch"
+                client.submissions[-1].options.dependency,
+                f"afterany:{group_job_ids['group_001']}",
             )
-            self.assertEqual(
-                client.submissions[-1][1], f"afterany:{group_job_ids['group_001']}"
-            )
-            persisted = read_notification_record(
-                Path(batch.submission_root), "batch_finished"
-            )
+            self.assertEqual(client.submissions[-1].options.mail_user, "you@example.com")
+            self.assertEqual(client.submissions[-1].options.mail_type, "END")
+            persisted = read_notification_record(Path(batch.submission_root), "batch_finished")
             assert persisted is not None
-            self.assertEqual(persisted.scheduler_job_id, record.scheduler_job_id)
+            self.assertEqual(persisted.scheduler_job_ids, record.scheduler_job_ids)

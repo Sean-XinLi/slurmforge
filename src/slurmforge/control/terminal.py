@@ -2,19 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..notifications.delivery import deliver_notification
-from ..root_model.notifications import load_notification_summary_input
 from ..root_model.snapshots import refresh_train_eval_pipeline_status
 from ..storage.workflow import write_workflow_status
 from .gate_ledger import submitted_gate_records
-from .state import record_workflow_event, save_workflow_state
+from .state import save_workflow_state
 from .state_model import submitted_stage_job_ids
 from .state_records import WorkflowState, workflow_state_to_dict
 
 
-def complete_pipeline(
-    pipeline_root: Path, state: WorkflowState, *, notification_plan
-) -> str:
+def complete_pipeline(pipeline_root: Path, state: WorkflowState) -> str:
     final_state = _pipeline_terminal_state(pipeline_root)
     state.state = final_state
     state.current_stage = None
@@ -28,22 +24,6 @@ def complete_pipeline(
         train_groups=state_payload["train_groups"],
         final_gate=state_payload["final_gate"],
     )
-    record = deliver_notification(
-        pipeline_root,
-        event="train_eval_pipeline_finished",
-        notification_plan=notification_plan,
-        summary_input=load_notification_summary_input(
-            pipeline_root, event="train_eval_pipeline_finished"
-        ),
-    )
-    if record is not None:
-        record_workflow_event(
-            pipeline_root,
-            "pipeline_notification",
-            notification_event="train_eval_pipeline_finished",
-            state=record.state,
-            reason=record.reason,
-        )
     return final_state
 
 

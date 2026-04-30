@@ -58,13 +58,13 @@ class GeneratedReadmeTests(StageBatchSystemTestCase):
                 self.assertIn("`CONFIG.sforge.md`: fields used by this starter.", readme)
                 self.assertNotIn("## Common Field Options", readme)
                 self.assertNotIn("| Field | Options | Meaning |", readme)
-                self.assertNotIn("`notifications.email.on`", readme)
+                self.assertNotIn("`notifications.email.events`", readme)
                 self.assertIn("# Starter Config Guide", config_guide)
                 self.assertIn("Template: `" + template + "`", config_guide)
                 self.assertIn("`runs.type`", config_guide)
                 self.assertIn("`matrix`: Plan named cases, each with its own grid.", config_guide)
                 self.assertIn(
-                    "`notifications.email.on`",
+                    "`notifications.email.events`",
                     config_guide,
                 )
                 self.assertIn(

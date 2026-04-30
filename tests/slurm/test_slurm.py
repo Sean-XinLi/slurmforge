@@ -26,12 +26,23 @@ class SlurmParsingTests(StageBatchSystemTestCase):
         self.assertEqual(squeue["200_4"].array_task_id, 4)
 
     def test_fake_slurm_tracks_array_tasks(self) -> None:
+        from slurmforge.slurm import SlurmSubmitOptions
         from tests.support.slurm import FakeSlurmClient
 
         client = FakeSlurmClient()
-        job_id = client.submit(Path("group.sbatch"))
+        job_id = client.submit(
+            Path("group.sbatch"),
+            options=SlurmSubmitOptions(
+                dependency="afterany:999",
+                mail_user="you@example.com",
+                mail_type="END",
+            ),
+        )
         client.set_array_task_state(job_id, 0, "COMPLETED")
 
+        self.assertEqual(client.submissions[0].options.dependency, "afterany:999")
+        self.assertEqual(client.submissions[0].options.mail_user, "you@example.com")
+        self.assertEqual(client.submissions[0].options.mail_type, "END")
         observed = client.query_observed_jobs([job_id])
         self.assertIn(job_id, observed)
         self.assertIn(f"{job_id}_0", observed)

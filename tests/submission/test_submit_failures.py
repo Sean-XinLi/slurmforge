@@ -21,7 +21,7 @@ class SubmitFailureTests(StageBatchSystemTestCase):
         from tests.support.slurm import FakeSlurmClient
 
         class FailingSlurm(FakeSlurmClient):
-            def submit(self, path, *, dependency=None):
+            def submit(self, path, *, options=None):
                 raise RuntimeError("sbatch unavailable")
 
         with tempfile.TemporaryDirectory() as tmp:

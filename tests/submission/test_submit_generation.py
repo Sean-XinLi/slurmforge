@@ -64,7 +64,7 @@ class SubmitGenerationTests(StageBatchSystemTestCase):
             group_job_ids = submit_prepared_stage_batch(prepared, client=client)
 
             self.assertEqual(set(group_job_ids), {"group_001", "group_002"})
-            submitted_paths = {path for path, _dep, _job_id in client.submissions}
+            submitted_paths = {submission.path for submission in client.submissions}
             self.assertNotIn(stale, submitted_paths)
             self.assertEqual(
                 {path.name for path in submitted_paths},
@@ -104,7 +104,7 @@ class SubmitGenerationTests(StageBatchSystemTestCase):
         self.assertFalse(hasattr(submission, "create_submit_generation"))
         self.assertFalse(hasattr(submission, "read_submission_ledger"))
         self.assertFalse(hasattr(submission, "write_submission_ledger"))
-        self.assertFalse(hasattr(submission, "finalizer_dependency_group_ids"))
+        self.assertFalse(hasattr(submission, "submit_stage_batch_notification"))
         self.assertFalse(hasattr(submission, "initialize_submission_ledger"))
         self.assertFalse(hasattr(submission, "append_submission_event"))
         self.assertFalse(hasattr(submission, "submit_stage_batch_with_ledger"))

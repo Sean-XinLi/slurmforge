@@ -3,15 +3,22 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from .models import SlurmJobState
+from .models import SlurmJobState, SlurmSubmitOptions
 from .parsers import parse_sacct_rows, parse_sbatch_job_id, parse_squeue_rows
 
 
 class SlurmClient:
-    def submit(self, path: Path, *, dependency: str | None = None) -> str:
+    def submit(
+        self, path: Path, *, options: SlurmSubmitOptions | None = None
+    ) -> str:
+        submit_options = options or SlurmSubmitOptions()
         cmd = ["sbatch", "--parsable"]
-        if dependency:
-            cmd.append(f"--dependency={dependency}")
+        if submit_options.dependency:
+            cmd.append(f"--dependency={submit_options.dependency}")
+        if submit_options.mail_user:
+            cmd.append(f"--mail-user={submit_options.mail_user}")
+        if submit_options.mail_type:
+            cmd.append(f"--mail-type={submit_options.mail_type}")
         cmd.append(str(path))
         proc = subprocess.run(cmd, check=True, text=True, capture_output=True)
         return parse_sbatch_job_id(proc.stdout)

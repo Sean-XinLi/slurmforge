@@ -48,12 +48,9 @@ def base_config() -> dict[str, Any]:
         "notifications": {
             "email": {
                 "enabled": default_for("notifications.email.enabled"),
-                "to": [],
-                "on": list(default_for("notifications.email.on")),
-                "mode": default_for("notifications.email.mode"),
-                "from": default_for("notifications.email.from"),
-                "sendmail": default_for("notifications.email.sendmail"),
-                "subject_prefix": default_for("notifications.email.subject_prefix"),
+                "recipients": [],
+                "events": list(default_for("notifications.email.events")),
+                "when": default_for("notifications.email.when"),
             }
         },
         "runs": {"type": default_for("runs.type")},

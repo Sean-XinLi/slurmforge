@@ -6,12 +6,9 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class EmailNotificationSpec:
     enabled: bool = False
-    to: tuple[str, ...] = ()
+    recipients: tuple[str, ...] = ()
     events: tuple[str, ...] = ()
-    mode: str = ""
-    from_address: str = ""
-    sendmail: str = ""
-    subject_prefix: str = ""
+    when: str = ""
 
 
 @dataclass(frozen=True)

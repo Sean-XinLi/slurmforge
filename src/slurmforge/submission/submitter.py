@@ -5,7 +5,7 @@ from typing import Literal
 
 from ..errors import ConfigContractError
 from ..io import diagnostic_path, utc_now, write_exception_diagnostic
-from ..slurm import SlurmClient, SlurmClientProtocol
+from ..slurm import SlurmClient, SlurmClientProtocol, SlurmSubmitOptions
 from .dependencies import dependency_for
 from .ledger import (
     append_submission_event,
@@ -66,7 +66,10 @@ def submit_prepared_stage_batch(
             dependency=dependency,
         )
         try:
-            job_id = slurm.submit(Path(record.sbatch_path), dependency=dependency)
+            job_id = slurm.submit(
+                Path(record.sbatch_path),
+                options=SlurmSubmitOptions(dependency=dependency or ""),
+            )
         except Exception as exc:
             diagnostic = write_exception_diagnostic(
                 diagnostic_path(

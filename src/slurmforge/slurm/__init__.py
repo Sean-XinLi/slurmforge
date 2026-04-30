@@ -4,6 +4,7 @@ from .client import SlurmClient
 from .models import (
     SLURM_TERMINAL_STATES,
     SlurmJobState,
+    SlurmSubmitOptions,
     failure_class_for_slurm_state,
     normalize_slurm_state,
     stage_state_for_slurm_state,
@@ -16,6 +17,7 @@ __all__ = [
     "SlurmClient",
     "SlurmClientProtocol",
     "SlurmJobState",
+    "SlurmSubmitOptions",
     "failure_class_for_slurm_state",
     "normalize_slurm_state",
     "parse_sacct_rows",

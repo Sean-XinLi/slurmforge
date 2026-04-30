@@ -18,8 +18,9 @@ from ..workflow_contract import (
 )
 from .eval_reconcile import reconcile_eval_shard
 from .gates import submit_control_gate
+from .notifications import submit_pipeline_terminal_notification
 from .stage_runtime import batch_terminal
-from .state import save_workflow_state
+from .state import record_workflow_event, save_workflow_state
 from .state_model import set_workflow_status, submitted_gate_job_ids
 from .state_records import WorkflowState
 from .terminal import complete_pipeline
@@ -40,6 +41,13 @@ def ensure_final_gate_submitted(
     final = state.final_gate
     existing_job_id = submitted_gate_job_ids(pipeline_root).get(FINAL_GATE)
     if existing_job_id:
+        submit_pipeline_terminal_notification(
+            pipeline_root,
+            plan,
+            final_gate_job_id=existing_job_id,
+            client=client,
+            max_dependency_length=max_dependency_length,
+        )
         final.state = "submitted"
         final.gate_key = FINAL_GATE
         save_workflow_state(pipeline_root, state)
@@ -69,6 +77,21 @@ def ensure_final_gate_submitted(
         WORKFLOW_FINAL_GATE_SUBMITTED,
         reason="all train groups have terminal dependencies; final gate is queued",
     )
+    notification = submit_pipeline_terminal_notification(
+        pipeline_root,
+        plan,
+        final_gate_job_id=final_job_id,
+        client=client,
+        max_dependency_length=max_dependency_length,
+    )
+    if notification is not None:
+        record_workflow_event(
+            pipeline_root,
+            "pipeline_notification_submitted",
+            notification_event="train_eval_pipeline_finished",
+            scheduler_job_ids=list(notification.scheduler_job_ids),
+            recipients=list(notification.recipients),
+        )
     return final_job_id
 
 
@@ -107,4 +130,4 @@ def advance_final(
         if batch_terminal(shard_root):
             record.state = TRAIN_GROUP_TERMINAL
     refresh_train_eval_pipeline_status(pipeline_root)
-    complete_pipeline(pipeline_root, state, notification_plan=plan.notification_plan)
+    complete_pipeline(pipeline_root, state)

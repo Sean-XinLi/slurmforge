@@ -93,15 +93,17 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             self.assertNotIn('state["', text, path.name)
             self.assertNotIn('record["', text, path.name)
 
-    def test_notification_finalizer_runtime_is_not_submission_runtime(self) -> None:
-        submission_finalizer = Path("src/slurmforge/submission/finalizer.py").read_text(
+    def test_notifications_use_slurm_mail_submission_runtime(self) -> None:
+        submission_notifications = Path(
+            "src/slurmforge/submission/notifications.py"
+        ).read_text(
             encoding="utf-8"
         )
-        self.assertNotIn("deliver_notification", submission_finalizer)
-        self.assertNotIn("load_notification_summary_input", submission_finalizer)
-        self.assertNotIn("def run_finalizer", submission_finalizer)
-        runtime = Path("src/slurmforge/notifications/finalizer_runtime.py").read_text(
+        self.assertNotIn("deliver_notification", submission_notifications)
+        self.assertNotIn("load_notification_summary_input", submission_notifications)
+        service = Path("src/slurmforge/submission/notification_mail.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("def run_finalizer", runtime)
-        self.assertIn("deliver_notification", runtime)
+        self.assertIn("mail_user", service)
+        self.assertIn("SlurmSubmitOptions", service)
+        self.assertFalse(Path("src/slurmforge/notifications/finalizer_runtime.py").exists())

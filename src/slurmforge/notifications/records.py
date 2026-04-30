@@ -12,7 +12,7 @@ from ..io import (
     utc_now,
     write_json,
 )
-from .models import NotificationDeliveryRecord
+from .models import NotificationSubmissionRecord
 
 
 def notifications_dir(root: Path) -> Path:
@@ -23,7 +23,9 @@ def notification_records_dir(root: Path) -> Path:
     return notifications_dir(root) / "records"
 
 
-def notification_record_path(root: Path, event: str, backend: str = "email") -> Path:
+def notification_record_path(
+    root: Path, event: str, backend: str = "slurm_mail"
+) -> Path:
     safe_event = event.replace("/", "_")
     safe_backend = backend.replace("/", "_")
     return notification_records_dir(root) / f"{safe_event}.{safe_backend}.json"
@@ -41,40 +43,42 @@ def append_notification_event(root: Path, event: str, **payload: Any) -> None:
         handle.write(json.dumps(to_jsonable(record), sort_keys=True) + "\n")
 
 
-def notification_delivery_record_from_dict(
+def notification_submission_record_from_dict(
     payload: dict[str, Any],
-) -> NotificationDeliveryRecord:
+) -> NotificationSubmissionRecord:
     require_schema(
-        payload, name="notification_delivery", version=SchemaVersion.NOTIFICATION
+        payload, name="notification_submission", version=SchemaVersion.NOTIFICATION
     )
-    return NotificationDeliveryRecord(
+    return NotificationSubmissionRecord(
         event=str(payload["event"]),
         root_kind=str(payload["root_kind"]),
         root=str(payload["root"]),
         backend=str(payload["backend"]),
         state=str(payload["state"]),
         recipients=tuple(str(item) for item in payload.get("recipients", ())),
-        subject=str(payload.get("subject") or ""),
-        sent_at=str(payload.get("sent_at") or ""),
-        reason=str(payload.get("reason") or ""),
-        scheduler_job_id=str(payload.get("scheduler_job_id") or ""),
-        sbatch_path=str(payload.get("sbatch_path") or ""),
+        scheduler_job_ids=tuple(
+            str(item) for item in payload.get("scheduler_job_ids", ())
+        ),
+        sbatch_paths=tuple(str(item) for item in payload.get("sbatch_paths", ())),
         barrier_job_ids=tuple(str(item) for item in payload.get("barrier_job_ids", ())),
         dependency_job_ids=tuple(
             str(item) for item in payload.get("dependency_job_ids", ())
         ),
+        dependency_type=str(payload.get("dependency_type") or ""),
+        mail_type=str(payload.get("mail_type") or ""),
         submitted_at=str(payload.get("submitted_at") or ""),
+        reason=str(payload.get("reason") or ""),
     )
 
 
 def read_notification_record(
-    root: Path, event: str, backend: str = "email"
-) -> NotificationDeliveryRecord | None:
+    root: Path, event: str, backend: str = "slurm_mail"
+) -> NotificationSubmissionRecord | None:
     path = notification_record_path(root, event, backend)
     if not path.exists():
         return None
-    return notification_delivery_record_from_dict(read_json(path))
+    return notification_submission_record_from_dict(read_json(path))
 
 
-def write_notification_record(root: Path, record: NotificationDeliveryRecord) -> None:
+def write_notification_record(root: Path, record: NotificationSubmissionRecord) -> None:
     write_json(notification_record_path(root, record.event, record.backend), record)

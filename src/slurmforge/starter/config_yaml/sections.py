@@ -97,24 +97,18 @@ def render_notifications(lines: list[str], config: dict[str, Any]) -> None:
             "  email:",
             comment_for("notifications.email.enabled", indent=4),
             f"    enabled: {scalar(email['enabled'])}",
-            comment_for("notifications.email.to", indent=4),
-            f"    to: {scalar(email['to'])}",
-            option_comment("notifications.email.on", indent=4),
-            '    "on":',
+            comment_for("notifications.email.recipients", indent=4),
+            f"    recipients: {scalar(email['recipients'])}",
+            option_comment("notifications.email.events", indent=4),
+            "    events:",
         ]
     )
-    for event in email["on"]:
+    for event in email["events"]:
         lines.append(f"      - {scalar(event)}")
     lines.extend(
         [
-            option_comment("notifications.email.mode", indent=4),
-            f"    mode: {scalar(email['mode'])}",
-            comment_for("notifications.email.from", indent=4),
-            f"    from: {scalar(email['from'])}",
-            comment_for("notifications.email.sendmail", indent=4),
-            f"    sendmail: {scalar(email['sendmail'])}",
-            comment_for("notifications.email.subject_prefix", indent=4),
-            f"    subject_prefix: {scalar(email['subject_prefix'])}",
+            option_comment("notifications.email.when", indent=4),
+            f"    when: {scalar(email['when'])}",
             "",
         ]
     )
