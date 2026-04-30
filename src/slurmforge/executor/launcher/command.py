@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shlex
 
-from ...config_contract.options import (
+from ...config_contract.option_sets import (
     LAUNCHER_COMMAND,
     LAUNCHER_MPIRUN,
     LAUNCHER_PYTHON,

@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import (
-    DEFAULT_OUTPUT_JSON_PATH,
-    DEFAULT_OUTPUT_REQUIRED,
-)
-from ...config_contract.options import OUTPUT_KIND_FILE, options_for, options_sentence
-from ...config_schema import reject_unknown_config_keys
+from ...config_contract.option_sets import OUTPUT_KIND_FILE
+from ...config_contract.keys import reject_unknown_config_keys
+from ...config_contract.registry import default_for, options_for, options_sentence
 from ...contracts.output_selectors import normalize_output_selector
 from ...contracts.outputs import (
     FileOutputDiscoveryRule,
@@ -53,10 +50,14 @@ def _parse_output_spec(
     return StageOutputSpec(
         name=output_name,
         kind=kind,
-        required=bool(data.get("required", DEFAULT_OUTPUT_REQUIRED)),
+        required=bool(
+            data.get("required", default_for("stages.*.outputs.*.required"))
+        ),
         discover=discover,
         file="" if file_value in (None, "") else str(file_value),
-        json_path=str(data.get("json_path") or DEFAULT_OUTPUT_JSON_PATH),
+        json_path=str(
+            data.get("json_path") or default_for("stages.*.outputs.*.json_path")
+        ),
     )
 
 

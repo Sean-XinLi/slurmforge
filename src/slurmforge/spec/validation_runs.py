@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import re
 
-from ..config_contract.options import (
+from ..config_contract.option_sets import (
     RUN_CASES,
     RUN_GRID,
     RUN_MATRIX,
     RUN_SINGLE,
-    options_sentence,
 )
+from ..config_contract.registry import options_sentence
 from ..errors import ConfigContractError
 from .models import ExperimentSpec
 from .run_paths import normalize_run_override_path

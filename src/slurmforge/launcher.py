@@ -8,6 +8,7 @@ from .cli.estimate import add_subparser as add_estimate_subparser
 from .cli.eval import add_subparser as add_eval_subparser
 from .cli.init import add_subparser as add_init_subparser
 from .cli.plan import add_subparser as add_plan_subparser
+from .cli.pipeline import add_subparser as add_pipeline_subparser
 from .cli.resubmit import add_subparser as add_resubmit_subparser
 from .cli.run import add_subparser as add_run_subparser
 from .cli.status import add_subparser as add_status_subparser
@@ -38,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_train_subparser(subparsers)
     add_eval_subparser(subparsers)
     add_run_subparser(subparsers)
+    add_pipeline_subparser(subparsers)
     add_status_subparser(subparsers)
     add_resubmit_subparser(subparsers)
     return parser

@@ -6,10 +6,10 @@ from ..errors import ConfigContractError
 from ..plans.runtime import RuntimePlan
 from ..plans.stage import StageBatchPlan
 from ..plans.train_eval import (
-    TRAIN_EVAL_PIPELINE_KIND,
-    TrainEvalControllerPlan,
+    TrainEvalControlPlan,
     TrainEvalPipelinePlan,
 )
+from ..workflow_contract import TRAIN_EVAL_PIPELINE_KIND, TRAIN_EVAL_STAGE_ORDER
 from ..spec import ExperimentSpec
 from ..spec.run_expansion import expand_run_definitions
 from .identifiers import train_eval_pipeline_id
@@ -27,7 +27,7 @@ def compile_train_eval_pipeline_plan(
 ) -> TrainEvalPipelinePlan:
     runs = expand_run_definitions(spec)
     stage_order = spec.stage_order()
-    if stage_order != ("train", "eval"):
+    if stage_order != TRAIN_EVAL_STAGE_ORDER:
         raise ConfigContractError(
             "Train/eval pipeline runs require enabled `stages.train` and `stages.eval` in train -> eval order"
         )
@@ -47,16 +47,16 @@ def compile_train_eval_pipeline_plan(
             source_ref=f"train_eval_pipeline:{pipeline_id}",
             batch_id=f"{pipeline_id}_{stage_name}",
         )
-    controller = spec.orchestration.controller
-    controller_plan = TrainEvalControllerPlan(
+    control = spec.orchestration.control
+    control_plan = TrainEvalControlPlan(
         pipeline_id=pipeline_id,
         stage_order=stage_order,
         config_path=str(spec.config_path),
         root_dir=str(root),
         pipeline_kind=TRAIN_EVAL_PIPELINE_KIND,
         resources=control_resources_payload(spec),
-        environment_name=controller.environment,
-        environment_plan=environment_payload(spec, controller.environment),
+        environment_name=control.environment,
+        environment_plan=environment_payload(spec, control.environment),
         runtime_plan=RuntimePlan(executor=executor_runtime_payload(spec)),
     )
     return TrainEvalPipelinePlan(
@@ -64,7 +64,7 @@ def compile_train_eval_pipeline_plan(
         stage_order=stage_order,
         run_set=tuple(run.run_id for run in runs),
         root_dir=str(root),
-        controller_plan=controller_plan,
+        control_plan=control_plan,
         stage_batches=stage_batches,
         spec_snapshot_digest=spec.spec_snapshot_digest,
         pipeline_kind=TRAIN_EVAL_PIPELINE_KIND,

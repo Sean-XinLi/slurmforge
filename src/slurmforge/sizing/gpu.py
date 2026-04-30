@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from math import ceil
 
-from ..config_contract.defaults import AUTO_VALUE
-from ..config_contract.options import options_for, options_sentence
+from ..config_contract.default_values import AUTO_VALUE
+from ..config_contract.registry import options_for, options_sentence
 from ..errors import ConfigContractError
 from .models import (
     GpuHardwareProfile,

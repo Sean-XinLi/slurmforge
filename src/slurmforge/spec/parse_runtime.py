@@ -3,21 +3,15 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from ..config_contract.defaults import (
-    DEFAULT_CONTROLLER_CPUS,
-    DEFAULT_CONTROLLER_ENVIRONMENT,
-    DEFAULT_CONTROLLER_MEM,
-    DEFAULT_CONTROLLER_TIME_LIMIT,
+from ..config_contract.default_values import (
     DEFAULT_ENVIRONMENT_NAME,
-    DEFAULT_EXECUTOR_MODULE,
-    DEFAULT_PYTHON_MIN_VERSION,
     DEFAULT_RUNTIME_NAME,
-    DEFAULT_STAGE_RESOURCES_PARTITION,
 )
-from ..config_schema import reject_unknown_config_keys
+from ..config_contract.keys import reject_unknown_config_keys
+from ..config_contract.registry import default_for
 from ..errors import ConfigContractError
 from .models import (
-    ControllerSpec,
+    ControlSpec,
     EnvironmentSourceSpec,
     EnvironmentSpec,
     ExecutorRuntimeSpec,
@@ -28,7 +22,6 @@ from .models import (
 )
 from .parse_common import optional_mapping, require_mapping
 
-
 def parse_python_runtime(raw: Any, *, name: str) -> PythonRuntimeSpec:
     data = require_mapping(raw, name)
     reject_unknown_config_keys(data, parent=name)
@@ -36,7 +29,10 @@ def parse_python_runtime(raw: Any, *, name: str) -> PythonRuntimeSpec:
         raise ConfigContractError(f"`{name}.bin` is required")
     return PythonRuntimeSpec(
         bin=str(data["bin"]),
-        min_version=str(data.get("min_version") or DEFAULT_PYTHON_MIN_VERSION),
+        min_version=str(
+            data.get("min_version")
+            or default_for("runtime.executor.python.min_version")
+        ),
     )
 
 
@@ -45,7 +41,9 @@ def parse_executor_runtime(raw: Any) -> ExecutorRuntimeSpec:
     reject_unknown_config_keys(data, parent="runtime.executor")
     return ExecutorRuntimeSpec(
         python=parse_python_runtime(data.get("python"), name="runtime.executor.python"),
-        executor_module=str(data.get("module") or DEFAULT_EXECUTOR_MODULE),
+        executor_module=str(
+            data.get("module") or default_for("runtime.executor.module")
+        ),
     )
 
 
@@ -133,30 +131,34 @@ def parse_environments(raw: Any) -> dict[str, EnvironmentSpec]:
 def parse_orchestration(raw: Any) -> OrchestrationSpec:
     data = optional_mapping(raw, "orchestration")
     reject_unknown_config_keys(data, parent="orchestration")
-    controller = optional_mapping(data.get("controller"), "orchestration.controller")
-    reject_unknown_config_keys(controller, parent="orchestration.controller")
+    control = optional_mapping(data.get("control"), "orchestration.control")
+    reject_unknown_config_keys(control, parent="orchestration.control")
+    default_control_partition = default_for("orchestration.control.partition")
+    default_control_mem = default_for("orchestration.control.mem")
+    default_control_time_limit = default_for("orchestration.control.time_limit")
+    default_control_environment = default_for("orchestration.control.environment")
     return OrchestrationSpec(
-        controller=ControllerSpec(
+        control=ControlSpec(
             partition=(
-                DEFAULT_STAGE_RESOURCES_PARTITION
-                if controller.get("partition") in (None, "")
-                else str(controller.get("partition"))
+                default_control_partition
+                if control.get("partition") in (None, "")
+                else str(control.get("partition"))
             ),
-            cpus=int(controller.get("cpus", DEFAULT_CONTROLLER_CPUS)),
+            cpus=int(control.get("cpus", default_for("orchestration.control.cpus"))),
             mem=(
-                DEFAULT_CONTROLLER_MEM
-                if controller.get("mem") in (None, "")
-                else str(controller.get("mem"))
+                default_control_mem
+                if control.get("mem") in (None, "")
+                else str(control.get("mem"))
             ),
             time_limit=(
-                DEFAULT_CONTROLLER_TIME_LIMIT
-                if controller.get("time_limit") in (None, "")
-                else str(controller.get("time_limit"))
+                default_control_time_limit
+                if control.get("time_limit") in (None, "")
+                else str(control.get("time_limit"))
             ),
             environment=(
-                DEFAULT_CONTROLLER_ENVIRONMENT
-                if controller.get("environment") in (None, "")
-                else str(controller.get("environment"))
+                default_control_environment
+                if control.get("environment") in (None, "")
+                else str(control.get("environment"))
             ),
         )
     )

@@ -94,13 +94,21 @@ A train/eval pipeline root contains:
   run_status.json
   train_eval_pipeline_plan.json
   train_eval_pipeline_status.json
-  controller/
-    controller_plan.json
-    controller_job.json
-    controller_state.json
-    controller_status.json
+  control/
+    control_plan.json
+    workflow_state.json
+    workflow_status.json
+    gate_ledger.json
     events.jsonl
-    controller.sbatch
+    gates/
+      train_group_001_gate.sbatch
+      eval_shard_group_001_gate.sbatch
+      final_gate.sbatch
+      *_barrier_001.sbatch          # optional dependency fan-in barriers
+    logs/
+  execution/
+    stage_catalog.json
+    runtime_batches.json
   notifications/
     records/
       train_eval_pipeline_finished.email.json

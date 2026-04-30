@@ -2,17 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import (
-    DEFAULT_INPUT_EXPECTS,
-    DEFAULT_INPUT_INJECT_MODE,
-)
-from ...config_contract.options import (
+from ...config_contract.option_sets import (
     INPUT_SOURCE_EXTERNAL_PATH,
     INPUT_SOURCE_UPSTREAM_OUTPUT,
-    options_for,
-    options_sentence,
 )
-from ...config_schema import reject_unknown_config_keys
+from ...config_contract.keys import reject_unknown_config_keys
+from ...config_contract.registry import default_for, options_for, options_sentence
 from ...contracts import InputInjection, InputSource
 from ...errors import ConfigContractError
 from ..models import StageInputSpec
@@ -43,7 +38,9 @@ def parse_inputs(raw: Any, *, stage_name: str) -> dict[str, StageInputSpec]:
         source = _parse_input_source(
             source_data, stage_name=stage_name, input_name=str(input_name)
         )
-        expects = str(input_data.get("expects") or DEFAULT_INPUT_EXPECTS)
+        expects = str(
+            input_data.get("expects") or default_for("stages.*.inputs.*.expects")
+        )
         if expects not in options_for("stages.*.inputs.*.expects"):
             raise ConfigContractError(
                 f"`stages.{stage_name}.inputs.{input_name}.expects` must be "
@@ -61,7 +58,10 @@ def parse_inputs(raw: Any, *, stage_name: str) -> dict[str, StageInputSpec]:
                 env=None
                 if inject_data.get("env") in (None, "")
                 else str(inject_data.get("env")),
-                mode=str(inject_data.get("mode") or DEFAULT_INPUT_INJECT_MODE),
+                mode=str(
+                    inject_data.get("mode")
+                    or default_for("stages.*.inputs.*.inject.mode")
+                ),
             ),
         )
     return parsed

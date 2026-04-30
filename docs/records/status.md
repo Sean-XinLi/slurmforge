@@ -74,13 +74,21 @@ Train/eval pipeline root:
   run_status.json
   train_eval_pipeline_plan.json
   train_eval_pipeline_status.json
-  controller/
-    controller_plan.json
-    controller_job.json
-    controller_state.json
-    controller_status.json
-    controller.sbatch
+  control/
+    control_plan.json
+    workflow_state.json
+    workflow_status.json
+    gate_ledger.json
     events.jsonl
+    gates/
+      train_group_001_gate.sbatch
+      eval_shard_group_001_gate.sbatch
+      final_gate.sbatch
+      *_barrier_001.sbatch          # optional dependency fan-in barriers
+    logs/
+  execution/
+    stage_catalog.json
+    runtime_batches.json
   notifications/
     records/
       train_eval_pipeline_finished.email.json
@@ -107,22 +115,22 @@ Train/eval pipeline root:
 - Artifact digest verification is enforced when `artifact_store_plan.verify_digest=true`; a mismatch is `artifact_integrity_error`.
 - Required stage inputs are verified before sbatch generation and before executor launch; missing or unreadable inputs fail as `input_contract_error`.
 - Train status and eval status are separate records.
-- Train/eval pipeline execution is controller-driven orchestration.
-- Train/eval pipeline dependency progression is contract-driven: the controller resolves the target stage's declared inputs from successful upstream stage outputs, not from train/eval-specific code paths.
-- Controller state is durable but orchestration-only; the controller Slurm job is recorded in `controller_job.json`, and submitted stage group job ids are recorded in each stage batch submission ledger.
+- Train/eval pipeline execution is driven by short-lived control gates.
+- Train/eval pipeline dependency progression is contract-driven: the control gate resolves the target stage's declared inputs from successful upstream stage outputs, not from train/eval-specific code paths.
+- Workflow state is durable but orchestration-only; control gate job ids are recorded in `control/gate_ledger.json`, and submitted stage group job ids are recorded in each stage batch submission ledger.
 - Stage submission is manifest-driven; submit code never glob-submits stale root-level sbatch files.
 - `submissions/ledger.json` is the scheduler job-id source of truth for `train`, `eval`, `run`, `resubmit`, and `status --reconcile`.
 - Public submit APIs are gated by `PreparedSubmission`; direct ledger mutation is not a supported submission path.
 - User-facing submit paths are new-only. A batch with submitted scheduler job ids is not silently reused; create a new execution through `resubmit`.
-- Controller recovery is the only path that may adopt already submitted groups and continue missing groups.
-- The public `emit` API renders/writes controller sbatch files and manifest-scoped stage submit files. Controller jobs are recorded through `controller_job.json`; stage group sbatch files are emitted only through `submission.prepare_stage_submission`.
+- Pipeline recovery is the only path that may adopt already submitted groups and continue missing groups.
+- The public `emit` API renders/writes control gate sbatch files and manifest-scoped stage submit files. Control jobs are recorded through `control/gate_ledger.json`; stage group sbatch files are emitted only through `submission.prepare_stage_submission`.
 - Submission records each group job id immediately, can continue after partial submission, and fails safe only for the uncertain window where a group may have reached `sbatch` without a recorded job id.
 - Batch notifications are Slurm finalizer jobs submitted by `submission.submit_stage_batch_finalizer` after terminal array groups with `afterany` dependencies. Large dependency sets are reduced through generated barrier jobs before the single notification job is submitted.
-- Train/eval pipeline notifications are controller-owned terminal actions. They send at most one `train_eval_pipeline_finished` summary per train/eval pipeline root and do not create separate train/eval batch notifications for controller-submitted stage batches.
+- Train/eval pipeline notifications are final-gate terminal actions. They send at most one `train_eval_pipeline_finished` summary per train/eval pipeline root and do not create separate train/eval batch notifications for pipeline-submitted stage batches.
 - Notification delivery state is persisted under `notifications/records/<event>.email.json`; summary content is rendered from `NotificationSummaryInput`. Root snapshots and notification inputs are assembled by `root_model.notifications` and exposed through `notifications.read_model`, while `notifications.summary` only counts, formats, and renders the neutral summary input.
 - `sforge status` is read-only by default; only `sforge status --reconcile` mutates status records from Slurm state.
 - `status --reconcile` refreshes aggregate read models from stage records, including `run_status.json` and train/eval pipeline `train_eval_pipeline_status.json`.
-- Stage status and attempt commits are per-stage writes; aggregate stage-batch and train/eval pipeline read models are refreshed by executor completion, controller progression, notification finalizers, and `status --reconcile`.
+- Stage status and attempt commits are per-stage writes; aggregate stage-batch and train/eval pipeline read models are refreshed by executor completion, control gate progression, notification finalizers, and `status --reconcile`.
 - Scheduler observation merges active `squeue` rows with accounting `sacct` rows, so running tasks are visible before they reach Slurm accounting.
 - Scheduler observations are append-only records in `scheduler_observations.jsonl`.
 - Scheduler reconcile creates a scheduler-sourced attempt when Slurm reports a running or terminal task without an executor attempt.

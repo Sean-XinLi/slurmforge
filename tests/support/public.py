@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from slurmforge.emit.controller import render_controller_sbatch
+from slurmforge.emit.pipeline_gate import render_pipeline_gate_sbatch
 from slurmforge.emit.stage import load_stage_submit_manifest, write_stage_submit_files
 from slurmforge.executor.launcher import build_shell_script
 from slurmforge.executor.stage import execute_stage_task
@@ -28,7 +28,7 @@ __all__ = [
     "load_stage_submit_manifest",
     "prepare_stage_submission",
     "read_submission_state",
-    "render_controller_sbatch",
+    "render_pipeline_gate_sbatch",
     "resolve_stage_inputs_for_train_eval_pipeline",
     "submit_prepared_stage_batch",
     "upstream_bindings_from_train_batch",

@@ -4,7 +4,7 @@ import copy
 import itertools
 from typing import Any
 
-from ..config_contract.options import RUN_CASES, RUN_MATRIX, RUN_SINGLE
+from ..config_contract.option_sets import RUN_CASES, RUN_MATRIX, RUN_SINGLE
 from ..contracts import RunDefinition
 from .models import ExperimentSpec
 from .run_ids import matrix_run_id_for, run_id_for, validate_case_run_id

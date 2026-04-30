@@ -8,6 +8,7 @@ from ..root_model.snapshots import (
     refresh_stage_batch_status,
     refresh_train_eval_pipeline_status,
 )
+from ..root_paths import parent_pipeline_root_for_stage_batch
 from .attempt import begin_attempt, complete_attempt
 from .finalize import failure_class_for_exception, finalize_successful_stage_outputs
 from .instances import find_stage_instance, load_stage_instance_from_run_dir
@@ -52,10 +53,8 @@ def execute_stage_task(batch_root: Path, group_index: int, task_index: int) -> i
     instance = find_stage_instance(batch_root, group_index, task_index)
     result = execute_stage_instance(batch_root / instance.run_dir_rel)
     refresh_stage_batch_status(batch_root)
-    pipeline_root = (
-        batch_root.parent.parent if batch_root.parent.name == "stage_batches" else None
-    )
-    if pipeline_root is not None and (pipeline_root / "manifest.json").exists():
+    pipeline_root = parent_pipeline_root_for_stage_batch(batch_root)
+    if pipeline_root is not None:
         refresh_train_eval_pipeline_status(pipeline_root)
     return result
 

@@ -53,10 +53,10 @@ def artifact_store_payload(spec: ExperimentSpec) -> ArtifactStorePlan:
 
 
 def control_resources_payload(spec: ExperimentSpec) -> ControlResourcesPlan:
-    controller = spec.orchestration.controller
+    control = spec.orchestration.control
     return ControlResourcesPlan(
-        partition=controller.partition,
-        cpus=controller.cpus,
-        mem=controller.mem,
-        time_limit=controller.time_limit,
+        partition=control.partition,
+        cpus=control.cpus,
+        mem=control.mem,
+        time_limit=control.time_limit,
     )

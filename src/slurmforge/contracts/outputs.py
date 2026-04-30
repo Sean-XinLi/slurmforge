@@ -3,15 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..config_contract.defaults import (
-    DEFAULT_OUTPUT_DISCOVER_SELECT,
-    DEFAULT_OUTPUT_JSON_PATH,
-    DEFAULT_OUTPUT_REQUIRED,
-)
-from ..config_contract.options import OUTPUT_KIND_FILE
+from ..config_contract.option_sets import OUTPUT_KIND_FILE
+from ..config_contract.registry import default_for
 from ..errors import ConfigContractError
 from ..io import SchemaVersion
 from .output_selectors import normalize_output_selector
+
+DEFAULT_OUTPUT_DISCOVER_SELECT = default_for("stages.*.outputs.*.discover.select")
+DEFAULT_OUTPUT_JSON_PATH = default_for("stages.*.outputs.*.json_path")
+DEFAULT_OUTPUT_REQUIRED = default_for("stages.*.outputs.*.required")
 
 
 @dataclass(frozen=True)

@@ -91,16 +91,16 @@ dispatch:
   overflow_policy: serialize_groups
 
 orchestration:
-  controller:
-    # Slurm partition for the lightweight train/eval controller job.
-    partition: gpu
-    # CPU count requested by the lightweight workflow controller job.
+  control:
+    # Optional Slurm partition for CPU-only pipeline control jobs.
+    partition: null
+    # CPU count requested by short-lived pipeline control jobs.
     cpus: 1
-    # Memory requested by the lightweight workflow controller job.
+    # Memory requested by short-lived pipeline control jobs.
     mem: 2G
-    # Slurm time limit requested by the lightweight workflow controller job.
-    time_limit: "01:00:00"
-    # Environment profile loaded before the lightweight workflow controller runs.
+    # Slurm time limit requested by short-lived pipeline control jobs.
+    time_limit: "00:10:00"
+    # Environment profile loaded before pipeline control jobs run.
     environment: default
 
 stages:
@@ -229,14 +229,6 @@ project: resnet
 experiment: ablation_matrix
 storage:
   root: /shared/runs
-hardware:
-  gpu_types:
-    a100_80gb:
-      memory_gb: 80
-      usable_memory_fraction: 0.9
-      max_gpus_per_node: 8
-      slurm:
-        constraint: a100
 environments:
   default:
     modules:
@@ -260,11 +252,6 @@ runtime:
         min_version: '3.10'
       env:
         TOKENIZERS_PARALLELISM: 'false'
-sizing:
-  gpu:
-    defaults:
-      safety_factor: 1.15
-      round_to: 1
 artifact_store:
   strategy: hardlink
   fallback_strategy: copy
@@ -308,11 +295,11 @@ dispatch:
   max_available_gpus: 16
   overflow_policy: serialize_groups
 orchestration:
-  controller:
-    partition: gpu
+  control:
+    partition: null
     cpus: 1
     mem: 2G
-    time_limit: '12:00:00'
+    time_limit: 00:10:00
     environment: default
 stages:
   train:
@@ -320,15 +307,13 @@ stages:
     enabled: true
     environment: default
     runtime: default
-    before:
-      - name: prepare_cache
-        run: mkdir -p "$HF_HOME"
     entry:
       type: python_script
       script: train.py
       workdir: .
       args:
         epochs: 5
+        lr: 0.001
         batch_size: 64
     launcher:
       type: torchrun
@@ -343,24 +328,17 @@ stages:
         - --cpu-bind=cores
     resources:
       partition: gpu
-      account: research
-      qos: normal
-      time_limit: 06:00:00
-      gpu_type: a100_80gb
       nodes: 2
       gpus_per_node: auto
       cpus_per_task: 16
       mem: 128G
+      time_limit: 06:00:00
+      account: research
+      qos: normal
+      gpu_type: a100_80gb
       constraint: a100
       extra_sbatch_args:
         - --exclusive
-    gpu_sizing:
-      estimator: heuristic
-      target_memory_gb: 120
-      min_gpus_per_job: 2
-      max_gpus_per_job: 16
-      safety_factor: 1.2
-      round_to: 2
     outputs:
       checkpoint:
         kind: file
@@ -369,11 +347,19 @@ stages:
           globs:
             - checkpoints/**/*.pt
           select: latest_step
+    before:
+      - name: prepare_cache
+        run: mkdir -p "$HF_HOME"
+    gpu_sizing:
+      estimator: heuristic
+      target_memory_gb: 120
+      min_gpus_per_job: 2
+      max_gpus_per_job: 16
+      safety_factor: 1.2
+      round_to: 2
   eval:
     kind: eval
     enabled: true
-    depends_on:
-      - train
     environment: default
     runtime: default
     entry:
@@ -386,12 +372,20 @@ stages:
       type: single
     resources:
       partition: gpu
-      time_limit: 01:00:00
-      gpu_type: a100_80gb
       nodes: 1
       gpus_per_node: 1
       cpus_per_task: 4
       mem: 32G
+      time_limit: 01:00:00
+      gpu_type: a100_80gb
+    outputs:
+      accuracy:
+        kind: metric
+        file: eval/metrics.json
+        json_path: $.accuracy
+        required: true
+    depends_on:
+      - train
     inputs:
       checkpoint:
         source:
@@ -404,12 +398,19 @@ stages:
           flag: checkpoint_path
           env: SFORGE_INPUT_CHECKPOINT
           mode: path
-    outputs:
-      accuracy:
-        kind: metric
-        required: true
-        file: eval/metrics.json
-        json_path: $.accuracy
+hardware:
+  gpu_types:
+    a100_80gb:
+      memory_gb: 80
+      usable_memory_fraction: 0.9
+      max_gpus_per_node: 8
+      slurm:
+        constraint: a100
+sizing:
+  gpu:
+    defaults:
+      safety_factor: 1.15
+      round_to: 1
 ```
 <!-- CONFIG_ADVANCED_EXAMPLE_END -->
 
@@ -479,9 +480,9 @@ sforge validate --config experiment.yaml --set stages.train.entry.args.lr=0.001
 
 ## Field Reference
 
-This table is generated from `slurmforge.config_schema.ConfigField`. Starter READMEs intentionally do not duplicate this full reference; `sforge init` writes a template-scoped `CONFIG.sforge.md` instead.
+This table is generated from `slurmforge.config_contract.models.ConfigField`. Starter READMEs intentionally do not duplicate this full reference; `sforge init` writes a template-scoped `CONFIG.sforge.md` instead.
 
-<!-- CONFIG_SCHEMA_REFERENCE_START -->
+<!-- CONFIG_CONTRACT_REFERENCE_START -->
 | Field | Type | Required | Level | Default | Options | Meaning | When To Change |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `experiment` | value | yes | common | baseline |  | Names this experiment inside the project namespace. | Change this for each baseline, ablation, sweep, or production run family. |
@@ -518,12 +519,12 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `runs.type` | enum | no | common | single | `single`, `grid`, `cases`, `matrix` | Controls whether the config plans one run or expands a sweep. | Keep single for the starter; switch to grid, cases, or matrix when you need run expansion. |
 | `dispatch.max_available_gpus` | value | no | intermediate | 1 |  | GPU budget used to serialize Slurm array groups when a plan exceeds available GPUs. | Set this to the practical cluster budget you want this workflow to consume. |
 | `dispatch.overflow_policy` | enum | no | intermediate | serialize_groups | `serialize_groups`, `error`, `best_effort` | Controls planner behavior when run groups exceed the declared GPU budget. | Use error for strict admission control, or best_effort when the scheduler should absorb overflow. |
-| `orchestration.controller` | value | no | advanced | partition=gpu, cpus=1, mem=2G, time_limit=01:00:00 |  | Slurm resources for the lightweight workflow controller job. | Change this when the controller needs a different partition, time limit, or environment. |
-| `orchestration.controller.cpus` | integer | no | advanced | 1 |  | CPU count requested by the lightweight workflow controller job. | Increase this only if controller scheduling or planning overhead requires it. |
-| `orchestration.controller.environment` | value | no | advanced | default |  | Environment profile loaded before the lightweight workflow controller runs. | Change this when controller jobs need cluster modules or setup scripts. |
-| `orchestration.controller.mem` | value | no | advanced | 2G |  | Memory requested by the lightweight workflow controller job. | Increase this when controller planning or notification work needs more memory. |
-| `orchestration.controller.partition` | value | no | advanced | gpu |  | Slurm partition for the lightweight train/eval controller job. | Change this when controller jobs need a different queue from stage jobs. |
-| `orchestration.controller.time_limit` | duration | no | advanced | 01:00:00 |  | Slurm time limit requested by the lightweight workflow controller job. | Increase this when the controller must wait for long train/eval pipeline stages. |
+| `orchestration.control` | value | no | advanced | partition=null, cpus=1, mem=2G, time_limit=00:10:00 |  | Slurm resources for short-lived CPU-only pipeline control jobs. | Change this when gate or notification jobs need a different control queue, time limit, or environment. |
+| `orchestration.control.cpus` | integer | no | advanced | 1 |  | CPU count requested by short-lived pipeline control jobs. | Increase this only if gate reconciliation or planning overhead requires it. |
+| `orchestration.control.environment` | value | no | advanced | default |  | Environment profile loaded before pipeline control jobs run. | Change this when gate jobs need cluster modules or setup scripts. |
+| `orchestration.control.mem` | value | no | advanced | 2G |  | Memory requested by short-lived pipeline control jobs. | Increase this when gate planning or notification work needs more memory. |
+| `orchestration.control.partition` | value | no | advanced |  |  | Optional Slurm partition for CPU-only pipeline control jobs. | Set this only when control jobs must use a named CPU/control queue. |
+| `orchestration.control.time_limit` | duration | no | advanced | 00:10:00 |  | Slurm time limit requested by short-lived pipeline control jobs. | Increase this only if gate reconciliation, eval materialization, or notifications need more time. |
 | `stages.*.resources` | value | no | common | template-specific |  | Slurm partition, CPU, GPU, memory, and time settings for each stage. | Set these before real cluster runs so train and eval request the right resources. |
 | `stages.*.resources.account` | value | no | intermediate | null |  | Slurm account charged for each stage task. | Set this when your cluster requires an account for GPU or partition access. |
 | `stages.*.resources.constraint` | value | no | advanced | null |  | Raw Slurm constraint requested for each stage task. | Use this for cluster-specific node feature constraints that are not covered by gpu_type. |
@@ -580,7 +581,7 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `stages.*.outputs.*.discover.globs` | list | no | common | template-specific |  | Glob patterns evaluated under the stage run directory. | Change these when the stage writes artifacts under a different directory or filename pattern. |
 | `stages.*.outputs.*.discover.select` | enum | no | intermediate | latest_step | `latest_step`, `first`, `last` | Selects one path from discovered output glob matches. | Use first or last when lexicographic ordering is the desired selection rule. |
 | `stages.*.outputs.*.file` | path | no | common | template-specific |  | JSON file produced by the stage and read by output discovery. | Change this when the stage writes metrics or manifests to a different path. |
-| `stages.*.outputs.*.json_path` | value | no | common | template-specific |  | JSONPath used to read a metric value from the output file. | Change this when the metric lives under a different JSON key. |
+| `stages.*.outputs.*.json_path` | value | no | common | $ |  | JSONPath used to read a metric value from the output file. | Change this when the metric lives under a different JSON key. |
 | `stages.*.outputs.*.kind` | enum | yes | intermediate | template-specific | `file`, `files`, `metric`, `manifest` | Declares the shape of a managed stage output. | Use file/files for artifacts, metric for JSON scalar metrics, and manifest for manifest files. |
 | `stages.*.outputs.*.required` | boolean | no | intermediate | false |  | Controls whether missing output discovery fails the stage result. | Enable this for artifacts or metrics required by downstream stages or run acceptance. |
 | `stages.eval.inputs.checkpoint` | value | no | common | template-specific |  | Checkpoint input consumed by the eval stage. | For train-eval keep upstream_output; for eval-checkpoint replace the sample external path. |
@@ -589,11 +590,11 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 | `notifications.email.enabled` | value | no | advanced | false |  | Enables email summary notifications for terminal workflow events. | Enable after sendmail works on the cluster and recipient addresses are configured. |
 | `notifications.email.from` | value | no | advanced | slurmforge@localhost |  | Sender address used by email delivery. | Change this to the approved sender identity for your cluster. |
 | `notifications.email.mode` | enum | no | advanced | summary | `summary` | Controls email content shape. | Keep summary unless a future notification mode is added. |
-| `notifications.email.on` | enum | no | advanced | batch_finished | `batch_finished`, `train_eval_pipeline_finished` | Terminal workflow events that trigger email summaries. | Use batch_finished for stage batches and train_eval_pipeline_finished for controller pipelines. |
+| `notifications.email.on` | enum | no | advanced | batch_finished | `batch_finished`, `train_eval_pipeline_finished` | Terminal workflow events that trigger email summaries. | Use batch_finished for stage batches and train_eval_pipeline_finished for streaming pipelines. |
 | `notifications.email.sendmail` | path | no | advanced | /usr/sbin/sendmail |  | Local sendmail-compatible binary used to deliver email. | Change this if the cluster exposes sendmail at a non-default path. |
 | `notifications.email.subject_prefix` | value | no | advanced | SlurmForge |  | Prefix added to SlurmForge notification email subjects. | Change this to identify a project, team, or cluster in inboxes. |
 | `notifications.email.to` | value | no | advanced | [] |  | Recipients for email notifications when email is enabled. | Set this before enabling notifications. |
-<!-- CONFIG_SCHEMA_REFERENCE_END -->
+<!-- CONFIG_CONTRACT_REFERENCE_END -->
 
 ## Runtime
 
@@ -605,7 +606,7 @@ This table is generated from `slurmforge.config_schema.ConfigField`. Starter REA
 
 Notifications are disabled unless `notifications.email.enabled` is true. When enabled, `notifications.email.to` must contain at least one email address and `notifications.email.on` must contain one or more supported terminal workflow events.
 
-`batch_finished` is emitted by stage-batch finalizer jobs. `train_eval_pipeline_finished` is emitted by the train/eval controller when the whole pipeline reaches a terminal state.
+`batch_finished` is emitted by stage-batch finalizer jobs. `train_eval_pipeline_finished` is emitted by the final train/eval control gate when the whole pipeline reaches a terminal state.
 
 ## Resources And Sizing
 

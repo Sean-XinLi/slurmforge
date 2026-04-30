@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from slurmforge.config_contract.defaults import DEFAULT_CONFIG_FILENAME
+from slurmforge.config_contract.default_values import DEFAULT_CONFIG_FILENAME
 from slurmforge.config_contract.workflows import TEMPLATE_TRAIN_EVAL
 from slurmforge.starter import InitRequest, create_starter_project
 

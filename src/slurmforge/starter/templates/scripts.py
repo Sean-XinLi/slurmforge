@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...config_contract.defaults import (
-    DEFAULT_CHECKPOINT_PATH,
-    DEFAULT_EVAL_SCRIPT,
-    DEFAULT_TRAIN_SCRIPT,
-)
+from ...config_contract.registry import default_for
 from ..models import FilePayload, InitRequest
 from .script_render import render_eval_asset, render_train_asset
+
+DEFAULT_CHECKPOINT_PATH = default_for("stages.*.inputs.*.source.path")
+DEFAULT_EVAL_SCRIPT = default_for("stages.eval.entry.script")
+DEFAULT_TRAIN_SCRIPT = default_for("stages.train.entry.script")
 
 
 def train_script(_request: InitRequest) -> FilePayload:

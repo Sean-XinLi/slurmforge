@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import shlex
 
+from ...config_contract.option_sets import ENTRY_PYTHON_SCRIPT
+from ...config_contract.registry import default_for
 from ...contracts import InputBinding
-from ...config_contract.defaults import (
-    DEFAULT_PYTHON_BIN,
-    DEFAULT_STAGE_LAUNCHER_TYPE,
-)
-from ...config_contract.options import ENTRY_PYTHON_SCRIPT
 from ...plans.stage import StageInstancePlan
 from ..bindings import binding_injected_value
 from .args import args_to_argv, flag
@@ -55,10 +52,12 @@ def _build_command(
         if injected_flag and injected is not None:
             extra_args.extend([flag(str(injected_flag)), injected])
     launcher = instance.launcher_plan
-    launcher_type = launcher.type or DEFAULT_STAGE_LAUNCHER_TYPE
+    launcher_type = launcher.type or default_for("stages.*.launcher.type")
     runtime_user = instance.runtime_plan.user
     python_bin = (
-        runtime_user.python.bin if runtime_user is not None else DEFAULT_PYTHON_BIN
+        runtime_user.python.bin
+        if runtime_user is not None
+        else default_for("runtime.executor.python.bin")
     )
     if entry.type == ENTRY_PYTHON_SCRIPT:
         return python_script_command(

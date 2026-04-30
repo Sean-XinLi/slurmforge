@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB
-from ...config_schema import reject_unknown_config_keys
+from ...config_contract.keys import reject_unknown_config_keys
+from ...config_contract.registry import default_for
 from ...errors import ConfigContractError
 from ..models import StageGpuSizingSpec
 from ..parse_common import require_mapping
-
 
 def parse_stage_gpu_sizing(raw: Any, *, stage_name: str) -> StageGpuSizingSpec | None:
     if raw in (None, ""):
@@ -25,12 +24,13 @@ def parse_stage_gpu_sizing(raw: Any, *, stage_name: str) -> StageGpuSizingSpec |
     max_gpus = data.get("max_gpus_per_job")
     safety_factor = data.get("safety_factor")
     round_to = data.get("round_to")
+    default_min_gpus_per_job = default_for("stages.*.gpu_sizing.min_gpus_per_job")
     return StageGpuSizingSpec(
         estimator=str(data["estimator"]),
         target_memory_gb=float(data["target_memory_gb"]),
         min_gpus_per_job=int(
-            data.get("min_gpus_per_job", DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB)
-            or DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB
+            data.get("min_gpus_per_job", default_min_gpus_per_job)
+            or default_min_gpus_per_job
         ),
         max_gpus_per_job=None if max_gpus in (None, "") else int(max_gpus),
         safety_factor=None if safety_factor in (None, "") else float(safety_factor),

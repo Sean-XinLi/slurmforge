@@ -19,7 +19,10 @@ from pathlib import Path
 class RootModelTests(StageBatchSystemTestCase):
     def test_detects_stage_batch_and_pipeline_roots(self) -> None:
         from slurmforge.root_model.detection import detect_root
-        from slurmforge.root_model.runs import iter_stage_run_dirs
+        from slurmforge.root_model.runs import (
+            iter_all_stage_run_dirs,
+            iter_runtime_stage_run_dirs,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -29,14 +32,19 @@ class RootModelTests(StageBatchSystemTestCase):
 
             batch_descriptor = detect_root(Path(batch.submission_root))
             self.assertEqual(batch_descriptor.kind, "stage_batch")
-            self.assertEqual(len(tuple(iter_stage_run_dirs(batch_descriptor.root))), 1)
+            self.assertEqual(
+                len(tuple(iter_runtime_stage_run_dirs(batch_descriptor.root))), 1
+            )
 
             pipeline = compile_train_eval_pipeline_plan(spec)
             materialize_train_eval_pipeline_for_test(pipeline, spec_snapshot=spec.raw)
             pipeline_descriptor = detect_root(Path(pipeline.root_dir))
             self.assertEqual(pipeline_descriptor.kind, "train_eval_pipeline")
             self.assertEqual(
-                len(tuple(iter_stage_run_dirs(pipeline_descriptor.root))), 2
+                len(tuple(iter_runtime_stage_run_dirs(pipeline_descriptor.root))), 1
+            )
+            self.assertEqual(
+                len(tuple(iter_all_stage_run_dirs(pipeline_descriptor.root))), 2
             )
 
     def test_invalid_root_is_user_facing_config_error(self) -> None:
@@ -109,7 +117,7 @@ class RootModelTests(StageBatchSystemTestCase):
 
     def test_notification_summary_uses_root_status_snapshot(self) -> None:
         from slurmforge.root_model.notifications import load_root_notification_snapshot
-        from slurmforge.root_model.runs import iter_stage_run_dirs
+        from slurmforge.root_model.runs import iter_runtime_stage_run_dirs
         from slurmforge.status.machine import commit_stage_status
         from slurmforge.status.models import StageStatusRecord
 
@@ -118,7 +126,7 @@ class RootModelTests(StageBatchSystemTestCase):
             spec = load_experiment_spec(write_demo_project(root))
             batch = compile_stage_batch_for_kind(spec, kind="train")
             materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
-            run_dir = next(iter_stage_run_dirs(Path(batch.submission_root)))
+            run_dir = next(iter_runtime_stage_run_dirs(Path(batch.submission_root)))
             commit_stage_status(
                 run_dir,
                 StageStatusRecord(

@@ -11,7 +11,8 @@ class InternalFacadeImportTests(StageBatchSystemTestCase):
     def test_internal_facades_are_not_imported_directly(self) -> None:
         blocked = {
             "slurmforge.cli",
-            "slurmforge.controller",
+            "slurmforge.control",
+            "slurmforge.docs_render",
             "slurmforge.emit",
             "slurmforge.executor",
             "slurmforge.inputs",

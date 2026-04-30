@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...config_contract.defaults import DEFAULT_PYTHON_BIN
+from ...config_contract.registry import default_for
 from ...plans.notifications import FinalizerPlan
 from ...plans.resources import ControlResourcesPlan
 from ...plans.runtime import EnvironmentPlan
@@ -30,7 +30,7 @@ def _finalizer_environment(batch: StageBatchPlan) -> EnvironmentPlan:
 def _finalizer_python_bin(batch: StageBatchPlan) -> str:
     runtime_plan = _finalizer_plan(batch).runtime_plan
     if runtime_plan is None:
-        return DEFAULT_PYTHON_BIN
+        return default_for("runtime.executor.python.bin")
     return runtime_plan.executor.python.bin
 
 

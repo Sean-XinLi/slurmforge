@@ -2,12 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import (
-    DEFAULT_STAGE_ENABLED,
-    DEFAULT_STAGE_ENVIRONMENT,
-    DEFAULT_STAGE_RUNTIME,
-)
-from ...config_schema import reject_unknown_config_keys
+from ...config_contract.keys import reject_unknown_config_keys
+from ...config_contract.registry import default_for
 from ..models import StageSpec
 from ..parse_common import require_mapping
 from ..parse_resources import parse_resources
@@ -17,7 +13,6 @@ from .gpu_sizing import parse_stage_gpu_sizing
 from .inputs import parse_inputs
 from .launcher import parse_launcher
 from .outputs import parse_stage_output_config
-
 
 def parse_stage(name: str, raw: Any) -> StageSpec:
     data = require_mapping(raw, f"stages.{name}")
@@ -31,14 +26,14 @@ def parse_stage(name: str, raw: Any) -> StageSpec:
     return StageSpec(
         name=name,
         kind=kind,
-        enabled=bool(data.get("enabled", DEFAULT_STAGE_ENABLED)),
+        enabled=bool(data.get("enabled", default_for("stages.*.enabled"))),
         depends_on=depends,
         entry=parse_entry(data.get("entry"), name=name),
         resources=parse_resources(data.get("resources"), name=name),
         launcher=parse_launcher(data.get("launcher"), name=name),
-        runtime=str(data.get("runtime") or DEFAULT_STAGE_RUNTIME),
+        runtime=str(data.get("runtime") or default_for("stages.*.runtime")),
         environment=(
-            DEFAULT_STAGE_ENVIRONMENT
+            default_for("stages.*.environment")
             if data.get("environment") in (None, "")
             else str(data.get("environment"))
         ),

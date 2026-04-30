@@ -37,20 +37,12 @@ def root_ref_path(run_dir: Path) -> Path:
     return Path(run_dir) / "root_ref.json"
 
 
-def controller_job_path(pipeline_root: Path) -> Path:
-    return Path(pipeline_root) / "controller" / "controller_job.json"
+def stage_catalog_path(pipeline_root: Path) -> Path:
+    return Path(pipeline_root) / "execution" / "stage_catalog.json"
 
 
-def controller_status_path(pipeline_root: Path) -> Path:
-    return Path(pipeline_root) / "controller" / "controller_status.json"
-
-
-def controller_state_path(pipeline_root: Path) -> Path:
-    return Path(pipeline_root) / "controller" / "controller_state.json"
-
-
-def controller_events_path(pipeline_root: Path) -> Path:
-    return Path(pipeline_root) / "controller" / "events.jsonl"
+def runtime_batches_path(pipeline_root: Path) -> Path:
+    return Path(pipeline_root) / "execution" / "runtime_batches.json"
 
 
 def next_attempt_id(run_dir: Path) -> str:

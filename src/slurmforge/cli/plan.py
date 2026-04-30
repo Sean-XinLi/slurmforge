@@ -112,7 +112,7 @@ def add_subparser(
     eval_parser.set_defaults(handler=handle_plan, plan_command="eval")
 
     run_parser = plan_subparsers.add_parser(
-        "run", help="Compile a train/eval pipeline controller plan"
+        "run", help="Compile a streaming train/eval pipeline plan"
     )
     add_config_args(run_parser)
     _add_plan_mode_args(run_parser)

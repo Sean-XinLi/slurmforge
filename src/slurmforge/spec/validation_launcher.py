@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from ..config_contract.defaults import (
-    DEFAULT_LAUNCHER_MODE,
-    DEFAULT_LAUNCHER_NNODES,
-    DEFAULT_LAUNCHER_NPROC_PER_NODE,
-    DEFAULT_RENDEZVOUS_PORT,
-)
-from ..config_contract.options import (
+from ..config_contract.option_sets import (
     ENTRY_COMMAND,
     ENTRY_PYTHON_SCRIPT,
     LAUNCHER_COMMAND,
@@ -16,9 +10,8 @@ from ..config_contract.options import (
     LAUNCHER_SINGLE,
     LAUNCHER_SRUN,
     LAUNCHER_TORCHRUN,
-    options_for,
-    options_sentence,
 )
+from ..config_contract.registry import default_for, options_for, options_sentence
 from ..errors import ConfigContractError
 from ..sizing.models import GpuSizingResolution
 from .models import StageSpec
@@ -58,7 +51,7 @@ def _validate_torchrun_launcher(
         or (
             LAUNCHER_MODE_MULTI_NODE
             if stage.resources.nodes > 1
-            else DEFAULT_LAUNCHER_MODE
+            else default_for("stages.*.launcher.mode")
         )
     )
     if mode not in options_for("stages.*.launcher.mode"):
@@ -75,7 +68,9 @@ def _validate_torchrun_launcher(
             f"`stages.{stage.name}.launcher.mode=multi_node` requires resources.nodes >= 2"
         )
     nnodes = explicit_int(
-        stage.launcher.options.get("nnodes", DEFAULT_LAUNCHER_NNODES),
+        stage.launcher.options.get(
+            "nnodes", default_for("stages.*.launcher.nnodes")
+        ),
         field=f"stages.{stage.name}.launcher.nnodes",
     )
     if nnodes is not None and nnodes != stage.resources.nodes:
@@ -83,7 +78,10 @@ def _validate_torchrun_launcher(
             f"`stages.{stage.name}.launcher.nnodes` must equal resources.nodes ({stage.resources.nodes})"
         )
     nproc_per_node = explicit_int(
-        stage.launcher.options.get("nproc_per_node", DEFAULT_LAUNCHER_NPROC_PER_NODE),
+        stage.launcher.options.get(
+            "nproc_per_node",
+            default_for("stages.*.launcher.nproc_per_node"),
+        ),
         field=f"stages.{stage.name}.launcher.nproc_per_node",
     )
     if nproc_per_node is not None:
@@ -105,6 +103,8 @@ def _validate_torchrun_launcher(
             f"`stages.{stage.name}.launcher.rendezvous` must be a mapping"
         )
     require_port(
-        rendezvous.get("port", DEFAULT_RENDEZVOUS_PORT),
+        rendezvous.get(
+            "port", default_for("stages.*.launcher.rendezvous.port")
+        ),
         field=f"stages.{stage.name}.launcher.rendezvous.port",
     )

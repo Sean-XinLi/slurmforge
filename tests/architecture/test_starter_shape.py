@@ -62,19 +62,26 @@ class StarterShapeTests(StageBatchSystemTestCase):
         }
         self.assertIn("advanced_example_config", advanced_functions)
         self.assertNotIn("dedent(", advanced_source)
+        self.assertIn("base_config", advanced_source)
+        self.assertIn("train_stage", advanced_source)
+        self.assertIn("eval_stage_from_train", advanced_source)
 
     def test_starter_io_contract_values_have_single_source(self) -> None:
         constant_owner = Path("src/slurmforge/config_contract/starter_io.py")
         self.assertTrue(constant_owner.exists())
         for path in (
-            Path("src/slurmforge/starter/examples/advanced.py"),
             Path("src/slurmforge/starter/templates/readme.py"),
             Path("src/slurmforge/starter/templates/script_render.py"),
             Path("src/slurmforge/starter/templates/stage_specs.py"),
-            Path("src/slurmforge/config_schema/sections/stage_io_starter.py"),
+            Path("src/slurmforge/config_contract/fields/stage_io_starter.py"),
         ):
+            expected = (
+                "from ..starter_io import"
+                if "config_contract/fields" in str(path)
+                else "config_contract.starter_io"
+            )
             self.assertIn(
-                "config_contract.starter_io",
+                expected,
                 path.read_text(encoding="utf-8"),
             )
 
@@ -85,7 +92,7 @@ class StarterShapeTests(StageBatchSystemTestCase):
             "checkpoints/**/*.pt",
         )
         checked = sorted(Path("src/slurmforge/starter").rglob("*.py")) + [
-            Path("src/slurmforge/config_schema/sections/stage_io.py")
+            Path("src/slurmforge/config_contract/fields/stage_io.py")
         ]
         violations: list[str] = []
         for path in checked:
@@ -95,14 +102,16 @@ class StarterShapeTests(StageBatchSystemTestCase):
                     violations.append(f"{path} contains {literal}")
         self.assertEqual(violations, [])
 
-    def test_stage_io_schema_fields_are_layered(self) -> None:
-        stage_io = Path("src/slurmforge/config_schema/sections/stage_io.py")
-        generic = Path("src/slurmforge/config_schema/sections/stage_io_generic.py")
-        base = Path("src/slurmforge/config_schema/sections/stage_io_base.py")
-        starter = Path("src/slurmforge/config_schema/sections/stage_io_starter.py")
-        self.assertFalse(generic.exists())
+    def test_stage_io_contract_fields_are_layered(self) -> None:
+        stage_io = Path("src/slurmforge/config_contract/fields/stage_io.py")
+        base = Path("src/slurmforge/config_contract/fields/stage_io_base.py")
+        starter = Path("src/slurmforge/config_contract/fields/stage_io_starter.py")
         self.assertTrue(base.exists())
         self.assertTrue(starter.exists())
+        self.assertFalse(
+            Path("src/slurmforge/config_contract/fields/stage_io_generic.py").exists()
+        )
+        self.assertFalse(Path("src/slurmforge/config_schema").exists())
 
         self.assertIn("stage_io_base", stage_io.read_text(encoding="utf-8"))
         self.assertIn("stage_io_starter", stage_io.read_text(encoding="utf-8"))
@@ -111,7 +120,7 @@ class StarterShapeTests(StageBatchSystemTestCase):
             base.read_text(encoding="utf-8"),
         )
         self.assertIn(
-            "config_contract.starter_io",
+            "from ..starter_io import",
             starter.read_text(encoding="utf-8"),
         )
 

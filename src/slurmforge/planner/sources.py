@@ -12,7 +12,7 @@ from ..plans.sources import (
     SourcedStageBatchPlan,
     StageBatchSource,
 )
-from ..root_model.runs import iter_stage_run_dirs
+from ..root_model.runs import iter_all_stage_run_dirs
 from ..spec import load_spec_snapshot, parse_experiment_spec, validate_experiment_spec
 from ..spec.run_paths import normalize_cli_override_path
 from ..status.query import state_matches
@@ -31,7 +31,7 @@ def select_stage_runs(
 ) -> tuple[SelectedStageRun, ...]:
     selected_run_ids = set(run_ids)
     selected: list[SelectedStageRun] = []
-    for run_dir in iter_stage_run_dirs(source_root):
+    for run_dir in iter_all_stage_run_dirs(source_root):
         status = read_stage_status(run_dir)
         if status is None or status.stage_name != stage_name:
             continue

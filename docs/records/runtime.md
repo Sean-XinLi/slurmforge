@@ -47,7 +47,7 @@ Status writes use monotonic transitions. Normal queued/running markers cannot mo
 
 Every status transition appends a line to `status_events.jsonl` in the run directory.
 
-Every materialized run directory writes `root_ref.json`. It records the containing stage batch root and, when applicable, the parent train/eval pipeline root. Stage status commits stay per-stage; layout writes, controller progression, and `status --reconcile` refresh aggregate `run_status.json` / `train_eval_pipeline_status.json` from the current stage records.
+Every materialized run directory writes `root_ref.json`. It records the containing stage batch root and, when applicable, the parent train/eval pipeline root. Stage status commits stay per-stage; layout writes, control gate progression, and `status --reconcile` refresh aggregate `run_status.json` / `train_eval_pipeline_status.json` from the current stage records.
 
 Every executor attempt writes `runtime_probe.json` under the attempt directory. It is a `RuntimeContractReport` with a single `state`, `failure_reason`, and both executor and user Python probes. A failed report prevents user code launch.
 

@@ -123,7 +123,7 @@ def _resolve_input_for_pipeline(
         )
     return unresolved_binding(
         input_spec,
-        reason="input source is not resolvable by the train/eval pipeline controller",
+        reason="input source is not resolvable by the train/eval pipeline control plane",
     )
 
 
@@ -132,9 +132,14 @@ def resolve_stage_inputs_for_train_eval_pipeline(
     plan: TrainEvalPipelinePlan,
     *,
     stage_name: str,
+    runs: tuple[RunDefinition, ...] | None = None,
 ) -> ResolvedStageInputs:
     stage = spec.enabled_stages[stage_name]
-    run_defs = run_definitions_from_stage_batch(plan.stage_batches[stage_name])
+    run_defs = (
+        run_definitions_from_stage_batch(plan.stage_batches[stage_name])
+        if runs is None
+        else runs
+    )
     selected_runs: list[RunDefinition] = []
     bindings_by_run: dict[str, tuple[InputBinding, ...]] = {}
     blocked: list[str] = []

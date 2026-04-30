@@ -65,7 +65,7 @@ class PublicApiFacadeTests(StageBatchSystemTestCase):
             "StageInstancePlan",
             "StageOutputsRecord",
             "TRAIN_EVAL_PIPELINE_KIND",
-            "TrainEvalControllerPlan",
+            "TrainEvalControlPlan",
             "TrainEvalPipelinePlan",
             "UserRuntimePlan",
             "group_plan_from_dict",

@@ -32,7 +32,9 @@ class DocsShapeTests(StageBatchSystemTestCase):
     def test_internals_document_config_contract_ownership(self) -> None:
         internals = Path("docs/internals.md").read_text(encoding="utf-8")
         self.assertIn("`config_contract` is the source", internals)
-        self.assertIn("option/default values live in `config_contract`", internals)
+        self.assertIn("key registration", internals)
+        self.assertIn("`docs_render.config_reference` owns", internals)
+        self.assertNotIn("`config_schema` owns", internals)
         self.assertNotIn(
             "contract parsing, and spec-facing validation messages",
             internals,
@@ -66,6 +68,7 @@ class DocsShapeTests(StageBatchSystemTestCase):
         for name in (
             "__init__.py",
             "config_doc.py",
+            "config_reference.py",
             "markers.py",
             "quickstart.py",
             "submission.py",
@@ -89,7 +92,9 @@ class DocsShapeTests(StageBatchSystemTestCase):
         self.assertEqual(definitions, ["src/slurmforge/docs_render/markers.py"])
 
     def test_config_docs_field_reference_matches_catalog(self) -> None:
-        from slurmforge.config_schema import render_global_field_reference
+        from slurmforge.docs_render.config_reference import (
+            render_global_field_reference,
+        )
         from slurmforge.starter.config_examples import render_advanced_example
 
         config_doc = Path("docs/config.md").read_text(encoding="utf-8")
@@ -99,8 +104,8 @@ class DocsShapeTests(StageBatchSystemTestCase):
         self.assertIn("<!-- CONFIG_ADVANCED_EXAMPLE_END -->", config_doc)
         self.assertIn("# Starter template: train-eval", config_doc)
         self.assertIn(render_advanced_example(), config_doc)
-        self.assertIn("<!-- CONFIG_SCHEMA_REFERENCE_START -->", config_doc)
-        self.assertIn("<!-- CONFIG_SCHEMA_REFERENCE_END -->", config_doc)
+        self.assertIn("<!-- CONFIG_CONTRACT_REFERENCE_START -->", config_doc)
+        self.assertIn("<!-- CONFIG_CONTRACT_REFERENCE_END -->", config_doc)
         self.assertIn(render_global_field_reference(), config_doc)
 
     def test_config_docs_generated_reference_is_current(self) -> None:
@@ -116,7 +121,7 @@ def _strip_generated_blocks(text: str) -> str:
     marker_pairs = (
         ("CONFIG_STARTER_EXAMPLE",),
         ("CONFIG_ADVANCED_EXAMPLE",),
-        ("CONFIG_SCHEMA_REFERENCE",),
+        ("CONFIG_CONTRACT_REFERENCE",),
         ("QUICKSTART_STARTER_CONTRACT",),
         ("SUBMISSION_BINDING_JSON",),
         ("SUBMISSION_INPUT_YAML",),

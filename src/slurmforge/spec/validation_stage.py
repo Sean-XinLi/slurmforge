@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..config_contract.options import ENTRY_PYTHON_SCRIPT
+from ..config_contract.option_sets import ENTRY_PYTHON_SCRIPT
 from ..errors import ConfigContractError
 from ..sizing.gpu import resolve_stage_gpu_sizing
 from .models import ExperimentSpec, StageSpec

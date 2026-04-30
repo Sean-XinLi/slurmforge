@@ -9,11 +9,8 @@ from .runtime import EnvironmentPlan, RuntimePlan
 from .stage import StageBatchPlan
 
 
-TRAIN_EVAL_PIPELINE_KIND = "train_eval_pipeline"
-
-
 @dataclass(frozen=True)
-class TrainEvalControllerPlan:
+class TrainEvalControlPlan:
     pipeline_id: str
     stage_order: tuple[str, ...]
     config_path: str
@@ -32,7 +29,7 @@ class TrainEvalPipelinePlan:
     stage_order: tuple[str, ...]
     run_set: tuple[str, ...]
     root_dir: str
-    controller_plan: TrainEvalControllerPlan
+    control_plan: TrainEvalControlPlan
     stage_batches: dict[str, StageBatchPlan]
     spec_snapshot_digest: str
     pipeline_kind: str
