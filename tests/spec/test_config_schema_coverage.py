@@ -29,7 +29,7 @@ class ConfigSchemaCoverageTests(StageBatchSystemTestCase):
 
     def test_schema_carries_required_and_enum_contracts(self) -> None:
         from slurmforge.config_schema import all_fields
-        from slurmforge.config_contract.options import OPTIONS_BY_PATH
+        from slurmforge.config_contract.registry import OPTIONS_BY_PATH
 
         by_path = {field.path: field for field in all_fields()}
         required_counts = Counter(field.required for field in all_fields())

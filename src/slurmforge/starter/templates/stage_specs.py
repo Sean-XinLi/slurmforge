@@ -2,20 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import (
-    DEFAULT_CHECKPOINT_PATH,
-    DEFAULT_EVAL_SCRIPT,
-    DEFAULT_INPUT_EXPECTS,
-    DEFAULT_INPUT_INJECT_MODE,
-    DEFAULT_OUTPUT_DISCOVER_SELECT,
-    DEFAULT_STAGE_ENABLED,
-    DEFAULT_STAGE_ENTRY_TYPE,
-    DEFAULT_STAGE_ENTRY_WORKDIR,
-    DEFAULT_STAGE_ENVIRONMENT,
-    DEFAULT_STAGE_LAUNCHER_TYPE,
-    DEFAULT_STAGE_RUNTIME,
-    DEFAULT_TRAIN_SCRIPT,
-)
 from ...config_contract.options import (
     INPUT_SOURCE_EXTERNAL_PATH,
     INPUT_SOURCE_UPSTREAM_OUTPUT,
@@ -33,6 +19,7 @@ from ...config_contract.starter_io import (
     CHECKPOINT_OUTPUT_NAME,
     EVAL_SPLIT_DEFAULT,
 )
+from ...config_contract.registry import default_for
 from ...config_contract.workflows import STAGE_EVAL, STAGE_TRAIN
 from .resources import stage_resources
 
@@ -40,19 +27,19 @@ from .resources import stage_resources
 def train_stage() -> dict[str, Any]:
     return {
         "kind": STAGE_TRAIN,
-        "enabled": DEFAULT_STAGE_ENABLED,
-        "environment": DEFAULT_STAGE_ENVIRONMENT,
-        "runtime": DEFAULT_STAGE_RUNTIME,
+        "enabled": default_for("stages.*.enabled"),
+        "environment": default_for("stages.*.environment"),
+        "runtime": default_for("stages.*.runtime"),
         "entry": {
-            "type": DEFAULT_STAGE_ENTRY_TYPE,
-            "script": DEFAULT_TRAIN_SCRIPT,
-            "workdir": DEFAULT_STAGE_ENTRY_WORKDIR,
+            "type": default_for("stages.*.entry.type"),
+            "script": default_for("stages.train.entry.script"),
+            "workdir": default_for("stages.*.entry.workdir"),
             "args": {
                 "epochs": 1,
                 "lr": 0.001,
             },
         },
-        "launcher": {"type": DEFAULT_STAGE_LAUNCHER_TYPE},
+        "launcher": {"type": default_for("stages.*.launcher.type")},
         "resources": stage_resources(cpus=4, mem="16G"),
         "outputs": {
             CHECKPOINT_OUTPUT_NAME: {
@@ -60,7 +47,7 @@ def train_stage() -> dict[str, Any]:
                 "required": True,
                 "discover": {
                     "globs": [CHECKPOINT_GLOB],
-                    "select": DEFAULT_OUTPUT_DISCOVER_SELECT,
+                    "select": default_for("stages.*.outputs.*.discover.select"),
                 },
             }
         },
@@ -77,12 +64,12 @@ def eval_stage_from_train() -> dict[str, Any]:
                 "stage": STAGE_TRAIN,
                 "output": CHECKPOINT_OUTPUT_NAME,
             },
-            "expects": DEFAULT_INPUT_EXPECTS,
+            "expects": default_for("stages.*.inputs.*.expects"),
             "required": True,
             "inject": {
                 "flag": CHECKPOINT_FLAG,
                 "env": CHECKPOINT_ENV,
-                "mode": DEFAULT_INPUT_INJECT_MODE,
+                "mode": default_for("stages.*.inputs.*.inject.mode"),
             },
         }
     }
@@ -95,14 +82,14 @@ def eval_stage_external_checkpoint() -> dict[str, Any]:
         CHECKPOINT_INPUT_NAME: {
             "source": {
                 "kind": INPUT_SOURCE_EXTERNAL_PATH,
-                "path": DEFAULT_CHECKPOINT_PATH,
+                "path": default_for("stages.*.inputs.*.source.path"),
             },
-            "expects": DEFAULT_INPUT_EXPECTS,
+            "expects": default_for("stages.*.inputs.*.expects"),
             "required": True,
             "inject": {
                 "flag": CHECKPOINT_FLAG,
                 "env": CHECKPOINT_ENV,
-                "mode": DEFAULT_INPUT_INJECT_MODE,
+                "mode": default_for("stages.*.inputs.*.inject.mode"),
             },
         }
     }
@@ -112,18 +99,18 @@ def eval_stage_external_checkpoint() -> dict[str, Any]:
 def eval_stage_base() -> dict[str, Any]:
     return {
         "kind": STAGE_EVAL,
-        "enabled": DEFAULT_STAGE_ENABLED,
-        "environment": DEFAULT_STAGE_ENVIRONMENT,
-        "runtime": DEFAULT_STAGE_RUNTIME,
+        "enabled": default_for("stages.*.enabled"),
+        "environment": default_for("stages.*.environment"),
+        "runtime": default_for("stages.*.runtime"),
         "entry": {
-            "type": DEFAULT_STAGE_ENTRY_TYPE,
-            "script": DEFAULT_EVAL_SCRIPT,
-            "workdir": DEFAULT_STAGE_ENTRY_WORKDIR,
+            "type": default_for("stages.*.entry.type"),
+            "script": default_for("stages.eval.entry.script"),
+            "workdir": default_for("stages.*.entry.workdir"),
             "args": {
                 "split": EVAL_SPLIT_DEFAULT,
             },
         },
-        "launcher": {"type": DEFAULT_STAGE_LAUNCHER_TYPE},
+        "launcher": {"type": default_for("stages.*.launcher.type")},
         "resources": stage_resources(cpus=2, mem="8G"),
         "outputs": {
             ACCURACY_OUTPUT_NAME: {

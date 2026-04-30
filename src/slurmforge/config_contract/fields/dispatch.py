@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+from typing import Final
+
+from ..default_values import (
+    DEFAULT_CONTROL_CPUS,
+    DEFAULT_CONTROL_ENVIRONMENT,
+    DEFAULT_CONTROL_MEM,
+    DEFAULT_CONTROL_PARTITION,
+    DEFAULT_CONTROL_TIME_LIMIT,
+    DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS,
+    DEFAULT_DISPATCH_OVERFLOW_POLICY,
+)
+from ..option_sets import DISPATCH_POLICIES
+from ..workflows import ALL_STARTER_TEMPLATES, TEMPLATE_TRAIN_EVAL
+from ..models import ConfigField
+
+FIELDS: Final[tuple[ConfigField, ...]] = (
+    ConfigField(
+        path="dispatch.max_available_gpus",
+        title="Global GPU budget",
+        short_help="GPU budget used to serialize Slurm array groups when a plan exceeds available GPUs.",
+        when_to_change="Set this to the practical cluster budget you want this workflow to consume.",
+        section="Dispatch",
+        level="intermediate",
+        templates=ALL_STARTER_TEMPLATES,
+        default_value=DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS,
+    ),
+    ConfigField(
+        path="dispatch.overflow_policy",
+        title="GPU overflow policy",
+        short_help="Controls planner behavior when run groups exceed the declared GPU budget.",
+        when_to_change="Use error for strict admission control, or best_effort when the scheduler should absorb overflow.",
+        section="Dispatch",
+        level="intermediate",
+        templates=ALL_STARTER_TEMPLATES,
+        default_value=DEFAULT_DISPATCH_OVERFLOW_POLICY,
+        options=DISPATCH_POLICIES,
+    ),
+    ConfigField(
+        path="orchestration.control",
+        title="Control job resources",
+        short_help="Slurm resources for short-lived CPU-only pipeline control jobs.",
+        when_to_change="Change this when gate or notification jobs need a different control queue, time limit, or environment.",
+        section="Dispatch",
+        level="advanced",
+        templates=(TEMPLATE_TRAIN_EVAL,),
+        default_display="partition=null, cpus=1, mem=2G, time_limit=00:10:00",
+    ),
+    ConfigField(
+        path="orchestration.control.partition",
+        title="Control partition",
+        short_help="Optional Slurm partition for CPU-only pipeline control jobs.",
+        when_to_change="Set this only when control jobs must use a named CPU/control queue.",
+        section="Dispatch",
+        level="advanced",
+        templates=(TEMPLATE_TRAIN_EVAL,),
+        default_value=DEFAULT_CONTROL_PARTITION,
+    ),
+    ConfigField(
+        path="orchestration.control.cpus",
+        title="Control CPU count",
+        short_help="CPU count requested by short-lived pipeline control jobs.",
+        when_to_change="Increase this only if gate reconciliation or planning overhead requires it.",
+        section="Dispatch",
+        level="advanced",
+        value_type="integer",
+        templates=(TEMPLATE_TRAIN_EVAL,),
+        default_value=DEFAULT_CONTROL_CPUS,
+    ),
+    ConfigField(
+        path="orchestration.control.mem",
+        title="Control memory",
+        short_help="Memory requested by short-lived pipeline control jobs.",
+        when_to_change="Increase this when gate planning or notification work needs more memory.",
+        section="Dispatch",
+        level="advanced",
+        templates=(TEMPLATE_TRAIN_EVAL,),
+        default_value=DEFAULT_CONTROL_MEM,
+    ),
+    ConfigField(
+        path="orchestration.control.time_limit",
+        title="Control time limit",
+        short_help="Slurm time limit requested by short-lived pipeline control jobs.",
+        when_to_change="Increase this only if gate reconciliation, eval materialization, or notifications need more time.",
+        section="Dispatch",
+        level="advanced",
+        value_type="duration",
+        templates=(TEMPLATE_TRAIN_EVAL,),
+        default_value=DEFAULT_CONTROL_TIME_LIMIT,
+    ),
+    ConfigField(
+        path="orchestration.control.environment",
+        title="Control environment",
+        short_help="Environment profile loaded before pipeline control jobs run.",
+        when_to_change="Change this when gate jobs need cluster modules or setup scripts.",
+        section="Dispatch",
+        level="advanced",
+        templates=(TEMPLATE_TRAIN_EVAL,),
+        default_value=DEFAULT_CONTROL_ENVIRONMENT,
+    ),
+)

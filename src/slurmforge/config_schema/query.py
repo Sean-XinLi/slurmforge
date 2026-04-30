@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ..config_contract.options import options_for as contract_options_for
-from ..config_contract.options import options_sentence as contract_options_sentence
+from ..config_contract.registry import options_for as contract_options_for
+from ..config_contract.registry import options_sentence as contract_options_sentence
 from .fields import CONFIG_FIELDS
 from .models import ConfigField
 

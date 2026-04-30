@@ -1,91 +1,84 @@
 from __future__ import annotations
 
-from .options import (
-    ARTIFACT_STRATEGY_COPY,
-    DISPATCH_POLICY_SERIALIZE_GROUPS,
-    EMAIL_EVENT_BATCH_FINISHED,
-    EMAIL_MODE_SUMMARY,
-    ENTRY_PYTHON_SCRIPT,
-    INPUT_EXPECTS_PATH,
-    INPUT_INJECT_PATH,
-    LAUNCHER_MODE_SINGLE_NODE,
-    LAUNCHER_SINGLE,
-    OUTPUT_SELECT_LATEST_STEP,
-    RUN_SINGLE,
+from . import default_values as _default_values
+from .registry import default_for
+
+AUTO_VALUE = _default_values.AUTO_VALUE
+DEFAULT_CONFIG_FILENAME = _default_values.DEFAULT_CONFIG_FILENAME
+DEFAULT_OUTPUT_DIR = _default_values.DEFAULT_OUTPUT_DIR
+DEFAULT_PARTITION = _default_values.DEFAULT_PARTITION
+DEFAULT_ENVIRONMENT_NAME = _default_values.DEFAULT_ENVIRONMENT_NAME
+DEFAULT_RUNTIME_NAME = _default_values.DEFAULT_RUNTIME_NAME
+
+DEFAULT_PROJECT = default_for("project")
+DEFAULT_EXPERIMENT = default_for("experiment")
+DEFAULT_STORAGE_ROOT = default_for("storage.root")
+
+DEFAULT_PYTHON_BIN = default_for("runtime.executor.python.bin")
+DEFAULT_PYTHON_MIN_VERSION = default_for("runtime.executor.python.min_version")
+DEFAULT_EXECUTOR_MODULE = default_for("runtime.executor.module")
+DEFAULT_TRAIN_SCRIPT = default_for("stages.train.entry.script")
+DEFAULT_EVAL_SCRIPT = default_for("stages.eval.entry.script")
+DEFAULT_CHECKPOINT_PATH = default_for("stages.*.inputs.*.source.path")
+
+DEFAULT_RUN_TYPE = default_for("runs.type")
+
+DEFAULT_ARTIFACT_STORE_STRATEGY = default_for("artifact_store.strategy")
+DEFAULT_ARTIFACT_STORE_FALLBACK_STRATEGY = default_for(
+    "artifact_store.fallback_strategy"
+)
+DEFAULT_ARTIFACT_STORE_VERIFY_DIGEST = default_for("artifact_store.verify_digest")
+DEFAULT_ARTIFACT_STORE_FAIL_ON_VERIFY_ERROR = default_for(
+    "artifact_store.fail_on_verify_error"
 )
 
-DEFAULT_CONFIG_FILENAME = "experiment.yaml"
-DEFAULT_OUTPUT_DIR = "."
+DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS = default_for("dispatch.max_available_gpus")
+DEFAULT_DISPATCH_OVERFLOW_POLICY = default_for("dispatch.overflow_policy")
 
-DEFAULT_PROJECT = "demo"
-DEFAULT_EXPERIMENT = "baseline"
-DEFAULT_STORAGE_ROOT = "./runs"
+DEFAULT_CONTROL_PARTITION = default_for("orchestration.control.partition")
+DEFAULT_CONTROL_CPUS = default_for("orchestration.control.cpus")
+DEFAULT_CONTROL_MEM = default_for("orchestration.control.mem")
+DEFAULT_CONTROL_TIME_LIMIT = default_for("orchestration.control.time_limit")
+DEFAULT_CONTROL_ENVIRONMENT = default_for("orchestration.control.environment")
 
-AUTO_VALUE = "auto"
+DEFAULT_STAGE_ENABLED = default_for("stages.*.enabled")
+DEFAULT_STAGE_ENTRY_TYPE = default_for("stages.*.entry.type")
+DEFAULT_STAGE_ENTRY_WORKDIR = default_for("stages.*.entry.workdir")
+DEFAULT_STAGE_LAUNCHER_TYPE = default_for("stages.*.launcher.type")
+DEFAULT_STAGE_ENVIRONMENT = default_for("stages.*.environment")
+DEFAULT_STAGE_RUNTIME = default_for("stages.*.runtime")
 
-DEFAULT_PARTITION = "gpu"
-DEFAULT_PYTHON_BIN = "python3"
-DEFAULT_PYTHON_MIN_VERSION = "3.10"
-DEFAULT_EXECUTOR_MODULE = "slurmforge.executor.stage"
-DEFAULT_TRAIN_SCRIPT = "train.py"
-DEFAULT_EVAL_SCRIPT = "eval.py"
-DEFAULT_CHECKPOINT_PATH = "checkpoint.pt"
+DEFAULT_STAGE_RESOURCES_PARTITION = default_for("stages.*.resources.partition")
+DEFAULT_STAGE_RESOURCES_NODES = default_for("stages.*.resources.nodes")
+DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE = default_for("stages.*.resources.gpus_per_node")
+DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK = default_for("stages.*.resources.cpus_per_task")
+DEFAULT_STAGE_RESOURCES_TIME_LIMIT = default_for("stages.*.resources.time_limit")
 
-DEFAULT_ENVIRONMENT_NAME = "default"
-DEFAULT_RUNTIME_NAME = "default"
+DEFAULT_LAUNCHER_MODE = default_for("stages.*.launcher.mode")
+DEFAULT_LAUNCHER_NNODES = default_for("stages.*.launcher.nnodes")
+DEFAULT_LAUNCHER_NPROC_PER_NODE = default_for("stages.*.launcher.nproc_per_node")
+DEFAULT_RENDEZVOUS_BACKEND = default_for("stages.*.launcher.rendezvous.backend")
+DEFAULT_RENDEZVOUS_ENDPOINT = default_for("stages.*.launcher.rendezvous.endpoint")
+DEFAULT_RENDEZVOUS_PORT = default_for("stages.*.launcher.rendezvous.port")
 
-DEFAULT_RUN_TYPE = RUN_SINGLE
+DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB = default_for(
+    "stages.*.gpu_sizing.min_gpus_per_job"
+)
+DEFAULT_GPU_SIZING_SAFETY_FACTOR = default_for("sizing.gpu.defaults.safety_factor")
+DEFAULT_GPU_SIZING_ROUND_TO = default_for("sizing.gpu.defaults.round_to")
 
-DEFAULT_ARTIFACT_STORE_STRATEGY = ARTIFACT_STRATEGY_COPY
-DEFAULT_ARTIFACT_STORE_FALLBACK_STRATEGY = None
-DEFAULT_ARTIFACT_STORE_VERIFY_DIGEST = True
-DEFAULT_ARTIFACT_STORE_FAIL_ON_VERIFY_ERROR = True
-
-DEFAULT_DISPATCH_MAX_AVAILABLE_GPUS = 1
-DEFAULT_DISPATCH_OVERFLOW_POLICY = DISPATCH_POLICY_SERIALIZE_GROUPS
-
-DEFAULT_CONTROL_PARTITION = None
-DEFAULT_CONTROL_CPUS = 1
-DEFAULT_CONTROL_MEM = "2G"
-DEFAULT_CONTROL_TIME_LIMIT = "00:10:00"
-DEFAULT_CONTROL_ENVIRONMENT = DEFAULT_ENVIRONMENT_NAME
-
-DEFAULT_STAGE_ENABLED = True
-DEFAULT_STAGE_ENTRY_TYPE = ENTRY_PYTHON_SCRIPT
-DEFAULT_STAGE_ENTRY_WORKDIR = "."
-DEFAULT_STAGE_LAUNCHER_TYPE = LAUNCHER_SINGLE
-DEFAULT_STAGE_ENVIRONMENT = DEFAULT_ENVIRONMENT_NAME
-DEFAULT_STAGE_RUNTIME = DEFAULT_RUNTIME_NAME
-
-DEFAULT_STAGE_RESOURCES_PARTITION = DEFAULT_PARTITION
-DEFAULT_STAGE_RESOURCES_NODES = 1
-DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE = 1
-DEFAULT_STAGE_RESOURCES_CPUS_PER_TASK = 1
-DEFAULT_STAGE_RESOURCES_TIME_LIMIT = "01:00:00"
-
-DEFAULT_LAUNCHER_MODE = LAUNCHER_MODE_SINGLE_NODE
-DEFAULT_LAUNCHER_NNODES = AUTO_VALUE
-DEFAULT_LAUNCHER_NPROC_PER_NODE = AUTO_VALUE
-DEFAULT_RENDEZVOUS_BACKEND = "c10d"
-DEFAULT_RENDEZVOUS_ENDPOINT = AUTO_VALUE
-DEFAULT_RENDEZVOUS_PORT = 29500
-
-DEFAULT_GPU_SIZING_MIN_GPUS_PER_JOB = 1
-DEFAULT_GPU_SIZING_SAFETY_FACTOR = 1.0
-DEFAULT_GPU_SIZING_ROUND_TO = 1
-
-DEFAULT_INPUT_EXPECTS = INPUT_EXPECTS_PATH
-DEFAULT_INPUT_INJECT_MODE = INPUT_INJECT_PATH
-DEFAULT_OUTPUT_REQUIRED = False
+DEFAULT_INPUT_EXPECTS = default_for("stages.*.inputs.*.expects")
+DEFAULT_INPUT_INJECT_MODE = default_for("stages.*.inputs.*.inject.mode")
+DEFAULT_OUTPUT_REQUIRED = default_for("stages.*.outputs.*.required")
 DEFAULT_OUTPUT_JSON_PATH = "$"
-DEFAULT_OUTPUT_DISCOVER_SELECT = OUTPUT_SELECT_LATEST_STEP
+DEFAULT_OUTPUT_DISCOVER_SELECT = default_for("stages.*.outputs.*.discover.select")
 
-DEFAULT_EMAIL_ENABLED = False
-DEFAULT_EMAIL_EVENTS = (EMAIL_EVENT_BATCH_FINISHED,)
-DEFAULT_EMAIL_MODE = EMAIL_MODE_SUMMARY
-DEFAULT_EMAIL_FROM = "slurmforge@localhost"
-DEFAULT_EMAIL_SENDMAIL = "/usr/sbin/sendmail"
-DEFAULT_EMAIL_SUBJECT_PREFIX = "SlurmForge"
+DEFAULT_EMAIL_ENABLED = default_for("notifications.email.enabled")
+DEFAULT_EMAIL_EVENTS = default_for("notifications.email.on")
+DEFAULT_EMAIL_MODE = default_for("notifications.email.mode")
+DEFAULT_EMAIL_FROM = default_for("notifications.email.from")
+DEFAULT_EMAIL_SENDMAIL = default_for("notifications.email.sendmail")
+DEFAULT_EMAIL_SUBJECT_PREFIX = default_for("notifications.email.subject_prefix")
 
 __all__ = [
     name for name in globals() if name == "AUTO_VALUE" or name.startswith("DEFAULT_")

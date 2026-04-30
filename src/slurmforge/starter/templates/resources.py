@@ -2,20 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...config_contract.defaults import (
-    DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
-    DEFAULT_STAGE_RESOURCES_NODES,
-    DEFAULT_STAGE_RESOURCES_PARTITION,
-    DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
-)
+from ...config_contract.registry import default_for
 
 
 def stage_resources(*, cpus: int, mem: str) -> dict[str, Any]:
     return {
-        "partition": DEFAULT_STAGE_RESOURCES_PARTITION,
-        "nodes": DEFAULT_STAGE_RESOURCES_NODES,
-        "gpus_per_node": DEFAULT_STAGE_RESOURCES_GPUS_PER_NODE,
+        "partition": default_for("stages.*.resources.partition"),
+        "nodes": default_for("stages.*.resources.nodes"),
+        "gpus_per_node": default_for("stages.*.resources.gpus_per_node"),
         "cpus_per_task": cpus,
         "mem": mem,
-        "time_limit": DEFAULT_STAGE_RESOURCES_TIME_LIMIT,
+        "time_limit": default_for("stages.*.resources.time_limit"),
     }
