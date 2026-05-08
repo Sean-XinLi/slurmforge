@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 from .paths import load_lineage_index
+from .records import (
+    LineageInputSourceRecord,
+    StageBatchLineageRecord,
+    TrainEvalPipelineLineageRecord,
+)
 
 
 def iter_lineage_source_roots(root: Path, *, max_depth: int = 4) -> Iterable[Path]:
@@ -17,22 +22,21 @@ def iter_lineage_source_roots(root: Path, *, max_depth: int = 4) -> Iterable[Pat
         index = load_lineage_index(current)
         if not index:
             return
-        for raw in index.get("source_roots", ()):
-            candidate = Path(str(raw)).expanduser().resolve()
+        for raw in index.source_roots:
+            candidate = Path(raw).expanduser().resolve()
             if candidate in seen:
                 continue
             seen.add(candidate)
             yield candidate
             yield from visit(candidate, depth + 1)
-        for batch in dict(index.get("stage_batches") or {}).values():
-            if not isinstance(batch, dict) or not batch.get("root"):
-                continue
-            candidate = Path(str(batch["root"])).expanduser().resolve()
-            if candidate in seen:
-                continue
-            seen.add(candidate)
-            yield candidate
-            yield from visit(candidate, depth + 1)
+        if isinstance(index, TrainEvalPipelineLineageRecord):
+            for batch in index.stage_batches.values():
+                candidate = Path(batch.root).expanduser().resolve()
+                if candidate in seen:
+                    continue
+                seen.add(candidate)
+                yield candidate
+                yield from visit(candidate, depth + 1)
 
     yield from visit(root.resolve(), 0)
 
@@ -43,23 +47,23 @@ def find_bound_input(
     run_id: str,
     input_name: str,
     lineage_ref: str | None = None,
-) -> dict[str, Any] | None:
+) -> LineageInputSourceRecord | None:
     index = load_lineage_index(root)
-    if not index:
+    if not isinstance(index, StageBatchLineageRecord):
         return None
-    for item in index.get("input_sources", ()):
-        if not isinstance(item, dict):
+    for item in index.input_sources:
+        if item.run_id != run_id:
             continue
-        if item.get("run_id") != run_id:
+        if item.input_name != input_name:
             continue
-        if item.get("input_name") != input_name:
-            continue
-        resolution = dict(item.get("resolution") or {})
-        if lineage_ref is not None and resolution.get("lineage_ref") not in {
+        resolution = item.resolution
+        item_lineage_ref = (
+            resolution["lineage_ref"] if "lineage_ref" in resolution else ""
+        )
+        if lineage_ref is not None and item_lineage_ref not in {
             lineage_ref,
-            None,
             "",
         }:
             continue
-        return dict(item)
+        return item
     return None

@@ -1,20 +1,24 @@
 from __future__ import annotations
 
-from ..workflow_contract import EVAL_STAGE
-from ..storage.workflow_state_records import (
+from ..plans.train_eval import TrainEvalPipelinePlan
+from ..storage.workflow_state_constants import (
     DISPATCH_ACTIVE_STATES,
     INSTANCE_RUNNING,
     INSTANCE_SUBMITTED,
-    WorkflowState,
 )
+from ..storage.workflow_state_models import DispatchSubmissionState, WorkflowState
+from ..workflow_contract import EVAL_STAGE
 
 
 def active_budgeted_gpus(state: WorkflowState) -> int:
-    return sum(_submission_active_gpus(state, submission) for submission in state.submissions.values())
+    return sum(
+        _submission_active_gpus(state, submission)
+        for submission in state.submissions.values()
+    )
 
 
 def select_instances_with_budget(
-    plan,
+    plan: TrainEvalPipelinePlan,
     state: WorkflowState,
     ready_ids: tuple[str, ...],
 ) -> tuple[str, ...]:
@@ -41,7 +45,9 @@ def select_instances_with_budget(
     return tuple(selected)
 
 
-def _submission_active_gpus(state: WorkflowState, submission) -> int:
+def _submission_active_gpus(
+    state: WorkflowState, submission: DispatchSubmissionState
+) -> int:
     if submission.state not in DISPATCH_ACTIVE_STATES:
         return 0
     active_instance_ids = {

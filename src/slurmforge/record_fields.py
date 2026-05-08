@@ -118,13 +118,32 @@ def required_object(
     return dict(value)
 
 
+def required_nullable_object(
+    payload: dict[str, Any], field_name: str, *, label: str
+) -> dict[str, Any] | None:
+    if field_name not in payload:
+        raise RecordContractError(f"{label}.{field_name} is required")
+    value = payload[field_name]
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise RecordContractError(f"{label}.{field_name} must be an object or null")
+    return dict(value)
+
+
+def required_json_value(payload: dict[str, Any], field_name: str, *, label: str) -> Any:
+    if field_name not in payload:
+        raise RecordContractError(f"{label}.{field_name} is required")
+    return payload[field_name]
+
+
 def required_array(
     payload: dict[str, Any], field_name: str, *, label: str
 ) -> tuple[Any, ...]:
     if field_name not in payload:
         raise RecordContractError(f"{label}.{field_name} is required")
     value = payload[field_name]
-    if not isinstance(value, (list, tuple)):
+    if not isinstance(value, list):
         raise RecordContractError(f"{label}.{field_name} must be an array")
     return tuple(value)
 
@@ -134,12 +153,106 @@ def required_string_tuple(
     field_name: str,
     *,
     label: str,
+    non_empty: bool = False,
     non_empty_items: bool = False,
 ) -> tuple[str, ...]:
     values = required_array(payload, field_name, label=label)
-    result = tuple(_string_array_item(item, label=f"{label}.{field_name}") for item in values)
+    return _string_tuple_items(
+        values,
+        label=f"{label}.{field_name}",
+        non_empty=non_empty,
+        non_empty_items=non_empty_items,
+    )
+
+
+def required_string_array(
+    payload: dict[str, Any],
+    field_name: str,
+    *,
+    label: str,
+    non_empty: bool = False,
+    non_empty_items: bool = False,
+) -> tuple[str, ...]:
+    return required_string_tuple(
+        payload,
+        field_name,
+        label=label,
+        non_empty=non_empty,
+        non_empty_items=non_empty_items,
+    )
+
+
+def required_object_array(
+    payload: dict[str, Any],
+    field_name: str,
+    *,
+    label: str,
+    non_empty: bool = False,
+) -> tuple[dict[str, Any], ...]:
+    values = required_array(payload, field_name, label=label)
+    if non_empty and not values:
+        raise RecordContractError(f"{label}.{field_name} must be non-empty")
+    result: list[dict[str, Any]] = []
+    for item in values:
+        if not isinstance(item, dict):
+            raise RecordContractError(f"{label}.{field_name} items must be objects")
+        result.append(dict(item))
+    return tuple(result)
+
+
+def required_string_map(
+    payload: dict[str, Any],
+    field_name: str,
+    *,
+    label: str,
+    non_empty_values: bool = False,
+) -> dict[str, str]:
+    values = required_object(payload, field_name, label=label)
+    result: dict[str, str] = {}
+    for key, value in values.items():
+        if not isinstance(key, str) or not key:
+            raise RecordContractError(
+                f"{label}.{field_name} keys must be non-empty strings"
+            )
+        if not isinstance(value, str):
+            raise RecordContractError(f"{label}.{field_name}.{key} must be a string")
+        if non_empty_values and not value:
+            raise RecordContractError(
+                f"{label}.{field_name}.{key} must be a non-empty string"
+            )
+        result[key] = value
+    return result
+
+
+def string_tuple_record_field(
+    value: Any,
+    *,
+    label: str,
+    non_empty: bool = False,
+    non_empty_items: bool = False,
+) -> tuple[str, ...]:
+    if not isinstance(value, tuple):
+        raise RecordContractError(f"{label} must be a tuple")
+    return _string_tuple_items(
+        value,
+        label=label,
+        non_empty=non_empty,
+        non_empty_items=non_empty_items,
+    )
+
+
+def _string_tuple_items(
+    values: tuple[Any, ...],
+    *,
+    label: str,
+    non_empty: bool,
+    non_empty_items: bool,
+) -> tuple[str, ...]:
+    result = tuple(_string_array_item(item, label=label) for item in values)
+    if non_empty and not result:
+        raise RecordContractError(f"{label} must be non-empty")
     if non_empty_items and any(not item for item in result):
-        raise RecordContractError(f"{label}.{field_name} must contain non-empty strings")
+        raise RecordContractError(f"{label} must contain non-empty strings")
     return result
 
 

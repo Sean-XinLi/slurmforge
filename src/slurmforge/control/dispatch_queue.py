@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..slurm import SlurmClientProtocol
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..workflow_contract import EVAL_STAGE, TRAIN_STAGE, WORKFLOW_STREAMING
@@ -16,17 +17,17 @@ from .dispatch_pack import (
 from .dispatch_submit import submit_dispatch
 from .instance_reconcile import sync_materialized_statuses
 from .state import record_workflow_event
-from ..storage.workflow_state_records import (
+from ..storage.workflow_state_constants import (
     DISPATCH_ROLE_DISPATCH,
     DISPATCH_ROLE_INITIAL,
-    WorkflowState,
-    dequeue_instances,
 )
+from ..storage.workflow_state_models import WorkflowState
+from ..storage.workflow_state_mutations import dequeue_instances
 
 
 def dispatch_ready_instances(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     state: WorkflowState,
     *,
     client: SlurmClientProtocol,
@@ -51,7 +52,7 @@ def dispatch_ready_instances(
 
 def _dispatch_initial_train(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     state: WorkflowState,
     *,
     client: SlurmClientProtocol,
@@ -89,7 +90,7 @@ def _dispatch_initial_train(
 
 def _dispatch_ready_eval(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     state: WorkflowState,
     *,
     client: SlurmClientProtocol,

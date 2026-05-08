@@ -133,3 +133,149 @@ class OutputTests(StageBatchSystemTestCase):
                     / "artifact_manifest.json"
                 ).exists()
             )
+
+    def test_artifact_records_reject_missing_or_wrong_typed_contract_fields(self) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.io import SchemaVersion
+        from slurmforge.outputs.models import (
+            artifact_manifest_record_from_dict,
+            artifact_ref_from_dict,
+        )
+
+        artifact_payload = {
+            "schema_version": SchemaVersion.OUTPUT_RECORD,
+            "name": "checkpoint",
+            "kind": "file",
+            "source_path": "/tmp/checkpoint.pt",
+            "managed_path": "/tmp/artifacts/checkpoint.pt",
+            "strategy": "copy",
+            "managed": True,
+            "digest": "abc",
+            "source_digest": "abc",
+            "managed_digest": "abc",
+            "verified": None,
+            "size_bytes": 12,
+            "optional": False,
+        }
+        artifact_cases = {
+            "missing_source_digest": {
+                key: value
+                for key, value in artifact_payload.items()
+                if key != "source_digest"
+            },
+            "string_verified": {**artifact_payload, "verified": "true"},
+            "integer_optional": {**artifact_payload, "optional": 0},
+        }
+        for name, payload in artifact_cases.items():
+            with self.subTest(name=name):
+                with self.assertRaises(RecordContractError):
+                    artifact_ref_from_dict(payload)
+
+        manifest_payload = {
+            "schema_version": SchemaVersion.OUTPUT_RECORD,
+            "stage_instance_id": "run_1.train",
+            "attempt_id": "0001",
+            "artifacts": [artifact_payload],
+        }
+        manifest_cases = {
+            "missing_artifacts": {
+                key: value
+                for key, value in manifest_payload.items()
+                if key != "artifacts"
+            },
+            "artifact_not_object": {**manifest_payload, "artifacts": ["bad"]},
+        }
+        for name, payload in manifest_cases.items():
+            with self.subTest(name=name):
+                with self.assertRaises(RecordContractError):
+                    artifact_manifest_record_from_dict(payload)
+
+    def test_stage_outputs_reader_returns_typed_record(self) -> None:
+        from slurmforge.outputs.records import load_stage_outputs
+        from slurmforge.plans.outputs import OutputRef, StageOutputsRecord
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = load_experiment_spec(write_demo_project(root))
+            batch = compile_stage_batch_for_kind(spec, kind="train")
+            materialize_stage_batch_for_test(batch, spec_snapshot=spec.raw)
+            self.assertEqual(execute_stage_task(Path(batch.submission_root), 1, 0), 0)
+            run_dir = Path(batch.submission_root) / batch.stage_instances[0].run_dir_rel
+
+            outputs = load_stage_outputs(run_dir)
+
+            self.assertIsInstance(outputs, StageOutputsRecord)
+            assert outputs is not None
+            self.assertIsInstance(outputs.outputs["checkpoint"], OutputRef)
+            self.assertEqual(outputs.outputs["checkpoint"].output_name, "checkpoint")
+
+    def test_stage_outputs_record_rejects_invalid_outputs_map(self) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.io import SchemaVersion
+        from slurmforge.plans.serde import stage_outputs_record_from_dict
+        from slurmforge.resolver.output_refs import output_ref
+
+        output_payload = {
+            "schema_version": SchemaVersion.OUTPUT_RECORD,
+            "output_name": "checkpoint",
+            "kind": "file",
+            "path": "/tmp/checkpoint.pt",
+            "producer_stage_instance_id": "run_1.train",
+            "cardinality": "one",
+            "producer_attempt_id": "0001",
+            "digest": "digest",
+            "source_path": "/tmp/source.pt",
+            "managed": True,
+            "strategy": "copy",
+            "source_digest": "source",
+            "managed_digest": "managed",
+            "verified": True,
+            "size_bytes": 4,
+            "selection_reason": "latest_step",
+            "value": None,
+        }
+        payload = {
+            "schema_version": SchemaVersion.OUTPUT_RECORD,
+            "stage_instance_id": "run_1.train",
+            "producer_attempt_id": "0001",
+            "outputs": {"checkpoint": output_payload},
+            "artifacts": [],
+            "artifact_manifest": "/tmp/artifact_manifest.json",
+        }
+
+        record = stage_outputs_record_from_dict(payload)
+        self.assertIsNotNone(output_ref(record, "checkpoint"))
+        empty_path = stage_outputs_record_from_dict(
+            {
+                **payload,
+                "outputs": {
+                    "checkpoint": {
+                        **output_payload,
+                        "path": "",
+                    }
+                },
+            }
+        )
+        self.assertIsNone(output_ref(empty_path, "checkpoint"))
+
+        with self.assertRaisesRegex(RecordContractError, "does not match"):
+            stage_outputs_record_from_dict(
+                {
+                    **payload,
+                    "outputs": {"renamed": output_payload},
+                }
+            )
+        with self.assertRaisesRegex(RecordContractError, "must be an object"):
+            stage_outputs_record_from_dict(
+                {
+                    **payload,
+                    "outputs": {"checkpoint": "bad"},
+                }
+            )
+        with self.assertRaisesRegex(RecordContractError, "non-empty strings"):
+            stage_outputs_record_from_dict(
+                {
+                    **payload,
+                    "outputs": {"": output_payload},
+                }
+            )

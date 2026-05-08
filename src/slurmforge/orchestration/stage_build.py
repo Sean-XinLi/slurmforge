@@ -8,6 +8,7 @@ from ..planner.sources import compile_stage_batch_from_prior_source
 from ..planner.stage_batch import compile_stage_batch_for_kind
 from ..planner.summaries import summarize_stage_batch as _summarize_stage_batch
 from ..plans.sources import SourcedStageBatchPlan
+from ..plans.stage import StageBatchPlan
 from ..resolver.explicit.external_path import explicit_input_bindings
 from ..resolver.explicit.run import upstream_bindings_from_run
 from ..resolver.explicit.stage_batch import upstream_bindings_from_stage_batch
@@ -51,7 +52,7 @@ def resolve_eval_inputs(
     )
 
 
-def build_train_stage_batch(spec: ExperimentSpec):
+def build_train_stage_batch(spec: ExperimentSpec) -> StageBatchPlan:
     return compile_stage_batch_for_kind(spec, kind=TRAIN_STAGE)
 
 
@@ -63,7 +64,7 @@ def build_eval_stage_batch(
     checkpoint: str | None = None,
     input_name: str | None = None,
     allow_unresolved: bool = False,
-):
+) -> StageBatchPlan:
     if allow_unresolved and not (from_train_batch or from_run or checkpoint):
         return compile_stage_batch_for_kind(spec, kind=EVAL_STAGE)
     runs, bindings, source_ref = resolve_eval_inputs(
@@ -82,7 +83,7 @@ def build_eval_stage_batch(
     )
 
 
-def summarize_stage_batch(batch) -> list[str]:
+def summarize_stage_batch(batch: StageBatchPlan) -> list[str]:
     return _summarize_stage_batch(batch)
 
 

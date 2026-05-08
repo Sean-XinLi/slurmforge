@@ -2,30 +2,31 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..control_job_contract import (
+    CONTROL_KIND_DISPATCH_CATCHUP_GATE,
+    control_job_key,
+)
 from ..emit.pipeline_gate import (
     write_pipeline_gate_barrier_file,
     write_pipeline_gate_submit_file,
 )
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..slurm import SlurmClientProtocol
 from ..submission.dependency_tree import submit_dependent_job_with_dependency_tree
 from ..workflow_contract import DISPATCH_CATCHUP_GATE
 from .control_submission_ledger import submitted_control_job_ids
-from .control_submission_records import (
-    CONTROL_KIND_DISPATCH_CATCHUP_GATE,
-    ControlSubmitResult,
-    control_submission_key,
-)
+from .control_submission_records import ControlSubmitResult
 from .control_submission_submit import (
     submit_control_once,
 )
 from .state import record_workflow_event, save_workflow_state
-from ..storage.workflow_state_records import WorkflowState
+from ..storage.workflow_state_models import WorkflowState
 
 
 def submit_control_gate(
     pipeline_root: Path,
     state: WorkflowState,
-    plan,
+    plan: TrainEvalPipelinePlan,
     gate: str,
     *,
     dependency_job_ids: tuple[str, ...],
@@ -75,14 +76,14 @@ def submit_control_gate(
 def _control_gate_key(gate: str, *, target_id: str | None) -> str:
     if gate != DISPATCH_CATCHUP_GATE:
         raise ValueError(f"Unsupported control gate: {gate}")
-    return control_submission_key(
+    return control_job_key(
         CONTROL_KIND_DISPATCH_CATCHUP_GATE,
         target_id=target_id or "all",
     )
 
 
 def _submit_gate_with_dependencies(
-    plan,
+    plan: TrainEvalPipelinePlan,
     gate: str,
     *,
     target_id: str | None,

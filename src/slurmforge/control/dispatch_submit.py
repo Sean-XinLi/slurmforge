@@ -4,36 +4,39 @@ from functools import partial
 from pathlib import Path
 
 from ..emit.pipeline_gate import write_stage_instance_gate_array_submit_file
+from ..control_job_contract import (
+    CONTROL_KIND_STAGE_INSTANCE_GATE,
+    control_job_key,
+)
+from ..plans.stage import StageBatchPlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..slurm import SlurmClientProtocol, SlurmSubmitOptions
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..workflow_contract import DISPATCH_CATCHUP_GATE
-from .control_submission_records import (
-    CONTROL_KIND_STAGE_INSTANCE_GATE,
-    ControlSubmitResult,
-    control_submission_key,
-)
+from .control_submission_records import ControlSubmitResult
 from .control_submission_submit import (
     submit_control_once,
 )
 from .gates import submit_control_gate
 from .stage_submit import ensure_stage_submitted
 from .state import record_workflow_event
-from ..storage.workflow_state_records import (
+from ..storage.workflow_state_constants import (
     DISPATCH_SUBMITTED,
-    DispatchGroupSubmissionState,
     INSTANCE_SUBMITTED,
+)
+from ..storage.workflow_state_models import (
+    DispatchGroupSubmissionState,
     DispatchSubmissionState,
     WorkflowState,
-    dequeue_instances,
-    set_submission,
 )
+from ..storage.workflow_state_mutations import dequeue_instances, set_submission
 
 
 def submit_dispatch(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     state: WorkflowState,
-    batch,
+    batch: StageBatchPlan,
     *,
     submission_id: str,
     role: str,
@@ -71,7 +74,7 @@ def submit_dispatch(
 
 def record_dispatch_submission(
     state: WorkflowState,
-    batch,
+    batch: StageBatchPlan,
     *,
     submission_id: str,
     role: str,
@@ -125,9 +128,9 @@ def record_dispatch_submission(
 
 def submit_dispatch_gates(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     state: WorkflowState,
-    batch,
+    batch: StageBatchPlan,
     *,
     submission_id: str,
     group_job_ids: dict[str, str],
@@ -145,7 +148,7 @@ def submit_dispatch_gates(
             stage_instance_ids=tuple(group.stage_instance_ids),
         )
         target_id = f"{submission_id}:{group.group_id}"
-        key = control_submission_key(
+        key = control_job_key(
             CONTROL_KIND_STAGE_INSTANCE_GATE,
             target_id=target_id,
         )
@@ -205,7 +208,7 @@ def _submit_stage_instance_gate(
     return ControlSubmitResult(scheduler_job_ids=(gate_job_id,))
 
 
-def _batch_budgeted_gpus(batch) -> int:
+def _batch_budgeted_gpus(batch: StageBatchPlan) -> int:
     if batch.budget_plan.max_available_gpus <= 0:
         return 0
     total = 0

@@ -41,7 +41,9 @@ class SchemaVersion:
 def require_schema(payload: dict[str, Any], *, name: str, version: int) -> int:
     if "schema_version" not in payload:
         raise RecordContractError(f"{name}.schema_version is required")
-    actual = int(payload["schema_version"])
+    actual = payload["schema_version"]
+    if not isinstance(actual, int) or isinstance(actual, bool):
+        raise RecordContractError(f"{name}.schema_version must be an integer")
     if actual != version:
         raise RecordContractError(f"{name}.schema_version is not supported: {actual}")
     return actual

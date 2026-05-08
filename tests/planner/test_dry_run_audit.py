@@ -16,6 +16,10 @@ class DryRunAuditTests(StageBatchSystemTestCase):
         self,
     ) -> None:
         from slurmforge.planner.audit import build_dry_run_audit
+        from slurmforge.planner.audit_models import (
+            StageBatchDryRunValidation,
+            dry_run_audit_to_dict,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             spec = load_experiment_spec(write_demo_project(Path(tmp)))
@@ -25,12 +29,18 @@ class DryRunAuditTests(StageBatchSystemTestCase):
 
             self.assertEqual(audit.state, "valid")
             self.assertEqual(audit.plan_kind, "stage_batch")
-            unresolved = audit.validation["unresolved_inputs"]
+            self.assertIsInstance(audit.validation, StageBatchDryRunValidation)
+            validation = audit.validation
+            unresolved = validation.unresolved_inputs
             self.assertEqual(len(unresolved), 1)
-            self.assertTrue(unresolved[0]["deferred"])
+            self.assertTrue(unresolved[0].deferred)
+            payload = dry_run_audit_to_dict(audit)
+            self.assertTrue(
+                payload["validation"]["unresolved_inputs"][0]["deferred"]
+            )
 
             full_audit = build_dry_run_audit(spec, batch, command="eval", full=True)
-            self.assertIn("stages", full_audit.resource_estimate)
+            self.assertIsNotNone(full_audit.resource_estimate)
             self.assertEqual(
-                full_audit.resource_estimate["stages"][0]["stage_name"], "eval"
+                full_audit.resource_estimate.stages[0].stage_name, "eval"
             )

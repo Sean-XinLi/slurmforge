@@ -18,6 +18,12 @@ from ..config_contract.option_sets import (
 )
 from ..config_contract.registry import default_for
 from ..io import SchemaVersion, require_schema, stable_json
+from ..record_fields import (
+    required_json_value,
+    required_object,
+    required_record,
+    required_string,
+)
 
 JsonObject = dict[str, Any]
 DEFAULT_INPUT_INJECT_MODE = default_for("stages.*.inputs.*.inject.mode")
@@ -64,48 +70,55 @@ class InputBinding:
 def input_source_from_dict(payload: JsonObject | InputSource) -> InputSource:
     if isinstance(payload, InputSource):
         return payload
-    values = dict(payload)
-    if "schema_version" in values:
-        require_schema(
-            values, name="input_source", version=SchemaVersion.INPUT_CONTRACT
-        )
+    values = required_record(payload, "input_source")
+    require_schema(values, name="input_source", version=SchemaVersion.INPUT_CONTRACT)
     return InputSource(
-        kind=str(values["kind"]),
-        stage=str(values.get("stage") or ""),
-        output=str(values.get("output") or ""),
-        path=str(values.get("path") or ""),
+        kind=required_string(values, "kind", label="input_source", non_empty=True),
+        stage=required_string(values, "stage", label="input_source"),
+        output=required_string(values, "output", label="input_source"),
+        path=required_string(values, "path", label="input_source"),
     )
 
 
 def resolved_input_from_dict(
-    payload: JsonObject | ResolvedInput | None,
+    payload: JsonObject | ResolvedInput,
 ) -> ResolvedInput:
     if isinstance(payload, ResolvedInput):
         return payload
-    values = dict(payload or {})
-    if values and "schema_version" in values:
-        require_schema(
-            values, name="resolved_input", version=SchemaVersion.INPUT_CONTRACT
-        )
+    values = required_record(payload, "resolved_input")
+    require_schema(values, name="resolved_input", version=SchemaVersion.INPUT_CONTRACT)
     return ResolvedInput(
-        kind=str(values.get("kind") or "unresolved"),
-        path=str(values.get("path") or ""),
-        value=values.get("value"),
-        digest=str(values.get("digest") or ""),
-        source_output_kind=str(values.get("source_output_kind") or ""),
-        producer_stage_instance_id=str(values.get("producer_stage_instance_id") or ""),
+        kind=required_string(values, "kind", label="resolved_input", non_empty=True),
+        path=required_string(values, "path", label="resolved_input"),
+        value=required_json_value(values, "value", label="resolved_input"),
+        digest=required_string(values, "digest", label="resolved_input"),
+        source_output_kind=required_string(
+            values, "source_output_kind", label="resolved_input"
+        ),
+        producer_stage_instance_id=required_string(
+            values, "producer_stage_instance_id", label="resolved_input"
+        ),
     )
 
 
 def input_binding_from_dict(payload: JsonObject) -> InputBinding:
-    require_schema(payload, name="input_binding", version=SchemaVersion.INPUT_CONTRACT)
+    values = required_record(payload, "input_binding")
+    require_schema(values, name="input_binding", version=SchemaVersion.INPUT_CONTRACT)
     return InputBinding(
-        input_name=str(payload["input_name"]),
-        source=input_source_from_dict(dict(payload["source"])),
-        expects=str(payload["expects"]),
-        resolved=resolved_input_from_dict(payload.get("resolved")),
-        inject=dict(payload.get("inject") or {}),
-        resolution=dict(payload.get("resolution") or {}),
+        input_name=required_string(
+            values, "input_name", label="input_binding", non_empty=True
+        ),
+        source=input_source_from_dict(
+            required_object(values, "source", label="input_binding")
+        ),
+        expects=required_string(
+            values, "expects", label="input_binding", non_empty=True
+        ),
+        resolved=resolved_input_from_dict(
+            required_object(values, "resolved", label="input_binding")
+        ),
+        inject=required_object(values, "inject", label="input_binding"),
+        resolution=required_object(values, "resolution", label="input_binding"),
     )
 
 
@@ -168,49 +181,3 @@ def binding_is_ready_for_injection(binding: InputBinding) -> bool:
     if not inject_mode_matches_expectation(mode, binding.expects):
         return False
     return input_injection_value(binding) is not None
-
-
-def resolved_input_from_output_ref(output: Any) -> ResolvedInput:
-    if isinstance(output, dict):
-        values = dict(output)
-        output_name = str(values.get("output_name") or "")
-        output_kind = str(values.get("kind") or "")
-        path = str(values.get("path") or "")
-        digest = str(
-            values.get("digest")
-            or values.get("managed_digest")
-            or values.get("source_digest")
-            or ""
-        )
-        value = values.get("value")
-        cardinality = str(values.get("cardinality") or "one")
-        producer = str(values.get("producer_stage_instance_id") or "")
-    else:
-        output_name = str(getattr(output, "output_name", ""))
-        output_kind = str(getattr(output, "kind", ""))
-        path = str(getattr(output, "path", ""))
-        digest = str(
-            getattr(output, "digest", "")
-            or getattr(output, "managed_digest", "")
-            or getattr(output, "source_digest", "")
-        )
-        value = getattr(output, "value", None)
-        cardinality = str(getattr(output, "cardinality", "one"))
-        producer = str(getattr(output, "producer_stage_instance_id", ""))
-    resolved_kind = resolved_kind_for_output_kind(output_kind, cardinality)
-    if resolved_kind == INPUT_EXPECTS_VALUE:
-        return ResolvedInput(
-            kind=INPUT_EXPECTS_VALUE,
-            path=path,
-            value=value,
-            digest=digest,
-            source_output_kind=output_kind,
-            producer_stage_instance_id=producer,
-        )
-    return ResolvedInput(
-        kind=resolved_kind,
-        path=path,
-        digest=digest,
-        source_output_kind=output_kind or output_name,
-        producer_stage_instance_id=producer,
-    )

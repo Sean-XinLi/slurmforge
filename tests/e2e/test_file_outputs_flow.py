@@ -75,10 +75,10 @@ class FileOutputsFlowTests(StageBatchSystemTestCase):
             )
             outputs = load_stage_outputs(train_run_dir)
             assert outputs is not None
-            logs_output = outputs["outputs"]["train_logs"]
-            self.assertEqual(logs_output["kind"], "files")
-            self.assertEqual(logs_output["cardinality"], "many")
-            self.assertTrue(Path(logs_output["path"]).exists())
+            logs_output = outputs.outputs["train_logs"]
+            self.assertEqual(logs_output.kind, "files")
+            self.assertEqual(logs_output.cardinality, "many")
+            self.assertTrue(Path(logs_output.path).exists())
 
             runs, bindings = upstream_bindings_from_train_batch(
                 spec,
@@ -89,4 +89,4 @@ class FileOutputsFlowTests(StageBatchSystemTestCase):
             binding = bindings[runs[0].run_id][0]
             self.assertEqual(binding.input_name, "logs_manifest")
             self.assertEqual(binding.resolved.kind, "manifest")
-            self.assertEqual(binding.resolved.path, logs_output["path"])
+            self.assertEqual(binding.resolved.path, logs_output.path)

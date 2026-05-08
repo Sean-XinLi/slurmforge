@@ -41,7 +41,7 @@ def resolve_stage_inputs_from_prior_source(
             )
             if resolved is not None:
                 source = input_source_from_dict(resolved["source"])
-                resolved_payload = resolved_input_from_dict(resolved.get("resolved"))
+                resolved_payload = resolved_input_from_dict(resolved["resolved"])
                 resolution = dict(resolved["resolution"])
         elif source.kind == "external_path":
             source_path = Path(source.path).expanduser()

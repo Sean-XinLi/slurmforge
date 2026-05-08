@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..workflow_enums import (
+from ..release_policy_contract import (
     RELEASE_PER_GROUP as RELEASE_POLICY_PER_GROUP,
     RELEASE_PER_RUN as RELEASE_POLICY_PER_RUN,
     RELEASE_PER_STAGE as RELEASE_POLICY_PER_STAGE,
@@ -158,7 +158,7 @@ DISPATCH_POLICIES = (
     ),
 )
 
-RELEASE_POLICIES = (
+RELEASE_POLICY_OPTIONS = (
     ConfigOption(RELEASE_POLICY_PER_RUN, "Release downstream work per completed run."),
     ConfigOption(
         RELEASE_POLICY_PER_GROUP,

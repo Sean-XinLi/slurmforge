@@ -5,14 +5,14 @@ from pathlib import Path
 from ..contracts import (
     InputBinding,
     InputSource,
-    input_source_from_dict,
-    resolved_input_from_dict,
     resolved_payload_present,
 )
 from ..errors import ConfigContractError
 from ..lineage.query import find_bound_input, iter_lineage_source_roots
+from ..lineage.records import LineageInputSourceRecord
 from ..root_model.runs import iter_runtime_stage_run_dirs
 from ..outputs.records import load_stage_outputs
+from ..plans.outputs import OutputRef
 from ..storage.plan_reader import plan_for_run_dir
 from .output_refs import (
     output_ref,
@@ -28,7 +28,7 @@ def _output_resolution(
     run_dir: Path,
     lineage_ref: str,
     output_name: str,
-    output: dict,
+    output: OutputRef,
     producer_stage_instance_id: str,
     producer_run_id: str,
     producer_stage_name: str,
@@ -83,27 +83,21 @@ def _find_upstream_output_direct(root: Path, lineage_ref: str) -> dict | None:
     return None
 
 
-def _record_resolution(root: Path, record: dict) -> dict | None:
-    resolved = resolved_input_from_dict(record.get("resolved"))
+def _record_resolution(root: Path, record: LineageInputSourceRecord) -> dict | None:
     binding = InputBinding(
-        input_name=str(record.get("input_name") or ""),
-        source=input_source_from_dict(
-            dict(record.get("source") or {"kind": "upstream_output"})
-        ),
-        expects=str(record.get("expects") or resolved.kind),
-        resolved=resolved,
+        input_name=record.input_name,
+        source=record.source,
+        expects=record.expects,
+        resolved=record.resolved,
     )
     if not resolved_payload_present(binding):
         return None
-    resolution = dict(record.get("resolution") or {})
-    source = input_source_from_dict(
-        dict(record.get("source") or {"kind": "upstream_output"})
-    )
-    resolution.setdefault("kind", source.kind or "bound_input")
+    resolution = dict(record.resolution)
+    resolution.setdefault("kind", record.source.kind or "bound_input")
     resolution["resolved_from_lineage_root"] = str(root.resolve())
     return {
-        "source": source,
-        "resolved": resolved,
+        "source": record.source,
+        "resolved": record.resolved,
         "resolution": resolution,
     }
 

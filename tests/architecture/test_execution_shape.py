@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from tests.support.case import StageBatchSystemTestCase
@@ -22,6 +23,12 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
         service_text = (discovery_root / "service.py").read_text(encoding="utf-8")
         self.assertNotIn("if output_cfg.kind ==", service_text)
         self.assertNotIn("elif output_cfg.kind ==", service_text)
+        registry_text = (discovery_root / "registry.py").read_text(encoding="utf-8")
+        self.assertIn("StageOutputSpec", registry_text)
+        self.assertNotIn("Any", registry_text)
+        for path in sorted((discovery_root / "handlers").glob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("output_cfg: Any", text)
 
     def test_stage_sbatch_rendering_is_split_by_render_surface(self) -> None:
         stage_render_root = Path("src/slurmforge/emit/stage_render")
@@ -102,19 +109,45 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
             "workflow_state_factory.py",
             "workflow_state_models.py",
             "workflow_state_mutations.py",
-            "workflow_state_records.py",
             "workflow_state_serde.py",
             "workflow_state_validation.py",
         ):
             self.assertTrue((storage_root / name).exists())
-        workflow_state_facade = (storage_root / "workflow_state_records.py").read_text(
-            encoding="utf-8"
-        )
-        self.assertLess(len(workflow_state_facade.splitlines()), 60)
-        self.assertNotIn("@dataclass", workflow_state_facade)
+        self.assertFalse((storage_root / "workflow_state_records.py").exists())
         workflow_text = (control_root / "workflow.py").read_text(encoding="utf-8")
         self.assertNotIn("deliver_notification", workflow_text)
         self.assertNotIn("materialize_stage_batch", workflow_text)
+        self.assertTrue(Path("src/slurmforge/control_job_contract.py").exists())
+        self.assertTrue(Path("src/slurmforge/gate_task_map_contract.py").exists())
+        self.assertTrue(Path("src/slurmforge/release_policy_contract.py").exists())
+        self.assertFalse(Path("src/slurmforge/workflow_enums.py").exists())
+        self.assertFalse(Path("src/slurmforge/contracts/control_jobs.py").exists())
+        gate_runtime_text = (control_root / "gate_runtime.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("load_gate_task_map", gate_runtime_text)
+        self.assertNotIn('payload["tasks"]', gate_runtime_text)
+        self.assertNotIn("read_json(task_map", gate_runtime_text)
+        deprecated_names = {
+            "ControlSubmissionRecord",
+            "WorkflowStatusControlJobRecord",
+        }
+        deprecated_usages: list[str] = []
+        for path in sorted(Path("src/slurmforge").rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                name = ""
+                if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                    name = node.name
+                elif isinstance(node, ast.Name):
+                    name = node.id
+                elif isinstance(node, ast.Attribute):
+                    name = node.attr
+                elif isinstance(node, ast.alias):
+                    name = node.asname or node.name
+                if name in deprecated_names:
+                    deprecated_usages.append(f"{path}:{node.lineno}:{name}")
+        self.assertEqual(deprecated_usages, [])
         for path in sorted(control_root.glob("*.py")):
             if path.name in {
                 "control_submission_records.py",
@@ -150,3 +183,41 @@ class ExecutionShapeTests(StageBatchSystemTestCase):
         self.assertIn("mail_user", service)
         self.assertIn("SlurmSubmitOptions", service)
         self.assertFalse(Path("src/slurmforge/notifications/finalizer_runtime.py").exists())
+
+    def test_runtime_probe_uses_typed_runtime_plan(self) -> None:
+        text = Path("src/slurmforge/runtime/probe.py").read_text(encoding="utf-8")
+        self.assertIn("RuntimePlan", text)
+        self.assertNotIn("runtime_plan: Any", text)
+        self.assertNotIn("def _section", text)
+        self.assertNotIn("def _field", text)
+        self.assertNotIn("payload.get(", text)
+
+    def test_dry_run_audit_uses_typed_validation_model(self) -> None:
+        model_path = Path("src/slurmforge/planner/audit_models.py")
+        self.assertTrue(model_path.exists())
+        model_text = model_path.read_text(encoding="utf-8")
+        audit_text = Path("src/slurmforge/planner/audit.py").read_text(
+            encoding="utf-8"
+        )
+        cli_text = Path("src/slurmforge/cli/dry_run.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("class StageBatchDryRunValidation", model_text)
+        self.assertIn("def dry_run_audit_to_dict", model_text)
+        self.assertIn("StageBatchDryRunValidation", audit_text)
+        self.assertIn("dry_run_audit_to_dict", cli_text)
+
+        forbidden = (
+            "item.get(",
+            "report.get(",
+            'validation["',
+            'stage["',
+            "to_jsonable(",
+            "dict[str, Any]",
+            "list[dict[str, Any]]",
+        )
+        violations = [
+            pattern for pattern in forbidden if pattern in audit_text
+        ]
+        self.assertEqual(violations, [])

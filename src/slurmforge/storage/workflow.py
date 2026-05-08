@@ -9,7 +9,8 @@ from ..workflow_contract import (
     WORKFLOW_PLANNED,
 )
 from .workflow_state_factory import build_initial_workflow_state
-from .workflow_state_records import WorkflowState, workflow_state_to_dict
+from .workflow_state_models import WorkflowState
+from .workflow_state_serde import workflow_state_to_dict
 from .workflow_status_records import (
     WorkflowStatusRecord,
     workflow_status_from_dict,
@@ -49,6 +50,16 @@ def read_workflow_status(pipeline_root: Path) -> WorkflowStatusRecord | None:
 
 
 def write_workflow_status(pipeline_root: Path, record: WorkflowStatusRecord) -> None:
-    record.schema_version = SchemaVersion.WORKFLOW_STATUS
-    record.updated_at = utc_now()
-    write_json(workflow_status_path(pipeline_root), workflow_status_to_dict(record))
+    write_json(
+        workflow_status_path(pipeline_root),
+        workflow_status_to_dict(
+            WorkflowStatusRecord(
+                schema_version=SchemaVersion.WORKFLOW_STATUS,
+                state=record.state,
+                updated_at=utc_now(),
+                reason=record.reason,
+                control_jobs=record.control_jobs,
+                stage_jobs=record.stage_jobs,
+            )
+        ),
+    )

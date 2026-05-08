@@ -4,29 +4,31 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..materialization.stage_batch import materialize_stage_batch
+from ..plans.stage import StageBatchPlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..planner.stage_batch import compile_stage_batch
 from ..resolver.train_eval_pipeline import resolve_stage_inputs_for_train_eval_pipeline
 from ..spec import load_experiment_spec_from_snapshot
 from ..storage.plan_reader import run_definitions_from_stage_batch
 from ..storage.runtime_batches import upsert_runtime_batch
+from ..storage.workflow_state_constants import (
+    INSTANCE_BLOCKED,
+)
+from ..storage.workflow_state_models import WorkflowState
+from ..storage.workflow_state_mutations import dequeue_instances
 from ..workflow_contract import BATCH_ROLE_DISPATCH, EVAL_STAGE
 from .project import project_root_from_pipeline
-from ..storage.workflow_state_records import (
-    INSTANCE_BLOCKED,
-    WorkflowState,
-    dequeue_instances,
-)
 
 
 @dataclass(frozen=True)
 class MaterializedDispatch:
-    batch: object
+    batch: StageBatchPlan
     selected_instance_ids: tuple[str, ...]
 
 
 def materialize_eval_dispatch(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     state: WorkflowState,
     *,
     submission_id: str,

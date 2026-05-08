@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from ..io import read_json
+from ..gate_task_map_contract import load_gate_task_map, stage_instance_id_for_task
 from .workflow import AdvanceHint, advance_pipeline_once
 
 
@@ -15,9 +15,13 @@ def run_gate(
     task_map: Path | None = None,
 ) -> int:
     if stage_instance_id is None and task_map is not None:
-        payload = read_json(task_map)
-        stage_instance_id = str(dict(payload["tasks"])[_slurm_array_task_id()])
-    hint = None if event is None else AdvanceHint(event=event, stage_instance_id=stage_instance_id or "")
+        record = load_gate_task_map(task_map)
+        stage_instance_id = stage_instance_id_for_task(record, _slurm_array_task_id())
+    hint = (
+        None
+        if event is None
+        else AdvanceHint(event=event, stage_instance_id=stage_instance_id or "")
+    )
     advance_pipeline_once(pipeline_root, hint=hint)
     return 0
 

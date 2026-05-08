@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..storage.workflow import write_workflow_status
-from ..storage.workflow_state_records import WorkflowState
+from ..storage.workflow_state_models import WorkflowState
 from ..storage.workflow_status_records import WorkflowStatusRecord
 from ..workflow_contract import WORKFLOW_TERMINAL_STATES
 from .control_submission_ledger import submitted_control_job_ids

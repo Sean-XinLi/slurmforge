@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from ..orchestration.audit import build_empty_source_selection_audit
+from ..orchestration.audit import (
+    build_empty_source_selection_audit,
+    dry_run_audit_to_dict,
+)
 from ..orchestration.launch import emit_sourced_stage_batch
 from ..orchestration.stage_build import (
     build_prior_source_stage_batch,
@@ -16,8 +20,11 @@ from .args import dry_run_mode_from_args
 from .dry_run import emit_machine_dry_run_if_requested, emit_machine_payload
 from .render import print_lines, print_sourced_stage_batch_execution_result
 
+if TYPE_CHECKING:
+    from ..plans.sources import SourcedStageBatchPlan
 
-def _spec_for_sourced_plan(plan) -> ExperimentSpec:
+
+def _spec_for_sourced_plan(plan: SourcedStageBatchPlan) -> ExperimentSpec:
     project_root = Path(plan.lineage.source_root)
     if plan.batch.stage_instances:
         project_root = Path(
@@ -47,14 +54,15 @@ def handle_resubmit(args: argparse.Namespace) -> None:
     if plan is None:
         mode = dry_run_mode_from_args(args)
         if mode in {"json", "full"}:
+            audit = build_empty_source_selection_audit(
+                command="resubmit",
+                stage=args.stage,
+                query=args.query,
+                source_root=str(source_root),
+            )
             emit_machine_payload(
                 args,
-                build_empty_source_selection_audit(
-                    command="resubmit",
-                    stage=args.stage,
-                    query=args.query,
-                    source_root=str(source_root),
-                ),
+                dry_run_audit_to_dict(audit),
             )
             return
         print(f"[RESUBMIT] selected_runs=0 stage={args.stage} query={args.query}")

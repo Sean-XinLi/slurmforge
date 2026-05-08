@@ -18,6 +18,8 @@ class ContractTests(StageBatchSystemTestCase):
                 "source": {
                     "schema_version": 1,
                     "kind": "external_path",
+                    "stage": "",
+                    "output": "",
                     "path": "/tmp/checkpoint.pt",
                 },
                 "expects": "path",
@@ -25,7 +27,10 @@ class ContractTests(StageBatchSystemTestCase):
                     "schema_version": 1,
                     "kind": "path",
                     "path": "/tmp/checkpoint.pt",
+                    "value": None,
                     "digest": "abc",
+                    "source_output_kind": "",
+                    "producer_stage_instance_id": "",
                 },
                 "inject": {"flag": "checkpoint", "mode": "path"},
                 "resolution": {"kind": "external_path"},
@@ -82,9 +87,11 @@ class ContractTests(StageBatchSystemTestCase):
                         "required": output.required,
                         "discover": {
                             "schema_version": output.discover.schema_version,
-                            "globs": output.discover.globs,
+                            "globs": list(output.discover.globs),
                             "select": getattr(output.discover, "select", None),
                         },
+                        "file": output.file,
+                        "json_path": output.json_path,
                     }
                     for name, output in contract.outputs.items()
                 },
@@ -93,6 +100,105 @@ class ContractTests(StageBatchSystemTestCase):
 
         self.assertIsInstance(contract, StageOutputContract)
         self.assertEqual(restored.outputs["checkpoint"].discover.select, "latest_step")
+
+    def test_input_binding_from_dict_rejects_incomplete_records(self) -> None:
+        from slurmforge.contracts import input_binding_from_dict
+        from slurmforge.errors import RecordContractError
+
+        payload = {
+            "schema_version": 1,
+            "input_name": "checkpoint",
+            "source": {
+                "schema_version": 1,
+                "kind": "external_path",
+                "stage": "",
+                "output": "",
+                "path": "/tmp/checkpoint.pt",
+            },
+            "expects": "path",
+            "resolved": {
+                "schema_version": 1,
+                "kind": "path",
+                "path": "/tmp/checkpoint.pt",
+                "value": None,
+                "digest": "abc",
+                "source_output_kind": "",
+                "producer_stage_instance_id": "",
+            },
+            "inject": {"flag": "checkpoint", "mode": "path"},
+            "resolution": {"kind": "external_path"},
+        }
+
+        for field in ("resolved", "inject", "resolution"):
+            with self.subTest(field=field):
+                invalid = dict(payload)
+                del invalid[field]
+                with self.assertRaisesRegex(RecordContractError, field):
+                    input_binding_from_dict(invalid)
+
+        invalid_source = {
+            **payload,
+            "source": {
+                **payload["source"],
+                "schema_version": "1",
+            },
+        }
+        with self.assertRaisesRegex(RecordContractError, "schema_version"):
+            input_binding_from_dict(invalid_source)
+
+    def test_stage_output_contract_from_dict_rejects_incomplete_records(self) -> None:
+        from slurmforge.contracts.outputs import stage_output_contract_from_dict
+        from slurmforge.errors import RecordContractError
+
+        payload = {
+            "schema_version": 1,
+            "outputs": {
+                "checkpoint": {
+                    "schema_version": 1,
+                    "name": "checkpoint",
+                    "kind": "file",
+                    "required": True,
+                    "discover": {
+                        "schema_version": 1,
+                        "globs": ["checkpoints/*.pt"],
+                        "select": "latest_step",
+                    },
+                    "file": "",
+                    "json_path": "",
+                }
+            },
+        }
+
+        invalid_schema = {**payload, "schema_version": "1"}
+        with self.assertRaisesRegex(RecordContractError, "schema_version"):
+            stage_output_contract_from_dict(invalid_schema)
+
+        invalid_required = {
+            **payload,
+            "outputs": {
+                "checkpoint": {
+                    **payload["outputs"]["checkpoint"],
+                    "required": "true",
+                }
+            },
+        }
+        with self.assertRaisesRegex(RecordContractError, "required"):
+            stage_output_contract_from_dict(invalid_required)
+
+        invalid_discover = {
+            **payload,
+            "outputs": {
+                "checkpoint": {
+                    **payload["outputs"]["checkpoint"],
+                    "discover": {
+                        **payload["outputs"]["checkpoint"]["discover"],
+                        "globs": ("checkpoints/*.pt",),
+                    },
+                }
+            },
+        }
+        with self.assertRaisesRegex(RecordContractError, "globs"):
+            stage_output_contract_from_dict(invalid_discover)
 
     def test_stage_output_contract_rejects_latest_selector_alias(self) -> None:
         from slurmforge.errors import ConfigContractError

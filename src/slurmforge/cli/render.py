@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ..orchestration.pipeline_build import summarize_train_eval_pipeline_plan
 from ..orchestration.results import (
     StageBatchExecutionResult,
@@ -9,6 +11,10 @@ from ..orchestration.results import (
 from ..orchestration.stage_build import (
     summarize_stage_batch,
 )
+
+if TYPE_CHECKING:
+    from ..plans.stage import StageBatchPlan
+    from ..plans.train_eval import TrainEvalPipelinePlan
 
 
 def print_lines(lines: list[str]) -> None:
@@ -63,9 +69,9 @@ def print_train_eval_pipeline_execution_result(
     print(f"[OK] emitted train/eval streaming pipeline: {result.root}")
 
 
-def print_stage_batch_plan(batch) -> None:
+def print_stage_batch_plan(batch: StageBatchPlan) -> None:
     print_lines(summarize_stage_batch(batch))
 
 
-def print_train_eval_pipeline_plan(plan) -> None:
+def print_train_eval_pipeline_plan(plan: TrainEvalPipelinePlan) -> None:
     print_lines(summarize_train_eval_pipeline_plan(plan))

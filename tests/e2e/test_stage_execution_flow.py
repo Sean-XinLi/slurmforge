@@ -38,14 +38,14 @@ class StageExecutionFlowTests(StageBatchSystemTestCase):
             )
             outputs = load_stage_outputs(train_run_dir)
             assert outputs is not None
-            self.assertIn("checkpoint", outputs["outputs"])
-            checkpoint_ref = outputs["outputs"]["checkpoint"]
-            self.assertEqual(checkpoint_ref["schema_version"], 1)
-            self.assertEqual(checkpoint_ref["output_name"], "checkpoint")
-            self.assertTrue(checkpoint_ref["managed"])
-            self.assertEqual(checkpoint_ref["producer_attempt_id"], "0001")
-            self.assertTrue(checkpoint_ref["digest"])
-            self.assertTrue(Path(checkpoint_ref["path"]).exists())
+            self.assertIn("checkpoint", outputs.outputs)
+            checkpoint_ref = outputs.outputs["checkpoint"]
+            self.assertEqual(checkpoint_ref.schema_version, 1)
+            self.assertEqual(checkpoint_ref.output_name, "checkpoint")
+            self.assertTrue(checkpoint_ref.managed)
+            self.assertEqual(checkpoint_ref.producer_attempt_id, "0001")
+            self.assertTrue(checkpoint_ref.digest)
+            self.assertTrue(Path(checkpoint_ref.path).exists())
             self.assertTrue(
                 (
                     train_run_dir

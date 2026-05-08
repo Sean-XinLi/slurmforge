@@ -27,3 +27,19 @@ class IoPrimitiveTests(StageBatchSystemTestCase):
                 file_digest(path),
                 "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
             )
+
+    def test_require_schema_rejects_non_integer_versions(self) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.io import require_schema
+
+        for value in ("1", 1.0, True):
+            with self.subTest(value=value):
+                with self.assertRaises(RecordContractError):
+                    require_schema({"schema_version": value}, name="record", version=1)
+
+    def test_required_array_rejects_in_memory_tuple(self) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.record_fields import required_array
+
+        with self.assertRaises(RecordContractError):
+            required_array({"items": ("a",)}, "items", label="record")

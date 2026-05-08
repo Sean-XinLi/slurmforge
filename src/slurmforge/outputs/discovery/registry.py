@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
+from ...contracts.outputs import StageOutputSpec
 from ...errors import ConfigContractError
 from .context import OutputDiscoveryContext
 from .handlers.file import discover_file_output
@@ -12,7 +12,7 @@ from .handlers.metric import discover_metric_output
 from .models import OutputDiscoveryItem
 
 OutputDiscoveryHandler = Callable[
-    [str, Any, OutputDiscoveryContext], OutputDiscoveryItem
+    [str, StageOutputSpec, OutputDiscoveryContext], OutputDiscoveryItem
 ]
 
 _HANDLERS: dict[str, OutputDiscoveryHandler] = {

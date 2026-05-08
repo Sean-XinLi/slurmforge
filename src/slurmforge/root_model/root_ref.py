@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..errors import RecordContractError
 from ..io import SchemaVersion, read_json, require_schema, write_json
-from ..root_paths import parent_pipeline_root_for_stage_batch
+from ..record_fields import required_nullable_string, required_string
 
 
 def _root_ref_path(run_dir: Path) -> Path:
@@ -18,18 +19,6 @@ class StageRootRef:
     stage_batch_root: str
     pipeline_root: str | None = None
     schema_version: int = SchemaVersion.ROOT_REF
-
-
-def infer_stage_root_ref(run_dir: Path) -> StageRootRef | None:
-    target = Path(run_dir).resolve()
-    if target.parent.name != "runs":
-        return None
-    stage_batch_root = target.parent.parent.resolve()
-    pipeline_root = parent_pipeline_root_for_stage_batch(stage_batch_root)
-    return StageRootRef(
-        stage_batch_root=str(stage_batch_root),
-        pipeline_root=None if pipeline_root is None else str(pipeline_root),
-    )
 
 
 def write_root_ref(
@@ -51,13 +40,18 @@ def write_root_ref(
 def read_root_ref(run_dir: Path) -> StageRootRef | None:
     path = _root_ref_path(run_dir)
     if not path.exists():
-        return infer_stage_root_ref(run_dir)
+        return None
     payload = read_json(path)
     version = require_schema(payload, name="root_ref", version=SchemaVersion.ROOT_REF)
+    pipeline_root = required_nullable_string(
+        payload, "pipeline_root", label="root_ref"
+    )
+    if pipeline_root == "":
+        raise RecordContractError("root_ref.pipeline_root must be null or non-empty")
     return StageRootRef(
-        stage_batch_root=str(payload["stage_batch_root"]),
-        pipeline_root=None
-        if payload.get("pipeline_root") in (None, "")
-        else str(payload["pipeline_root"]),
+        stage_batch_root=required_string(
+            payload, "stage_batch_root", label="root_ref", non_empty=True
+        ),
+        pipeline_root=pipeline_root,
         schema_version=version,
     )

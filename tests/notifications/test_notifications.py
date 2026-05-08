@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import tempfile
 
@@ -125,3 +126,79 @@ class NotificationSubmissionTests(StageBatchSystemTestCase):
                         reason="",
                     ),
                 )
+
+            for field_name in (
+                "scheduler_job_ids",
+                "sbatch_paths",
+                "barrier_job_ids",
+                "dependency_job_ids",
+            ):
+                with self.subTest(field_name=field_name):
+                    record_kwargs = {
+                        **base,
+                        "state": "submitted",
+                        "scheduler_job_ids": ("1001",),
+                    }
+                    record_kwargs[field_name] = ("",)
+                    with self.assertRaises(RecordContractError):
+                        write_notification_record(
+                            root, NotificationSubmissionRecord(**record_kwargs)
+                        )
+
+            invalid_item_cases = {
+                "list_recipients_field": {"recipients": ["you@example.com"]},
+                "list_scheduler_field": {"scheduler_job_ids": ["1001"]},
+                "path_sbatch_item": {"sbatch_paths": (Path("notify.sbatch"),)},
+                "integer_scheduler_item": {"scheduler_job_ids": (1001,)},
+                "integer_barrier_item": {"barrier_job_ids": (1002,)},
+                "integer_dependency_item": {"dependency_job_ids": (1003,)},
+            }
+            for name, override in invalid_item_cases.items():
+                with self.subTest(name=name):
+                    record_kwargs = {
+                        **base,
+                        "state": "submitted",
+                        "scheduler_job_ids": ("1001",),
+                        **override,
+                    }
+                    with self.assertRaises(RecordContractError):
+                        write_notification_record(
+                            root, NotificationSubmissionRecord(**record_kwargs)
+                        )
+
+    def test_malformed_notification_record_payload_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            record_dir = root / "notifications" / "records"
+            record_dir.mkdir(parents=True)
+            payload = {
+                "schema_version": 1,
+                "event": "batch_finished",
+                "root_kind": "stage_batch",
+                "root": str(root),
+                "backend": "slurm_mail",
+                "state": "submitted",
+                "recipients": ["you@example.com"],
+                "scheduler_job_ids": ["1001"],
+                "sbatch_paths": ["notify.sbatch"],
+                "barrier_job_ids": [],
+                "dependency_job_ids": [],
+                "dependency_type": "afterany",
+                "mail_type": "END",
+                "submitted_at": "2026-01-01T00:00:00Z",
+                "reason": "",
+            }
+
+            for field_name in (
+                "scheduler_job_ids",
+                "sbatch_paths",
+                "barrier_job_ids",
+                "dependency_job_ids",
+            ):
+                with self.subTest(field_name=field_name):
+                    record_payload = {**payload, field_name: [""]}
+                    (record_dir / "batch_finished.slurm_mail.json").write_text(
+                        json.dumps(record_payload), encoding="utf-8"
+                    )
+                    with self.assertRaises(RecordContractError):
+                        read_notification_record(root, "batch_finished")

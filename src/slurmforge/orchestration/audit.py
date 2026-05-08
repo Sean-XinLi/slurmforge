@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..planner.audit_models import dry_run_audit_to_dict as _dry_run_audit_to_dict
 from ..planner.audit import (
     build_dry_run_audit as _build_dry_run_audit,
     build_empty_source_selection_audit as _build_empty_source_selection_audit,
@@ -22,3 +23,7 @@ def build_empty_source_selection_audit(
         query=query,
         source_root=source_root,
     )
+
+
+def dry_run_audit_to_dict(audit):
+    return _dry_run_audit_to_dict(audit)

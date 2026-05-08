@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import ConfigContractError
+from ..plans.stage import StageBatchPlan
 from ..slurm import SlurmSubmitOptions
 
 
@@ -46,7 +47,7 @@ def dependency_chunks(
     return tuple(chunks)
 
 
-def dependency_sink_group_ids(batch) -> tuple[str, ...]:
+def dependency_sink_group_ids(batch: StageBatchPlan) -> tuple[str, ...]:
     group_ids = {group.group_id for group in batch.group_plans}
     has_outgoing_dependency: set[str] = set()
     for dep in batch.budget_plan.dependencies:

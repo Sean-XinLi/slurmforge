@@ -8,11 +8,8 @@ from ..control_paths import workflow_events_path, workflow_state_path
 from ..io import read_json, utc_now, write_json
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..storage.workflow import default_workflow_state
-from ..storage.workflow_state_records import (
-    WorkflowState,
-    workflow_state_from_dict,
-    workflow_state_to_dict,
-)
+from ..storage.workflow_state_models import WorkflowState
+from ..storage.workflow_state_serde import workflow_state_from_dict, workflow_state_to_dict
 
 
 def load_workflow_state(pipeline_root: Path, plan: TrainEvalPipelinePlan) -> WorkflowState:

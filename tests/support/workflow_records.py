@@ -3,11 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from slurmforge.storage.workflow_state_records import (
-    WorkflowState,
-    workflow_state_from_dict,
-)
 from slurmforge.storage.workflow import read_workflow_status
+from slurmforge.storage.workflow_state_models import WorkflowState
+from slurmforge.storage.workflow_state_serde import workflow_state_from_dict
 from slurmforge.storage.workflow_status_records import WorkflowStatusRecord
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..io import write_json
+from ..gate_task_map_contract import GateTaskMapRecord, write_gate_task_map
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..workflow_contract import (
     DISPATCH_CATCHUP_GATE,
@@ -135,16 +135,16 @@ def write_stage_instance_gate_array_submit_file(
         _gate_task_map_root(plan)
         / f"{_safe_id(submission_id)}_{_safe_id(group_id)}.json"
     )
-    write_json(
+    write_gate_task_map(
         task_map_path,
-        {
-            "submission_id": submission_id,
-            "group_id": group_id,
-            "tasks": {
+        GateTaskMapRecord(
+            submission_id=submission_id,
+            group_id=group_id,
+            tasks={
                 str(index): stage_instance_id
                 for index, stage_instance_id in enumerate(stage_instance_ids)
             },
-        },
+        ),
     )
     path = (
         _gate_root(plan)

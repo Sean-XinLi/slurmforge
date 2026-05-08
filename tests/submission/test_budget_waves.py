@@ -4,7 +4,7 @@ from tests.support.case import StageBatchSystemTestCase
 from tests.support.public import (
     compile_stage_batch_for_kind,
     load_experiment_spec,
-    load_stage_submit_manifest,
+    load_submit_manifest,
     write_demo_project,
     write_stage_submit_files,
 )
@@ -44,8 +44,8 @@ class BudgetWaveTests(StageBatchSystemTestCase):
                 batch, spec_snapshot=load_experiment_spec(cfg_path).raw
             )
             write_stage_submit_files(batch)
-            manifest = load_stage_submit_manifest(Path(batch.submission_root))
-            submit_text = Path(manifest["submit_script"]).read_text()
+            manifest = load_submit_manifest(Path(batch.submission_root))
+            submit_text = Path(manifest.submit_script).read_text()
             self.assertIn("--dependency=afterany", submit_text)
 
     def test_gpu_budget_does_not_double_count_parallel_group_throttles(self) -> None:

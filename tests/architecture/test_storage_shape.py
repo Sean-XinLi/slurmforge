@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from tests.support.case import StageBatchSystemTestCase
@@ -59,11 +60,15 @@ class StorageShapeTests(StageBatchSystemTestCase):
         strict_readers = (
             "src/slurmforge/control/control_submission_ledger.py",
             "src/slurmforge/control/control_submission_records.py",
+            "src/slurmforge/lineage/records.py",
             "src/slurmforge/notifications/records.py",
+            "src/slurmforge/outputs/models.py",
             "src/slurmforge/plans/serde/outputs.py",
             "src/slurmforge/plans/serde/resources.py",
             "src/slurmforge/plans/serde/runtime.py",
             "src/slurmforge/plans/serde/train_eval.py",
+            "src/slurmforge/root_model/manifest.py",
+            "src/slurmforge/root_model/root_ref.py",
             "src/slurmforge/status/reconcile_observations.py",
             "src/slurmforge/status/serde.py",
             "src/slurmforge/storage/batch_materialization_records.py",
@@ -71,6 +76,7 @@ class StorageShapeTests(StageBatchSystemTestCase):
             "src/slurmforge/storage/workflow_state_serde.py",
             "src/slurmforge/storage/workflow_status_records.py",
             "src/slurmforge/submission/ledger_records.py",
+            "src/slurmforge/submission/submit_manifest.py",
         )
         violations = [
             path
@@ -78,3 +84,168 @@ class StorageShapeTests(StageBatchSystemTestCase):
             if "payload.get(" in Path(path).read_text(encoding="utf-8")
         ]
         self.assertEqual(violations, [])
+
+    def test_remaining_storage_boundary_readers_are_strict(self) -> None:
+        files = (
+            "src/slurmforge/lineage/query.py",
+            "src/slurmforge/root_model/root_ref.py",
+            "src/slurmforge/submission/submit_manifest.py",
+        )
+        forbidden = (
+            "payload.get(",
+            "index.get(",
+            "item.get(",
+            "manifest.get(",
+            " in (None, \"\")",
+            "str(payload[",
+            "str(manifest[",
+        )
+        violations = [
+            f"{path}: {pattern}"
+            for path in files
+            for pattern in forbidden
+            if pattern in Path(path).read_text(encoding="utf-8")
+        ]
+        self.assertEqual(violations, [])
+
+    def test_submit_manifest_reader_is_not_owned_by_emit(self) -> None:
+        emit_stage = Path("src/slurmforge/emit/stage.py").read_text(encoding="utf-8")
+        self.assertNotIn("def load_stage_submit_manifest", emit_stage)
+        self.assertNotIn("read_json", emit_stage)
+        self.assertTrue(Path("src/slurmforge/submission/submit_manifest.py").exists())
+
+    def test_root_ref_reader_does_not_infer_missing_records(self) -> None:
+        root_ref = Path("src/slurmforge/root_model/root_ref.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("infer_stage_root_ref", root_ref)
+        self.assertNotIn("parent_pipeline_root_for_stage_batch", root_ref)
+
+    def test_plan_serde_readers_do_not_coerce_payload_scalars(self) -> None:
+        reader_files = (
+            "src/slurmforge/plans/serde/budget.py",
+            "src/slurmforge/plans/serde/launcher.py",
+            "src/slurmforge/plans/serde/notifications.py",
+            "src/slurmforge/plans/serde/stage.py",
+        )
+        forbidden = (
+            "str(payload[",
+            "int(payload[",
+            "bool(payload[",
+            "str(item) for item in",
+            "int(item) for item in",
+            "bool(item) for item in",
+            " in (None, \"\")",
+        )
+        violations = [
+            f"{path}: {pattern}"
+            for path in reader_files
+            for pattern in forbidden
+            if pattern in Path(path).read_text(encoding="utf-8")
+        ]
+        self.assertEqual(violations, [])
+
+    def test_contract_from_dict_readers_use_record_helpers(self) -> None:
+        readers = {
+            "src/slurmforge/contracts/inputs.py": (
+                "input_source_from_dict",
+                "resolved_input_from_dict",
+                "input_binding_from_dict",
+            ),
+            "src/slurmforge/contracts/outputs.py": (
+                "output_discovery_rule_from_dict",
+                "stage_output_spec_from_dict",
+                "stage_output_contract_from_dict",
+            ),
+        }
+        forbidden_getters = ("payload.get(", "values.get(")
+        violations: list[str] = []
+        for path, function_names in readers.items():
+            text = Path(path).read_text(encoding="utf-8")
+            lines = text.splitlines()
+            tree = ast.parse(text)
+            functions = {
+                node.name: "\n".join(lines[node.lineno - 1 : node.end_lineno])
+                for node in ast.walk(tree)
+                if isinstance(node, ast.FunctionDef)
+            }
+            for function_name in function_names:
+                source = functions[function_name]
+                for pattern in forbidden_getters:
+                    if pattern in source:
+                        violations.append(f"{path}:{function_name}: {pattern}")
+                function_tree = ast.parse(source)
+                for node in ast.walk(function_tree):
+                    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                        if node.func.id in {"str", "int", "bool"}:
+                            violations.append(
+                                f"{path}:{function_name}: {node.func.id}()"
+                            )
+        self.assertEqual(violations, [])
+
+    def test_stage_outputs_boundary_uses_typed_records(self) -> None:
+        records_text = Path("src/slurmforge/outputs/records.py").read_text(
+            encoding="utf-8"
+        )
+        resolver_text = Path("src/slurmforge/resolver/output_refs.py").read_text(
+            encoding="utf-8"
+        )
+        inputs_text = Path("src/slurmforge/contracts/inputs.py").read_text(
+            encoding="utf-8"
+        )
+        contracts_init = Path("src/slurmforge/contracts/__init__.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("StageOutputsRecord | None", records_text)
+        self.assertNotIn("return payload", records_text)
+        self.assertNotIn("payload.get(", resolver_text)
+        self.assertNotIn("output.get(", resolver_text)
+        self.assertNotIn("resolved_input_from_output_ref", inputs_text)
+        self.assertNotIn("resolved_input_from_output_ref", contracts_init)
+
+    def test_lineage_boundary_uses_typed_records(self) -> None:
+        records_text = Path("src/slurmforge/lineage/records.py").read_text(
+            encoding="utf-8"
+        )
+        paths_text = Path("src/slurmforge/lineage/paths.py").read_text(
+            encoding="utf-8"
+        )
+        query_text = Path("src/slurmforge/lineage/query.py").read_text(
+            encoding="utf-8"
+        )
+        resolver_text = Path("src/slurmforge/resolver/upstream.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("LineageIndexRecord", records_text)
+        self.assertIn("def lineage_index_from_dict", records_text)
+        self.assertNotIn(
+            "def lineage_index_from_dict(payload: dict[str, Any]) -> dict",
+            records_text,
+        )
+        self.assertIn("LineageIndexRecord | None", paths_text)
+        self.assertNotIn('index["', query_text)
+        self.assertNotIn('item["', query_text)
+        self.assertNotIn("return dict(item)", query_text)
+        self.assertIn("LineageInputSourceRecord", resolver_text)
+        self.assertNotIn("required_object(record", resolver_text)
+
+    def test_root_manifest_detection_uses_strict_reader(self) -> None:
+        manifest_text = Path("src/slurmforge/root_model/manifest.py").read_text(
+            encoding="utf-8"
+        )
+        detection_text = Path("src/slurmforge/root_model/detection.py").read_text(
+            encoding="utf-8"
+        )
+        root_paths_text = Path("src/slurmforge/root_paths.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("class RootManifestRecord", manifest_text)
+        self.assertIn("read_root_manifest", detection_text)
+        self.assertIn("read_root_manifest", root_paths_text)
+        self.assertNotIn('manifest.get("kind")', detection_text)
+        self.assertNotIn('manifest.get("kind")', root_paths_text)
+        self.assertNotIn('payload.get("kind")', detection_text)
+        self.assertNotIn('payload.get("kind")', root_paths_text)

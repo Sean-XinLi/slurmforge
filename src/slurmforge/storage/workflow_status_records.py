@@ -3,49 +3,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..control_job_contract import (
+    ControlJobRecord,
+    control_job_from_payload,
+    validate_control_job_record,
+)
 from ..errors import RecordContractError
 from ..io import SchemaVersion, require_schema, to_jsonable
-from ..workflow_contract import (
-    WORKFLOW_BLOCKED,
-    WORKFLOW_FAILED,
-    WORKFLOW_FINALIZING,
-    WORKFLOW_PLANNED,
-    WORKFLOW_STREAMING,
-    WORKFLOW_SUCCESS,
-)
-from ..workflow_enums import CONTROL_STATE_SUBMITTED, CONTROL_STATES
 from ..record_fields import (
     required_object,
     required_record,
     required_string,
-    required_string_tuple,
 )
-
-WORKFLOW_STATUS_STATES = (
-    WORKFLOW_PLANNED,
-    WORKFLOW_STREAMING,
-    WORKFLOW_FINALIZING,
-    WORKFLOW_SUCCESS,
-    WORKFLOW_FAILED,
-    WORKFLOW_BLOCKED,
-)
-
-
-@dataclass
-class WorkflowStatusControlJobRecord:
-    key: str
-    kind: str
-    target_kind: str
-    target_id: str
-    state: str
-    sbatch_paths: tuple[str, ...] = ()
-    scheduler_job_ids: tuple[str, ...] = ()
-    barrier_job_ids: tuple[str, ...] = ()
-    dependency_job_ids: tuple[str, ...] = ()
-    reason: str = ""
-    started_at: str = ""
-    submitted_at: str = ""
-    failed_at: str = ""
+from ..workflow_contract import WORKFLOW_STATES
 
 
 @dataclass
@@ -53,9 +23,7 @@ class WorkflowStatusRecord:
     state: str
     updated_at: str
     reason: str = ""
-    control_jobs: dict[str, WorkflowStatusControlJobRecord] = field(
-        default_factory=dict
-    )
+    control_jobs: dict[str, ControlJobRecord] = field(default_factory=dict)
     stage_jobs: dict[str, dict[str, str]] = field(default_factory=dict)
     schema_version: int = SchemaVersion.WORKFLOW_STATUS
 
@@ -67,7 +35,7 @@ def workflow_status_from_dict(payload: dict[str, Any]) -> WorkflowStatusRecord:
     state = required_string(
         payload, "state", label="workflow_status", non_empty=True
     )
-    if state not in WORKFLOW_STATUS_STATES:
+    if state not in WORKFLOW_STATES:
         raise RecordContractError(f"Unsupported workflow status state: {state}")
     record = WorkflowStatusRecord(
         schema_version=version,
@@ -94,59 +62,18 @@ def workflow_status_to_dict(record: WorkflowStatusRecord) -> dict[str, Any]:
 
 def workflow_status_control_job_from_dict(
     key: str, payload: dict[str, Any]
-) -> WorkflowStatusControlJobRecord:
-    payload_key = required_string(
-        payload, "key", label="workflow_status control job", non_empty=True
+) -> ControlJobRecord:
+    return control_job_from_payload(
+        key,
+        payload,
+        label="workflow status control job",
     )
-    if payload_key != key:
-        raise RecordContractError(
-            f"workflow status control job key `{payload_key}` does not match `{key}`"
-        )
-    record = WorkflowStatusControlJobRecord(
-        key=key,
-        kind=required_string(
-            payload, "kind", label="workflow_status control job", non_empty=True
-        ),
-        target_kind=required_string(
-            payload, "target_kind", label="workflow_status control job", non_empty=True
-        ),
-        target_id=required_string(
-            payload, "target_id", label="workflow_status control job", non_empty=True
-        ),
-        state=required_string(
-            payload, "state", label="workflow_status control job", non_empty=True
-        ),
-        sbatch_paths=required_string_tuple(
-            payload, "sbatch_paths", label="workflow_status control job"
-        ),
-        scheduler_job_ids=required_string_tuple(
-            payload, "scheduler_job_ids", label="workflow_status control job"
-        ),
-        barrier_job_ids=required_string_tuple(
-            payload, "barrier_job_ids", label="workflow_status control job"
-        ),
-        dependency_job_ids=required_string_tuple(
-            payload, "dependency_job_ids", label="workflow_status control job"
-        ),
-        reason=required_string(payload, "reason", label="workflow_status control job"),
-        started_at=required_string(
-            payload, "started_at", label="workflow_status control job"
-        ),
-        submitted_at=required_string(
-            payload, "submitted_at", label="workflow_status control job"
-        ),
-        failed_at=required_string(
-            payload, "failed_at", label="workflow_status control job"
-        ),
-    )
-    _validate_control_job(record)
-    return record
 
 
 def _validate_workflow_status_record(record: WorkflowStatusRecord) -> None:
     if record.schema_version != SchemaVersion.WORKFLOW_STATUS:
         raise RecordContractError("workflow_status schema_version is invalid")
-    if record.state not in WORKFLOW_STATUS_STATES:
+    if record.state not in WORKFLOW_STATES:
         raise RecordContractError(
             f"Unsupported workflow status state: {record.state}"
         )
@@ -157,36 +84,14 @@ def _validate_workflow_status_record(record: WorkflowStatusRecord) -> None:
             raise RecordContractError(
                 f"workflow status control job key `{control_job.key}` does not match `{key}`"
             )
-        _validate_control_job(control_job)
-
-
-def _validate_control_job(record: WorkflowStatusControlJobRecord) -> None:
-    if record.state not in CONTROL_STATES:
-        raise RecordContractError(
-            f"Unsupported workflow status control job state: {record.state}"
-        )
-    if not record.kind:
-        raise RecordContractError("workflow status control job kind is required")
-    if not record.target_kind:
-        raise RecordContractError("workflow status control job target_kind is required")
-    if not record.target_id:
-        raise RecordContractError("workflow status control job target_id is required")
-    if not record.sbatch_paths:
-        raise RecordContractError("workflow status control job sbatch_paths is required")
-    if record.state == CONTROL_STATE_SUBMITTED and not record.scheduler_job_ids:
-        raise RecordContractError(
-            "submitted workflow status control job requires scheduler_job_ids"
-        )
-    if record.state in {"failed", "uncertain"} and not record.reason:
-        raise RecordContractError(
-            f"{record.state} workflow status control job requires reason"
-        )
+        validate_control_job_record(control_job, label="workflow status control job")
+    _validate_stage_jobs(record.stage_jobs)
 
 
 def _control_jobs_from_payload(
     payload: dict[str, Any],
-) -> dict[str, WorkflowStatusControlJobRecord]:
-    result: dict[str, WorkflowStatusControlJobRecord] = {}
+) -> dict[str, ControlJobRecord]:
+    result: dict[str, ControlJobRecord] = {}
     for key, value in payload.items():
         result[str(key)] = workflow_status_control_job_from_dict(
             str(key), required_record(value, f"workflow_status.control_jobs.{key}")
@@ -197,12 +102,35 @@ def _control_jobs_from_payload(
 def _stage_jobs_from_payload(payload: dict[str, Any]) -> dict[str, dict[str, str]]:
     stage_jobs: dict[str, dict[str, str]] = {}
     for stage_key, groups in payload.items():
-        group_payload = required_record(groups, f"workflow_status.stage_jobs.{stage_key}")
-        stage_jobs[str(stage_key)] = {
-            str(group_id): _job_id(job_id, stage_key=str(stage_key), group_id=str(group_id))
+        stage = _non_empty_string(stage_key, label="workflow_status.stage_jobs key")
+        group_payload = required_record(groups, f"workflow_status.stage_jobs.{stage}")
+        stage_jobs[stage] = {
+            _non_empty_string(
+                group_id, label=f"workflow_status.stage_jobs.{stage} group key"
+            ): _job_id(job_id, stage_key=stage, group_id=str(group_id))
             for group_id, job_id in group_payload.items()
         }
     return stage_jobs
+
+
+def _validate_stage_jobs(stage_jobs: Any) -> None:
+    if not isinstance(stage_jobs, dict):
+        raise RecordContractError("workflow_status.stage_jobs must be an object")
+    for stage_key, groups in stage_jobs.items():
+        stage = _non_empty_string(stage_key, label="workflow_status.stage_jobs key")
+        if not isinstance(groups, dict):
+            raise RecordContractError(f"workflow_status.stage_jobs.{stage} must be an object")
+        for group_id, job_id in groups.items():
+            group = _non_empty_string(
+                group_id, label=f"workflow_status.stage_jobs.{stage} group key"
+            )
+            _job_id(job_id, stage_key=stage, group_id=group)
+
+
+def _non_empty_string(value: Any, *, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise RecordContractError(f"{label} must be a non-empty string")
+    return value
 
 
 def _job_id(value: Any, *, stage_key: str, group_id: str) -> str:

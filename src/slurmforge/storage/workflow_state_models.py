@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ..io import SchemaVersion
+from ..release_policy_contract import RELEASE_PER_RUN
 from ..workflow_contract import WORKFLOW_PLANNED
 from .workflow_state_constants import (
     DEPENDENCY_WAITING,
     DISPATCH_SUBMITTED,
     DISPATCH_SUBMITTING,
     INSTANCE_PLANNED,
-    RELEASE_PER_RUN,
 )
 
 
