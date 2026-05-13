@@ -19,7 +19,10 @@ from ..config_contract.option_sets import (
 from ..config_contract.registry import default_for
 from ..io import SchemaVersion, require_schema, stable_json
 from ..record_fields import (
+    required_bool,
     required_json_value,
+    required_nullable_bool,
+    required_nullable_string,
     required_object,
     required_record,
     required_string,
@@ -34,6 +37,33 @@ class InputInjection:
     flag: str | None = None
     env: str | None = None
     mode: str = DEFAULT_INPUT_INJECT_MODE
+
+
+@dataclass(frozen=True)
+class InputResolution:
+    kind: str = "unresolved"
+    state: str = "unresolved"
+    reason: str = ""
+    source_root: str = ""
+    producer_root: str = ""
+    producer_run_dir: str = ""
+    producer_stage_instance_id: str = ""
+    producer_run_id: str = ""
+    producer_stage_name: str = ""
+    output_name: str = ""
+    output_path: str = ""
+    output_digest: str = ""
+    producer_digest: str = ""
+    digest: str = ""
+    selection_reason: str = ""
+    searched_root: str = ""
+    resolved_from_lineage_root: str = ""
+    source_exists: bool | None = None
+    source_role: str = ""
+    path_kind: str = "file"
+    lineage_ref: str = ""
+    expected_digest: str = ""
+    schema_version: int = SchemaVersion.INPUT_CONTRACT
 
 
 @dataclass(frozen=True)
@@ -61,9 +91,10 @@ class InputBinding:
     input_name: str
     source: InputSource
     expects: str
+    required: bool = False
     resolved: ResolvedInput = field(default_factory=ResolvedInput)
-    inject: JsonObject = field(default_factory=dict)
-    resolution: JsonObject = field(default_factory=dict)
+    inject: InputInjection = field(default_factory=InputInjection)
+    resolution: InputResolution = field(default_factory=InputResolution)
     schema_version: int = SchemaVersion.INPUT_CONTRACT
 
 
@@ -101,6 +132,81 @@ def resolved_input_from_dict(
     )
 
 
+def input_injection_from_dict(
+    payload: JsonObject | InputInjection,
+) -> InputInjection:
+    if isinstance(payload, InputInjection):
+        return payload
+    values = required_record(payload, "input_injection")
+    return InputInjection(
+        flag=required_nullable_string(values, "flag", label="input_injection"),
+        env=required_nullable_string(values, "env", label="input_injection"),
+        mode=required_string(values, "mode", label="input_injection", non_empty=True),
+    )
+
+
+def input_resolution_from_dict(
+    payload: JsonObject | InputResolution,
+) -> InputResolution:
+    if isinstance(payload, InputResolution):
+        return payload
+    values = required_record(payload, "input_resolution")
+    version = require_schema(
+        values, name="input_resolution", version=SchemaVersion.INPUT_CONTRACT
+    )
+    return InputResolution(
+        kind=required_string(values, "kind", label="input_resolution", non_empty=True),
+        state=required_string(values, "state", label="input_resolution"),
+        reason=required_string(values, "reason", label="input_resolution"),
+        source_root=required_string(values, "source_root", label="input_resolution"),
+        producer_root=required_string(
+            values, "producer_root", label="input_resolution"
+        ),
+        producer_run_dir=required_string(
+            values, "producer_run_dir", label="input_resolution"
+        ),
+        producer_stage_instance_id=required_string(
+            values, "producer_stage_instance_id", label="input_resolution"
+        ),
+        producer_run_id=required_string(
+            values, "producer_run_id", label="input_resolution"
+        ),
+        producer_stage_name=required_string(
+            values, "producer_stage_name", label="input_resolution"
+        ),
+        output_name=required_string(values, "output_name", label="input_resolution"),
+        output_path=required_string(values, "output_path", label="input_resolution"),
+        output_digest=required_string(
+            values, "output_digest", label="input_resolution"
+        ),
+        producer_digest=required_string(
+            values, "producer_digest", label="input_resolution"
+        ),
+        digest=required_string(values, "digest", label="input_resolution"),
+        selection_reason=required_string(
+            values, "selection_reason", label="input_resolution"
+        ),
+        searched_root=required_string(
+            values, "searched_root", label="input_resolution"
+        ),
+        resolved_from_lineage_root=required_string(
+            values, "resolved_from_lineage_root", label="input_resolution"
+        ),
+        source_exists=required_nullable_bool(
+            values, "source_exists", label="input_resolution"
+        ),
+        source_role=required_string(values, "source_role", label="input_resolution"),
+        path_kind=required_string(
+            values, "path_kind", label="input_resolution", non_empty=True
+        ),
+        lineage_ref=required_string(values, "lineage_ref", label="input_resolution"),
+        expected_digest=required_string(
+            values, "expected_digest", label="input_resolution"
+        ),
+        schema_version=version,
+    )
+
+
 def input_binding_from_dict(payload: JsonObject) -> InputBinding:
     values = required_record(payload, "input_binding")
     require_schema(values, name="input_binding", version=SchemaVersion.INPUT_CONTRACT)
@@ -114,11 +220,16 @@ def input_binding_from_dict(payload: JsonObject) -> InputBinding:
         expects=required_string(
             values, "expects", label="input_binding", non_empty=True
         ),
+        required=required_bool(values, "required", label="input_binding"),
         resolved=resolved_input_from_dict(
             required_object(values, "resolved", label="input_binding")
         ),
-        inject=required_object(values, "inject", label="input_binding"),
-        resolution=required_object(values, "resolution", label="input_binding"),
+        inject=input_injection_from_dict(
+            required_object(values, "inject", label="input_binding")
+        ),
+        resolution=input_resolution_from_dict(
+            required_object(values, "resolution", label="input_binding")
+        ),
     )
 
 
@@ -156,7 +267,7 @@ def resolved_payload_present(binding: InputBinding) -> bool:
 
 def input_injection_value(binding: InputBinding) -> str | None:
     resolved = binding.resolved
-    mode = str(binding.inject.get("mode") or DEFAULT_INPUT_INJECT_MODE)
+    mode = binding.inject.mode or DEFAULT_INPUT_INJECT_MODE
     if mode == INPUT_INJECT_PATH:
         return (
             resolved.path
@@ -177,7 +288,7 @@ def binding_is_ready_for_injection(binding: InputBinding) -> bool:
         return False
     if not resolved_kind_matches_expectation(binding.resolved.kind, binding.expects):
         return False
-    mode = str(binding.inject.get("mode") or DEFAULT_INPUT_INJECT_MODE)
+    mode = binding.inject.mode or DEFAULT_INPUT_INJECT_MODE
     if not inject_mode_matches_expectation(mode, binding.expects):
         return False
     return input_injection_value(binding) is not None

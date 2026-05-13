@@ -7,11 +7,11 @@ from typing import Any
 from ..errors import RecordContractError
 from ..io import (
     SchemaVersion,
-    read_json,
+    read_json_object,
     require_schema,
     to_jsonable,
     utc_now,
-    write_json,
+    write_json_object,
 )
 from ..record_fields import (
     required_string,
@@ -104,12 +104,12 @@ def read_notification_record(
     path = notification_record_path(root, event, backend)
     if not path.exists():
         return None
-    return notification_submission_record_from_dict(read_json(path))
+    return notification_submission_record_from_dict(read_json_object(path))
 
 
 def write_notification_record(root: Path, record: NotificationSubmissionRecord) -> None:
     validate_notification_submission_record(record)
-    write_json(notification_record_path(root, record.event, record.backend), record)
+    write_json_object(notification_record_path(root, record.event, record.backend), record)
 
 
 def validate_notification_submission_record(record: NotificationSubmissionRecord) -> None:

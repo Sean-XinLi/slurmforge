@@ -6,12 +6,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..errors import RecordContractError
-from ..io import SchemaVersion, read_json, require_schema, write_json
+from ..io import SchemaVersion, read_json_object, require_schema, write_json_object
 from ..record_fields import required_nullable_string, required_string
-
-
-def _root_ref_path(run_dir: Path) -> Path:
-    return Path(run_dir) / "root_ref.json"
+from ..storage.paths import root_ref_path
 
 
 @dataclass(frozen=True)
@@ -33,15 +30,15 @@ def write_root_ref(
         if pipeline_root is None
         else str(Path(pipeline_root).resolve()),
     )
-    write_json(_root_ref_path(run_dir), ref)
+    write_json_object(root_ref_path(run_dir), ref)
     return ref
 
 
 def read_root_ref(run_dir: Path) -> StageRootRef | None:
-    path = _root_ref_path(run_dir)
+    path = root_ref_path(run_dir)
     if not path.exists():
         return None
-    payload = read_json(path)
+    payload = read_json_object(path)
     version = require_schema(payload, name="root_ref", version=SchemaVersion.ROOT_REF)
     pipeline_root = required_nullable_string(
         payload, "pipeline_root", label="root_ref"

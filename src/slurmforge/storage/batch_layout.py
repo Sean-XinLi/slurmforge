@@ -7,7 +7,7 @@ from typing import Any
 
 import yaml
 
-from ..io import SchemaVersion, write_json
+from ..io import SchemaVersion, write_json_object
 from ..lineage.builders import build_stage_batch_lineage
 from ..lineage.paths import write_lineage_index
 from ..plans.stage import StageBatchPlan
@@ -29,6 +29,7 @@ def _bindings_payload(instance) -> dict[str, Any]:
                 "input_name": binding.input_name,
                 "source": binding.source,
                 "expects": binding.expects,
+                "required": binding.required,
                 "resolved": binding.resolved,
                 "inject": binding.inject,
                 "resolution": binding.resolution,
@@ -42,8 +43,8 @@ def _persist_stage_run_layout(batch: StageBatchPlan, batch_root: Path) -> None:
     for instance in batch.stage_instances:
         run_dir = batch_root / instance.run_dir_rel
         run_dir.mkdir(parents=True, exist_ok=True)
-        write_json(stage_plan_path(run_dir), instance)
-        write_json(input_bindings_path(run_dir), _bindings_payload(instance))
+        write_json_object(stage_plan_path(run_dir), instance)
+        write_json_object(input_bindings_path(run_dir), _bindings_payload(instance))
 
 
 def persist_stage_batch_layout(
@@ -54,7 +55,7 @@ def persist_stage_batch_layout(
 ) -> Path:
     batch_root = _root(batch)
     batch_root.mkdir(parents=True, exist_ok=True)
-    write_json(
+    write_json_object(
         batch_root / "manifest.json",
         {
             "schema_version": SchemaVersion.BATCH_MANIFEST,
@@ -70,18 +71,18 @@ def persist_stage_batch_layout(
         yaml.safe_dump(spec_snapshot, sort_keys=True),
         encoding="utf-8",
     )
-    write_json(batch_root / "batch_plan.json", batch)
+    write_json_object(batch_root / "batch_plan.json", batch)
     write_materialization_status(
         batch_root,
         batch_id=batch.batch_id,
         stage_name=batch.stage_name,
         state="planned",
     )
-    write_json(
+    write_json_object(
         batch_root / "groups" / "groups.json",
         {"schema_version": SchemaVersion.GROUPS, "groups": batch.group_plans},
     )
-    write_json(batch_root / "groups" / "gpu_budget_plan.json", batch.budget_plan)
+    write_json_object(batch_root / "groups" / "gpu_budget_plan.json", batch.budget_plan)
     _persist_stage_run_layout(batch, batch_root)
     write_lineage_index(batch_root, build_stage_batch_lineage(batch))
     return batch_root
@@ -93,21 +94,21 @@ def persist_selected_stage_batch_layout(
     blocked_run_ids: list[str] | None = None,
 ) -> Path:
     batch_root = _root(batch)
-    write_json(batch_root / "selected_batch_plan.json", batch)
+    write_json_object(batch_root / "selected_batch_plan.json", batch)
     write_materialization_status(
         batch_root,
         batch_id=batch.batch_id,
         stage_name=batch.stage_name,
         state="planned",
     )
-    write_json(
+    write_json_object(
         batch_root / "groups" / "selected_groups.json",
         {"schema_version": SchemaVersion.GROUPS, "groups": batch.group_plans},
     )
-    write_json(
+    write_json_object(
         batch_root / "groups" / "selected_gpu_budget_plan.json", batch.budget_plan
     )
-    write_json(
+    write_json_object(
         batch_root / "blocked_runs.json",
         {
             "schema_version": SchemaVersion.BLOCKED_RUNS,

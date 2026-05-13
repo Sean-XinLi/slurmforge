@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
+from ..contracts import InputBinding, RunDefinition
 from ..errors import UsageError
 from ..planner.sources import compile_stage_batch_from_prior_source
 from ..planner.stage_batch import compile_stage_batch_for_kind
@@ -24,7 +25,7 @@ def resolve_eval_inputs(
     from_run: str | None,
     checkpoint: str | None,
     input_name: str | None = None,
-) -> tuple[tuple[Any, ...], dict[str, tuple[Any, ...]], str]:
+) -> tuple[tuple[RunDefinition, ...], dict[str, tuple[InputBinding, ...]], str]:
     selected_input = input_name or stage_source_input_name(spec, stage_name=EVAL_STAGE)
     if checkpoint:
         runs, bindings = explicit_input_bindings(

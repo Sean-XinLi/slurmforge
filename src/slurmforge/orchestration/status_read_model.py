@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from ..root_model.detection import detect_root
 from ..root_model.runs import collect_stage_statuses
@@ -11,6 +10,7 @@ from ..status.query import state_matches
 from ..storage.batch_materialization_records import read_materialization_status
 from ..storage.runtime_batches import iter_runtime_batch_roots
 from ..storage.workflow import read_workflow_status
+from ..status.models import StageStatusRecord
 from ..storage.workflow_status_records import WorkflowStatusRecord
 from ..submission.reconcile import reconcile_root_submissions
 
@@ -30,8 +30,8 @@ class StatusReadModel:
     query: str
     workflow_status: WorkflowStatusRecord | None
     materializations: tuple[StatusMaterializationView, ...]
-    statuses: tuple[Any, ...]
-    matched_statuses: tuple[Any, ...]
+    statuses: tuple[StageStatusRecord, ...]
+    matched_statuses: tuple[StageStatusRecord, ...]
     counts: dict[str, int]
     stage_counts: dict[str, dict[str, int]]
 
@@ -113,7 +113,9 @@ def _view(materialization) -> StatusMaterializationView:
     )
 
 
-def _status_counts(statuses: tuple[Any, ...]) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
+def _status_counts(
+    statuses: tuple[StageStatusRecord, ...],
+) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
     counts: dict[str, int] = {}
     stage_counts: dict[str, dict[str, int]] = {}
     for status in statuses:

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..outputs.records import stage_outputs_path
 from ..plans.stage import StageBatchPlan
 from ..slurm import SlurmClientProtocol
 from ..status.models import TERMINAL_STATES
 from ..status.reader import read_stage_status
 from ..status.reconcile import reconcile_stage_batch_with_slurm
 from ..storage.plan_reader import load_execution_stage_batch_plan
+from ..storage.paths import stage_outputs_path
 from ..storage.workflow_state_constants import (
     DISPATCH_ACTIVE_STATES,
     DISPATCH_FAILED,

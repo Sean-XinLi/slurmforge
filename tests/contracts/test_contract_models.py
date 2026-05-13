@@ -9,7 +9,12 @@ from tests.support.public import write_demo_project
 
 class ContractTests(StageBatchSystemTestCase):
     def test_input_binding_from_dict_round_trips_contract_fields(self) -> None:
-        from slurmforge.contracts import input_binding_from_dict
+        from slurmforge.contracts import (
+            InputInjection,
+            InputResolution,
+            input_binding_from_dict,
+        )
+        from slurmforge.io import to_jsonable
 
         binding = input_binding_from_dict(
             {
@@ -23,6 +28,7 @@ class ContractTests(StageBatchSystemTestCase):
                     "path": "/tmp/checkpoint.pt",
                 },
                 "expects": "path",
+                "required": True,
                 "resolved": {
                     "schema_version": 1,
                     "kind": "path",
@@ -32,15 +38,20 @@ class ContractTests(StageBatchSystemTestCase):
                     "source_output_kind": "",
                     "producer_stage_instance_id": "",
                 },
-                "inject": {"flag": "checkpoint", "mode": "path"},
-                "resolution": {"kind": "external_path"},
+                "inject": to_jsonable(
+                    InputInjection(flag="checkpoint", mode="path")
+                ),
+                "resolution": to_jsonable(
+                    InputResolution(kind="external_path", state="resolved")
+                ),
             }
         )
 
         self.assertEqual(binding.input_name, "checkpoint")
         self.assertEqual(binding.source.kind, "external_path")
         self.assertEqual(binding.resolved.kind, "path")
-        self.assertEqual(binding.inject["flag"], "checkpoint")
+        self.assertTrue(binding.required)
+        self.assertEqual(binding.inject.flag, "checkpoint")
 
     def test_run_definition_lives_in_contracts_and_is_reexported_by_plans(self) -> None:
         from slurmforge.contracts import RunDefinition as ContractRunDefinition
@@ -102,8 +113,13 @@ class ContractTests(StageBatchSystemTestCase):
         self.assertEqual(restored.outputs["checkpoint"].discover.select, "latest_step")
 
     def test_input_binding_from_dict_rejects_incomplete_records(self) -> None:
-        from slurmforge.contracts import input_binding_from_dict
+        from slurmforge.contracts import (
+            InputInjection,
+            InputResolution,
+            input_binding_from_dict,
+        )
         from slurmforge.errors import RecordContractError
+        from slurmforge.io import to_jsonable
 
         payload = {
             "schema_version": 1,
@@ -116,6 +132,7 @@ class ContractTests(StageBatchSystemTestCase):
                 "path": "/tmp/checkpoint.pt",
             },
             "expects": "path",
+            "required": True,
             "resolved": {
                 "schema_version": 1,
                 "kind": "path",
@@ -125,11 +142,13 @@ class ContractTests(StageBatchSystemTestCase):
                 "source_output_kind": "",
                 "producer_stage_instance_id": "",
             },
-            "inject": {"flag": "checkpoint", "mode": "path"},
-            "resolution": {"kind": "external_path"},
+            "inject": to_jsonable(InputInjection(flag="checkpoint", mode="path")),
+            "resolution": to_jsonable(
+                InputResolution(kind="external_path", state="resolved")
+            ),
         }
 
-        for field in ("resolved", "inject", "resolution"):
+        for field in ("required", "resolved", "inject", "resolution"):
             with self.subTest(field=field):
                 invalid = dict(payload)
                 del invalid[field]

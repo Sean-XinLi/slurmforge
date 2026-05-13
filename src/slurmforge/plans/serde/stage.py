@@ -14,7 +14,13 @@ from ...record_fields import (
     required_string,
     required_string_array,
 )
-from ..stage import EntryPlan, GroupPlan, StageBatchPlan, StageInstancePlan
+from ..stage import (
+    EntryPlan,
+    GroupPlan,
+    StageBatchPlan,
+    StageInstanceLineage,
+    StageInstancePlan,
+)
 from .budget import budget_plan_from_dict
 from .common import require_plan_schema
 from .launcher import before_step_plan_from_dict, launcher_plan_from_dict
@@ -76,7 +82,9 @@ def stage_instance_plan_from_dict(payload: dict[str, Any]) -> StageInstancePlan:
         output_contract=stage_output_contract_from_dict(
             required_object(payload, "output_contract", label="stage_instance_plan")
         ),
-        lineage=required_object(payload, "lineage", label="stage_instance_plan"),
+        lineage=stage_instance_lineage_from_dict(
+            required_object(payload, "lineage", label="stage_instance_plan")
+        ),
         run_overrides=required_object(
             payload, "run_overrides", label="stage_instance_plan"
         ),
@@ -99,6 +107,19 @@ def entry_plan_from_dict(payload: dict[str, Any]) -> EntryPlan:
         command=_required_command(payload, "command", label="entry_plan"),
         workdir=required_string(payload, "workdir", label="entry_plan"),
         args=required_object(payload, "args", label="entry_plan"),
+    )
+
+
+def stage_instance_lineage_from_dict(
+    payload: dict[str, Any],
+) -> StageInstanceLineage:
+    label = "stage_instance_plan.lineage"
+    return StageInstanceLineage(
+        project=required_string(payload, "project", label=label, non_empty=True),
+        experiment=required_string(payload, "experiment", label=label, non_empty=True),
+        config_path=required_string(payload, "config_path", label=label),
+        project_root=required_string(payload, "project_root", label=label),
+        source_ref=required_string(payload, "source_ref", label=label, non_empty=True),
     )
 
 

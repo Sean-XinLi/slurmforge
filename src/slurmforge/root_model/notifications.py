@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from ..contracts import (
     NotificationRunStatusInput,
     NotificationStageStatusInput,
     NotificationSummaryInput,
 )
+from ..plans.notifications import NotificationPlan
 from ..storage.plan_reader import (
     load_execution_stage_batch_plan,
     load_train_eval_pipeline_plan,
@@ -21,7 +21,7 @@ from .models import (
 from .snapshots import load_root_status_snapshot
 
 
-def notification_plan_for_root(root: Path) -> Any:
+def notification_plan_for_root(root: Path) -> NotificationPlan:
     descriptor = detect_root(root)
     if descriptor.kind == "train_eval_pipeline":
         return load_train_eval_pipeline_plan(descriptor.root).notification_plan

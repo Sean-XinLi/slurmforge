@@ -14,6 +14,7 @@ from .models import (
     GpuSizingDefaultsSpec,
     GpuTypeSpec,
     HardwareSpec,
+    LauncherRendezvousSpec,
     LauncherSpec,
     NotificationsSpec,
     OrchestrationSpec,
@@ -26,6 +27,7 @@ from .models import (
     StageInputSpec,
     StageSpec,
     StorageSpec,
+    TorchrunLauncherSpec,
     UserRuntimeSpec,
 )
 from .parser import load_experiment_spec, parse_experiment_spec
@@ -51,6 +53,7 @@ __all__ = [
     "GpuSizingDefaultsSpec",
     "GpuTypeSpec",
     "HardwareSpec",
+    "LauncherRendezvousSpec",
     "NotificationsSpec",
     "OrchestrationSpec",
     "ResourceSpec",
@@ -62,6 +65,7 @@ __all__ = [
     "StageInputSpec",
     "StageSpec",
     "StorageSpec",
+    "TorchrunLauncherSpec",
     "UserRuntimeSpec",
     "load_experiment_spec",
     "load_experiment_spec_from_snapshot",

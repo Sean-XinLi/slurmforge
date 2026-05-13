@@ -7,7 +7,7 @@ from typing import Any
 
 import yaml
 
-from ..io import SchemaVersion, write_json
+from ..io import SchemaVersion, write_json_object
 from ..lineage.builders import build_train_eval_pipeline_lineage
 from ..lineage.paths import write_lineage_index
 from ..plans.train_eval import TrainEvalPipelinePlan
@@ -26,7 +26,7 @@ def persist_train_eval_pipeline_layout(
 ) -> Path:
     root = Path(plan.root_dir)
     root.mkdir(parents=True, exist_ok=True)
-    write_json(
+    write_json_object(
         root / "manifest.json",
         {
             "schema_version": SchemaVersion.PIPELINE_MANIFEST,
@@ -41,7 +41,7 @@ def persist_train_eval_pipeline_layout(
         yaml.safe_dump(spec_snapshot, sort_keys=True),
         encoding="utf-8",
     )
-    write_json(root / "train_eval_pipeline_plan.json", plan)
+    write_json_object(root / "train_eval_pipeline_plan.json", plan)
     initialize_stage_catalog(root, pipeline_id=plan.pipeline_id)
     initialize_runtime_batches(root, pipeline_id=plan.pipeline_id)
     for stage_index, stage_name in enumerate(plan.stage_order):

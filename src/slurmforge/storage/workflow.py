@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..control_paths import workflow_status_path, workflow_state_path
-from ..io import SchemaVersion, read_json, utc_now, write_json
+from ..io import SchemaVersion, read_json_object, utc_now, write_json_object
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..workflow_contract import (
     WORKFLOW_PLANNED,
@@ -26,8 +26,8 @@ def write_initial_workflow_state(root: Path, plan: TrainEvalPipelinePlan) -> Non
     root = Path(root)
     workflow_state = default_workflow_state(plan)
     workflow_state_payload = workflow_state_to_dict(workflow_state)
-    write_json(root / "control" / "control_plan.json", plan.control_plan)
-    write_json(workflow_state_path(root), workflow_state_payload)
+    write_json_object(root / "control" / "control_plan.json", plan.control_plan)
+    write_json_object(workflow_state_path(root), workflow_state_payload)
     write_workflow_status(
         root,
         WorkflowStatusRecord(
@@ -46,11 +46,11 @@ def read_workflow_status(pipeline_root: Path) -> WorkflowStatusRecord | None:
     path = workflow_status_path(pipeline_root)
     if not path.exists():
         return None
-    return workflow_status_from_dict(read_json(path))
+    return workflow_status_from_dict(read_json_object(path))
 
 
 def write_workflow_status(pipeline_root: Path, record: WorkflowStatusRecord) -> None:
-    write_json(
+    write_json_object(
         workflow_status_path(pipeline_root),
         workflow_status_to_dict(
             WorkflowStatusRecord(

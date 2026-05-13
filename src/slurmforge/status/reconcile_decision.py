@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..outputs.records import stage_outputs_path
+from ..storage.paths import stage_outputs_path
 from ..slurm import (
     SlurmJobState,
     failure_class_for_slurm_state,

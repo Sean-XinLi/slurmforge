@@ -3,15 +3,19 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..errors import InputContractError
-from ..io import SchemaVersion, utc_now, write_json
+from ..io import SchemaVersion, read_json_object, utc_now, write_json_object
 from ..contracts import InputBinding
 from ..plans.stage import StageBatchPlan, StageInstancePlan
+from ..storage.paths import input_verification_path
 from .models import StageInputVerificationReport
+from .serde import stage_input_verification_report_from_dict
 from .verification import record_for_binding
 
 
-def input_verification_path(run_dir: Path) -> Path:
-    return run_dir / "input_verification.json"
+def load_stage_input_verification_report(run_dir: Path) -> StageInputVerificationReport:
+    return stage_input_verification_report_from_dict(
+        read_json_object(input_verification_path(run_dir))
+    )
 
 
 def verify_stage_instance_inputs(
@@ -56,7 +60,7 @@ def verify_and_write_stage_instance_inputs(
     run_dir: Path,
 ) -> StageInputVerificationReport:
     report = verify_stage_instance_inputs(instance, bindings, phase=phase)
-    write_json(input_verification_path(run_dir), report)
+    write_json_object(input_verification_path(run_dir), report)
     raise_for_failed_report(report)
     return report
 
@@ -87,7 +91,7 @@ def verify_stage_batch_inputs(
         report = verify_stage_instance_inputs(
             instance, instance.input_bindings, phase=phase
         )
-        write_json(input_verification_path(run_dir), report)
+        write_json_object(input_verification_path(run_dir), report)
         reports.append(report)
     failures = verification_failure_reasons(tuple(reports))
     if failures:

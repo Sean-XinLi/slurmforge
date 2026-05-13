@@ -47,7 +47,12 @@ class StageCliFlagTests(StageBatchSystemTestCase):
             self.assertNotIn("--skip", shell)
 
     def test_python_script_shell_uses_same_flag_rules_for_input_injection(self) -> None:
-        from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
+        from slurmforge.contracts import (
+            InputBinding,
+            InputInjection,
+            InputSource,
+            ResolvedInput,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -66,19 +71,16 @@ class StageCliFlagTests(StageBatchSystemTestCase):
                     input_name="checkpoint",
                     source=InputSource(kind="external_path", path="/tmp/checkpoint.pt"),
                     expects="path",
+                    required=True,
                     resolved=ResolvedInput(kind="path", path="/tmp/checkpoint.pt"),
-                    inject={
-                        "flag": "checkpoint_path",
-                        "mode": "path",
-                        "required": True,
-                    },
+                    inject=InputInjection(flag="checkpoint_path", mode="path"),
                 ),
                 InputBinding(
                     input_name="raw",
                     source=InputSource(kind="external_path", path="/tmp/raw.pt"),
                     expects="path",
                     resolved=ResolvedInput(kind="path", path="/tmp/raw.pt"),
-                    inject={"flag": "--raw.input", "mode": "path"},
+                    inject=InputInjection(flag="--raw.input", mode="path"),
                 ),
             )
 

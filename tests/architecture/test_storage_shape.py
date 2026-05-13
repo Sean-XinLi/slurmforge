@@ -45,6 +45,66 @@ class StorageShapeTests(StageBatchSystemTestCase):
         self.assertTrue(Path("src/slurmforge/storage/workflow.py").exists())
         self.assertTrue(Path("src/slurmforge/root_model/seed.py").exists())
 
+    def test_stage_run_path_conventions_have_single_owner(self) -> None:
+        owner = Path("src/slurmforge/storage/paths.py")
+        self.assertTrue(owner.exists())
+        owner_text = owner.read_text(encoding="utf-8")
+        for name in (
+            "status_path",
+            "stage_plan_path",
+            "input_bindings_path",
+            "input_verification_path",
+            "stage_outputs_path",
+            "status_events_path",
+            "attempts_dir",
+            "attempt_path",
+            "root_ref_path",
+            "next_attempt_id",
+        ):
+            self.assertIn(f"def {name}(", owner_text)
+
+        forbidden_defs = (
+            "def status_path(",
+            "def input_verification_path(",
+            "def stage_outputs_path(",
+            "def root_ref_path(",
+            "def attempts_dir(",
+            "def attempt_path(",
+            "def _status_events_path(",
+            "def _stage_outputs_path(",
+            "def _root_ref_path(",
+            "def _attempts_dir(",
+            "def _next_attempt_id(",
+            "def _stage_plan_path(",
+            "def _input_bindings_path(",
+            "def _manifest_path(",
+        )
+        violations = [
+            f"{path}: {pattern}"
+            for path in sorted(Path("src/slurmforge").rglob("*.py"))
+            if path != owner
+            for pattern in forbidden_defs
+            if pattern in path.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(violations, [])
+
+    def test_json_record_writers_use_object_boundary(self) -> None:
+        violations: list[str] = []
+        for path in sorted(Path("src/slurmforge").rglob("*.py")):
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text, filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom):
+                    for alias in node.names:
+                        if alias.name == "write_json":
+                            violations.append(f"{path}:{node.lineno}: import write_json")
+                elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                    if node.func.id == "write_json":
+                        violations.append(f"{path}:{node.lineno}: write_json()")
+                elif isinstance(node, ast.Constant) and node.value == "write_json":
+                    violations.append(f"{path}:{node.lineno}: write_json export")
+        self.assertEqual(violations, [])
+
     def test_materialization_workflow_is_not_owned_by_storage(self) -> None:
         storage_root = Path("src/slurmforge/storage")
         self.assertFalse((storage_root / "materialization.py").exists())
@@ -111,6 +171,7 @@ class StorageShapeTests(StageBatchSystemTestCase):
     def test_submit_manifest_reader_is_not_owned_by_emit(self) -> None:
         emit_stage = Path("src/slurmforge/emit/stage.py").read_text(encoding="utf-8")
         self.assertNotIn("def load_stage_submit_manifest", emit_stage)
+        self.assertNotIn("def _manifest_path", emit_stage)
         self.assertNotIn("read_json", emit_stage)
         self.assertTrue(Path("src/slurmforge/submission/submit_manifest.py").exists())
 
@@ -204,6 +265,23 @@ class StorageShapeTests(StageBatchSystemTestCase):
         self.assertNotIn("resolved_input_from_output_ref", inputs_text)
         self.assertNotIn("resolved_input_from_output_ref", contracts_init)
 
+    def test_input_verification_boundary_uses_typed_records(self) -> None:
+        models_text = Path("src/slurmforge/inputs/models.py").read_text(
+            encoding="utf-8"
+        )
+        serde_text = Path("src/slurmforge/inputs/serde.py").read_text(
+            encoding="utf-8"
+        )
+        ready_text = Path("src/slurmforge/submission/ready.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("source: InputSource", models_text)
+        self.assertNotIn("source: JsonObject", models_text)
+        self.assertIn("stage_input_verification_report_from_dict", serde_text)
+        self.assertNotIn("read_json_object", ready_text)
+        self.assertNotIn("verification.get(", ready_text)
+
     def test_lineage_boundary_uses_typed_records(self) -> None:
         records_text = Path("src/slurmforge/lineage/records.py").read_text(
             encoding="utf-8"
@@ -238,13 +316,23 @@ class StorageShapeTests(StageBatchSystemTestCase):
         detection_text = Path("src/slurmforge/root_model/detection.py").read_text(
             encoding="utf-8"
         )
+        models_text = Path("src/slurmforge/root_model/models.py").read_text(
+            encoding="utf-8"
+        )
+        manifest_model_text = manifest_text.split("def root_manifest_path", 1)[0]
+        descriptor_model_text = models_text.split("class RootStatusSnapshot", 1)[0]
         root_paths_text = Path("src/slurmforge/root_paths.py").read_text(
             encoding="utf-8"
         )
 
         self.assertIn("class RootManifestRecord", manifest_text)
+        self.assertIn("schema_version: int", manifest_text)
+        self.assertIn("schema_version: int", models_text)
         self.assertIn("read_root_manifest", detection_text)
         self.assertIn("read_root_manifest", root_paths_text)
+        self.assertNotIn("    payload:", manifest_model_text)
+        self.assertNotIn("    manifest:", descriptor_model_text)
+        self.assertNotIn("manifest.payload", detection_text)
         self.assertNotIn('manifest.get("kind")', detection_text)
         self.assertNotIn('manifest.get("kind")', root_paths_text)
         self.assertNotIn('payload.get("kind")', detection_text)

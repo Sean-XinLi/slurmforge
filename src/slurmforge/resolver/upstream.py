@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from ..contracts import (
     InputBinding,
+    InputResolution,
     InputSource,
+    ResolvedInput,
     resolved_payload_present,
 )
 from ..errors import ConfigContractError
@@ -22,6 +25,13 @@ from .output_refs import (
 )
 
 
+@dataclass(frozen=True)
+class FoundInputBinding:
+    source: InputSource
+    resolved: ResolvedInput
+    resolution: InputResolution
+
+
 def _output_resolution(
     *,
     root: Path,
@@ -32,7 +42,7 @@ def _output_resolution(
     producer_stage_instance_id: str,
     producer_run_id: str,
     producer_stage_name: str,
-) -> dict:
+) -> FoundInputBinding:
     resolution = upstream_resolution(
         producer_root=producer_root_from_run_dir(run_dir),
         run_dir=run_dir,
@@ -42,18 +52,22 @@ def _output_resolution(
         output_name=output_name,
         output=output,
     )
-    resolution["searched_root"] = str(root.resolve())
-    return {
-        "source": InputSource(
+    return FoundInputBinding(
+        source=InputSource(
             kind="upstream_output", stage=producer_stage_name, output=output_name
         ),
-        "lineage_ref": lineage_ref,
-        "resolved": resolved_output(output),
-        "resolution": resolution,
-    }
+        resolved=resolved_output(output),
+        resolution=replace(
+            resolution,
+            searched_root=str(root.resolve()),
+            lineage_ref=lineage_ref,
+        ),
+    )
 
 
-def _find_upstream_output_direct(root: Path, lineage_ref: str) -> dict | None:
+def _find_upstream_output_direct(
+    root: Path, lineage_ref: str
+) -> FoundInputBinding | None:
     if ":" not in lineage_ref:
         return None
     producer, output_name = lineage_ref.split(":", 1)
@@ -83,23 +97,28 @@ def _find_upstream_output_direct(root: Path, lineage_ref: str) -> dict | None:
     return None
 
 
-def _record_resolution(root: Path, record: LineageInputSourceRecord) -> dict | None:
+def _record_resolution(
+    root: Path, record: LineageInputSourceRecord
+) -> FoundInputBinding | None:
     binding = InputBinding(
         input_name=record.input_name,
         source=record.source,
         expects=record.expects,
         resolved=record.resolved,
+        required=False,
+        resolution=record.resolution,
     )
     if not resolved_payload_present(binding):
         return None
-    resolution = dict(record.resolution)
-    resolution.setdefault("kind", record.source.kind or "bound_input")
-    resolution["resolved_from_lineage_root"] = str(root.resolve())
-    return {
-        "source": record.source,
-        "resolved": record.resolved,
-        "resolution": resolution,
-    }
+    return FoundInputBinding(
+        source=record.source,
+        resolved=record.resolved,
+        resolution=replace(
+            record.resolution,
+            kind=record.resolution.kind or record.source.kind or "bound_input",
+            resolved_from_lineage_root=str(root.resolve()),
+        ),
+    )
 
 
 def _find_bound_input_resolution(
@@ -108,7 +127,7 @@ def _find_bound_input_resolution(
     run_id: str,
     input_name: str,
     lineage_ref: str,
-) -> dict | None:
+) -> FoundInputBinding | None:
     exact = find_bound_input(
         root, run_id=run_id, input_name=input_name, lineage_ref=lineage_ref
     )
@@ -134,7 +153,7 @@ def _find_bound_input_resolution(
 
 def find_upstream_output(
     root: Path, lineage_ref: str, *, run_id: str, input_name: str
-) -> dict | None:
+) -> FoundInputBinding | None:
     direct = _find_upstream_output_direct(root, lineage_ref)
     if direct is not None:
         return direct

@@ -28,10 +28,7 @@ def _spec_for_sourced_plan(plan: SourcedStageBatchPlan) -> ExperimentSpec:
     project_root = Path(plan.lineage.source_root)
     if plan.batch.stage_instances:
         project_root = Path(
-            str(
-                plan.batch.stage_instances[0].lineage.get("project_root")
-                or project_root
-            )
+            plan.batch.stage_instances[0].lineage.project_root or str(project_root)
         )
     spec = parse_experiment_spec(
         plan.spec_snapshot,

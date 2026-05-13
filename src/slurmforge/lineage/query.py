@@ -56,10 +56,7 @@ def find_bound_input(
             continue
         if item.input_name != input_name:
             continue
-        resolution = item.resolution
-        item_lineage_ref = (
-            resolution["lineage_ref"] if "lineage_ref" in resolution else ""
-        )
+        item_lineage_ref = item.resolution.lineage_ref
         if lineage_ref is not None and item_lineage_ref not in {
             lineage_ref,
             "",

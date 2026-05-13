@@ -4,8 +4,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..io import SchemaVersion, content_digest, read_json, utc_now, write_json
+from ..io import SchemaVersion, content_digest, read_json_object, utc_now, write_json_object
 from ..plans.stage import StageInstancePlan
+from ..storage.paths import next_attempt_id
 from ..status.machine import commit_attempt, commit_stage_status
 from ..status.models import StageAttemptRecord, StageStatusRecord
 
@@ -26,20 +27,8 @@ class ExecutionAttempt:
     node_list: str
 
 
-def _next_attempt_id(run_dir: Path) -> str:
-    attempts = run_dir / "attempts"
-    if not attempts.exists():
-        return "0001"
-    existing = [
-        int(path.name)
-        for path in attempts.iterdir()
-        if path.is_dir() and path.name.isdigit()
-    ]
-    return f"{(max(existing) + 1) if existing else 1:04d}"
-
-
 def begin_attempt(run_dir: Path, instance: StageInstancePlan) -> ExecutionAttempt:
-    attempt_id = _next_attempt_id(run_dir)
+    attempt_id = next_attempt_id(run_dir)
     attempt_dir = run_dir / "attempts" / attempt_id
     log_dir = attempt_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -59,9 +48,9 @@ def begin_attempt(run_dir: Path, instance: StageInstancePlan) -> ExecutionAttemp
         node_list=os.environ.get("SLURM_NODELIST", ""),
     )
     commit_attempt(run_dir, _running_attempt_record(attempt))
-    write_json(attempt_dir / "launcher_plan.json", instance.launcher_plan)
-    write_json(attempt_dir / "environment_plan.json", instance.environment_plan)
-    write_json(attempt_dir / "before_steps.json", {"steps": instance.before_steps})
+    write_json_object(attempt_dir / "launcher_plan.json", instance.launcher_plan)
+    write_json_object(attempt_dir / "environment_plan.json", instance.environment_plan)
+    write_json_object(attempt_dir / "before_steps.json", {"steps": instance.before_steps})
     commit_stage_status(
         run_dir,
         StageStatusRecord(
@@ -159,4 +148,4 @@ def _artifact_manifest_path(attempt: ExecutionAttempt) -> str:
 
 def _stage_output_digest(run_dir: Path) -> str | None:
     path = run_dir / "stage_outputs.json"
-    return content_digest(read_json(path)) if path.exists() else None
+    return content_digest(read_json_object(path)) if path.exists() else None

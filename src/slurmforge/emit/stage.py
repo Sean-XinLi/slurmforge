@@ -3,8 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..config_contract.option_sets import EMAIL_EVENT_BATCH_FINISHED
-from ..io import SchemaVersion, content_digest, write_json
+from ..io import SchemaVersion, content_digest, write_json_object
+from ..notifications.policy import email_notification_enabled
 from ..plans.stage import StageBatchPlan
+from ..submission_paths import submit_manifest_path
 from .sbatch_helpers import _q
 from .stage_render import (
     render_stage_group_sbatch,
@@ -39,15 +41,6 @@ def _generation_id(batch: StageBatchPlan) -> str:
 
 def _generation_dir(batch: StageBatchPlan, generation_id: str) -> Path:
     return _submit_root(batch) / "generations" / generation_id
-
-
-def _manifest_path(batch_root: Path) -> Path:
-    return batch_root / "submit" / "submit_manifest.json"
-
-
-def _notification_enabled(batch: StageBatchPlan, event: str) -> bool:
-    email = batch.notification_plan.email
-    return email.enabled and bool(email.recipients) and event in set(email.events)
 
 
 def write_stage_notification_submit_file(
@@ -138,7 +131,7 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
         submit_lines.append(f'printf "%s\\n" "{group_id}=${{{var_name}}}"')
         job_vars[group_id] = var_name
     notification_entries: list[dict[str, str]] = []
-    if _notification_enabled(batch, EMAIL_EVENT_BATCH_FINISHED):
+    if email_notification_enabled(batch.notification_plan, EMAIL_EVENT_BATCH_FINISHED):
         notify_path = submit_dir / "notify_batch_finished.sbatch"
         notify_path.write_text(
             render_stage_notification_sbatch(
@@ -175,7 +168,7 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
         "dependencies": batch.budget_plan.dependencies,
         "notifications": notification_entries,
     }
-    write_json(_manifest_path(root), manifest)
+    write_json_object(submit_manifest_path(root), manifest)
     wrapper = _submit_root(batch) / "submit.sh"
     wrapper.write_text(
         "\n".join(

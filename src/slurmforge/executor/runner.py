@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..errors import RuntimeContractError
 from ..inputs.verifier import verify_and_write_stage_instance_inputs
-from ..io import write_json
+from ..io import write_json_object
 from ..runtime.probe import require_runtime_contract
 from .attempt import ExecutionAttempt
 from .bindings import bindings_from_file
@@ -28,9 +28,9 @@ def run_stage_user_command(attempt: ExecutionAttempt) -> StageUserCommandResult:
         runtime_report = require_runtime_contract(instance.runtime_plan)
     except RuntimeContractError as exc:
         runtime_report = exc.report  # type: ignore[attr-defined]
-        write_json(attempt.attempt_dir / "runtime_probe.json", runtime_report)
+        write_json_object(attempt.attempt_dir / "runtime_probe.json", runtime_report)
         raise
-    write_json(attempt.attempt_dir / "runtime_probe.json", runtime_report)
+    write_json_object(attempt.attempt_dir / "runtime_probe.json", runtime_report)
     bindings = bindings_from_file(attempt.run_dir)
     verify_and_write_stage_instance_inputs(
         instance, bindings, phase="executor", run_dir=attempt.run_dir

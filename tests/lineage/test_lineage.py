@@ -54,7 +54,7 @@ class LineageTests(StageBatchSystemTestCase):
             assert record is not None
             self.assertEqual(record.stage_name, "eval")
             self.assertEqual(
-                record.resolution["producer_root"],
+                record.resolution.producer_root,
                 str(Path(train_batch.submission_root).resolve()),
             )
 
@@ -79,6 +79,8 @@ class LineageTests(StageBatchSystemTestCase):
         self,
     ) -> None:
         from slurmforge.errors import RecordContractError
+        from slurmforge.contracts import InputResolution
+        from slurmforge.io import to_jsonable
         from slurmforge.lineage.records import (
             StageBatchLineageRecord,
             TrainEvalPipelineLineageRecord,
@@ -145,7 +147,9 @@ class LineageTests(StageBatchSystemTestCase):
                         "source_output_kind": "file",
                         "producer_stage_instance_id": "run_1.train",
                     },
-                    "resolution": {"kind": "upstream_output"},
+                    "resolution": to_jsonable(
+                        InputResolution(kind="upstream_output", state="resolved")
+                    ),
                 }
             ],
         }

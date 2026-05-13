@@ -71,6 +71,7 @@ def upstream_bindings_from_stage_batch(
                     output=output_name,
                 ),
                 expects=input_spec.expects,
+                required=input_spec.required,
                 resolved=resolved_output(output),
                 resolution=upstream_resolution(
                     producer_root=producer_batch_root,

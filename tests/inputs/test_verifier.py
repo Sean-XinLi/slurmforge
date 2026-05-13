@@ -18,7 +18,12 @@ class InputVerifierTests(StageBatchSystemTestCase):
 
     def test_required_unresolved_input_fails(self) -> None:
         from slurmforge.inputs.verifier import verify_stage_instance_inputs
-        from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
+        from slurmforge.contracts import (
+            InputBinding,
+            InputInjection,
+            InputSource,
+            ResolvedInput,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             instance = self._stage_instance(Path(tmp))
@@ -26,8 +31,9 @@ class InputVerifierTests(StageBatchSystemTestCase):
                 input_name="checkpoint",
                 source=InputSource(kind="external_path", path="missing.pt"),
                 expects="path",
+                required=True,
                 resolved=ResolvedInput(kind="unresolved"),
-                inject={"mode": "path", "required": True},
+                inject=InputInjection(mode="path"),
             )
 
             report = verify_stage_instance_inputs(
@@ -40,7 +46,13 @@ class InputVerifierTests(StageBatchSystemTestCase):
 
     def test_digest_mismatch_fails(self) -> None:
         from slurmforge.inputs.verifier import verify_stage_instance_inputs
-        from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
+        from slurmforge.contracts import (
+            InputBinding,
+            InputInjection,
+            InputResolution,
+            InputSource,
+            ResolvedInput,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -51,9 +63,14 @@ class InputVerifierTests(StageBatchSystemTestCase):
                 input_name="checkpoint",
                 source=InputSource(kind="external_path", path=str(checkpoint)),
                 expects="path",
+                required=True,
                 resolved=ResolvedInput(kind="path", path=str(checkpoint)),
-                inject={"mode": "path", "required": True},
-                resolution={"expected_digest": "0" * 64},
+                inject=InputInjection(mode="path"),
+                resolution=InputResolution(
+                    kind="external_path",
+                    state="resolved",
+                    expected_digest="0" * 64,
+                ),
             )
 
             report = verify_stage_instance_inputs(
@@ -66,7 +83,12 @@ class InputVerifierTests(StageBatchSystemTestCase):
 
     def test_resolved_kind_must_match_expectation(self) -> None:
         from slurmforge.inputs.verifier import verify_stage_instance_inputs
-        from slurmforge.contracts import InputBinding, InputSource, ResolvedInput
+        from slurmforge.contracts import (
+            InputBinding,
+            InputInjection,
+            InputSource,
+            ResolvedInput,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             instance = self._stage_instance(Path(tmp))
@@ -74,8 +96,9 @@ class InputVerifierTests(StageBatchSystemTestCase):
                 input_name="checkpoint",
                 source=InputSource(kind="external_path"),
                 expects="path",
+                required=True,
                 resolved=ResolvedInput(kind="value", value="not-a-path"),
-                inject={"mode": "path", "required": True},
+                inject=InputInjection(mode="path"),
             )
 
             report = verify_stage_instance_inputs(

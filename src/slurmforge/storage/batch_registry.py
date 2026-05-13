@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
-from ..io import read_json, require_schema, utc_now, write_json
+from ..io import read_json_object, require_schema, utc_now, write_json_object
 from ..plans.stage import StageBatchPlan
 from ..record_fields import required_object_array, required_string, required_string_array
 from ..workflow_contract import TRAIN_EVAL_STAGE_ORDER
@@ -45,7 +45,7 @@ def empty_batch_registry(pipeline_id: str, *, schema_version: int) -> BatchRegis
 def read_batch_registry(path: Path, *, schema_version: int) -> BatchRegistry:
     if not path.exists():
         raise FileNotFoundError(f"pipeline batch registry does not exist: {path}")
-    payload = read_json(path)
+    payload = read_json_object(path)
     version = require_schema(
         payload, name="pipeline_batch_registry", version=schema_version
     )
@@ -67,7 +67,7 @@ def read_batch_registry(path: Path, *, schema_version: int) -> BatchRegistry:
 def write_batch_registry(
     path: Path, registry: BatchRegistry, *, schema_version: int
 ) -> None:
-    write_json(
+    write_json_object(
         path,
         BatchRegistry(
             schema_version=schema_version,

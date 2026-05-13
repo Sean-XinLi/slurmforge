@@ -28,7 +28,7 @@ def _binding_record(
         source=binding.source,
         expects=binding.expects,
         resolved=binding.resolved,
-        resolution=dict(binding.resolution),
+        resolution=binding.resolution,
     )
 
 
@@ -36,11 +36,12 @@ def _source_roots_from_bindings(instances: Iterable[StageInstancePlan]) -> list[
     roots: set[str] = set()
     for instance in instances:
         for binding in instance.input_bindings:
-            resolution = dict(binding.resolution)
-            for key in ("producer_root", "source_root"):
-                value = resolution.get(key)
+            for value in (
+                binding.resolution.producer_root,
+                binding.resolution.source_root,
+            ):
                 if value:
-                    roots.add(str(Path(str(value)).expanduser().resolve()))
+                    roots.add(str(Path(value).expanduser().resolve()))
     return sorted(roots)
 
 

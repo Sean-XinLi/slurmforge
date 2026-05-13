@@ -58,8 +58,8 @@ class RootModelTests(StageBatchSystemTestCase):
             detect_root(Path(tmp))
 
     def test_root_manifest_reader_is_strict(self) -> None:
-        from slurmforge.errors import ConfigContractError
-        from slurmforge.io import write_json
+        from slurmforge.errors import ConfigContractError, RecordContractError
+        from slurmforge.io import write_json_object
         from slurmforge.root_model.manifest import read_root_manifest
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -68,34 +68,35 @@ class RootModelTests(StageBatchSystemTestCase):
             self.assertIsNone(read_root_manifest(root))
 
             (root / "manifest.json").write_text("[]\n", encoding="utf-8")
-            with self.assertRaisesRegex(ConfigContractError, "mapping"):
+            with self.assertRaisesRegex(RecordContractError, "JSON object"):
                 read_root_manifest(root)
 
-            write_json(root / "manifest.json", {"schema_version": 1})
+            write_json_object(root / "manifest.json", {"schema_version": 1})
             with self.assertRaisesRegex(ConfigContractError, "kind"):
                 read_root_manifest(root)
 
-            write_json(
+            write_json_object(
                 root / "manifest.json",
                 {"schema_version": "1", "kind": "stage_batch"},
             )
             with self.assertRaisesRegex(ConfigContractError, "schema_version"):
                 read_root_manifest(root)
 
-            write_json(
+            write_json_object(
                 root / "manifest.json",
                 {"schema_version": 1, "kind": "unknown"},
             )
             with self.assertRaisesRegex(ConfigContractError, "unsupported"):
                 read_root_manifest(root)
 
-            write_json(
+            write_json_object(
                 root / "manifest.json",
                 {"schema_version": 1, "kind": "stage_batch"},
             )
             record = read_root_manifest(root)
             assert record is not None
             self.assertEqual(record.kind, "stage_batch")
+            self.assertEqual(record.schema_version, SchemaVersion.BATCH_MANIFEST)
 
     def test_refresh_status_snapshots_write_root_read_models(self) -> None:
         from slurmforge.root_model.snapshots import (
@@ -192,7 +193,7 @@ class RootModelTests(StageBatchSystemTestCase):
 
     def test_root_ref_reader_is_strict_and_does_not_infer_missing_file(self) -> None:
         from slurmforge.errors import RecordContractError
-        from slurmforge.io import write_json
+        from slurmforge.io import write_json_object
         from slurmforge.root_model.root_ref import read_root_ref
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -201,7 +202,7 @@ class RootModelTests(StageBatchSystemTestCase):
 
             self.assertIsNone(read_root_ref(run_dir))
 
-            write_json(
+            write_json_object(
                 run_dir / "root_ref.json",
                 {
                     "schema_version": 1,
@@ -212,7 +213,7 @@ class RootModelTests(StageBatchSystemTestCase):
             with self.assertRaisesRegex(RecordContractError, "pipeline_root"):
                 read_root_ref(run_dir)
 
-            write_json(
+            write_json_object(
                 run_dir / "root_ref.json",
                 {
                     "schema_version": 1,

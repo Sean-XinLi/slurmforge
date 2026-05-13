@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from ..planner.resource_estimate import (
+from ..resource_estimates.build import (
     build_resource_estimate as _build_resource_estimate,
 )
-from ..planner.resource_estimate import (
+from ..resource_estimates.render import (
     render_resource_estimate as _render_resource_estimate,
 )
 from ..plans.stage import StageBatchPlan

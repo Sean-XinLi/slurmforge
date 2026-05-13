@@ -275,6 +275,16 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
     def test_storage_package_facade_and_paths_are_not_used_externally(self) -> None:
         violations: list[str] = []
         root = Path("src/slurmforge")
+        storage_path_consumers = {
+            "control",
+            "executor",
+            "inputs",
+            "outputs",
+            "root_model",
+            "status",
+            "storage",
+            "submission",
+        }
         for path in sorted(root.rglob("*.py")):
             if path == root / "storage" / "__init__.py":
                 continue
@@ -287,7 +297,7 @@ class ImportBoundaryTests(StageBatchSystemTestCase):
                     violations.append(f"{path}:{node.lineno} imports storage facade")
                 if (
                     module == "slurmforge.storage.paths"
-                    and root / "storage" not in path.parents
+                    and path.relative_to(root).parts[0] not in storage_path_consumers
                 ):
                     violations.append(f"{path}:{node.lineno} imports storage paths")
         self.assertEqual(violations, [])

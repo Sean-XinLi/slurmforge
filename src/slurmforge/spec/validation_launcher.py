@@ -46,8 +46,9 @@ def _validate_torchrun_launcher(
         raise ConfigContractError(
             f"`stages.{stage.name}.launcher.type=torchrun` requires a python_script entry"
         )
+    torchrun = stage.launcher.torchrun
     mode = str(
-        stage.launcher.options.get("mode")
+        torchrun.mode
         or (
             LAUNCHER_MODE_MULTI_NODE
             if stage.resources.nodes > 1
@@ -68,9 +69,7 @@ def _validate_torchrun_launcher(
             f"`stages.{stage.name}.launcher.mode=multi_node` requires resources.nodes >= 2"
         )
     nnodes = explicit_int(
-        stage.launcher.options.get(
-            "nnodes", default_for("stages.*.launcher.nnodes")
-        ),
+        torchrun.nnodes,
         field=f"stages.{stage.name}.launcher.nnodes",
     )
     if nnodes is not None and nnodes != stage.resources.nodes:
@@ -78,10 +77,7 @@ def _validate_torchrun_launcher(
             f"`stages.{stage.name}.launcher.nnodes` must equal resources.nodes ({stage.resources.nodes})"
         )
     nproc_per_node = explicit_int(
-        stage.launcher.options.get(
-            "nproc_per_node",
-            default_for("stages.*.launcher.nproc_per_node"),
-        ),
+        torchrun.nproc_per_node,
         field=f"stages.{stage.name}.launcher.nproc_per_node",
     )
     if nproc_per_node is not None:
@@ -97,14 +93,12 @@ def _validate_torchrun_launcher(
                 f"`stages.{stage.name}.launcher.nproc_per_node` cannot exceed "
                 f"resources.gpus_per_node ({sizing_resolution.resolved_gpus_per_node})"
             )
-    rendezvous = stage.launcher.options.get("rendezvous") or {}
-    if not isinstance(rendezvous, dict):
+    rendezvous = torchrun.rendezvous
+    if not rendezvous.backend:
         raise ConfigContractError(
-            f"`stages.{stage.name}.launcher.rendezvous` must be a mapping"
+            f"`stages.{stage.name}.launcher.rendezvous.backend` must be non-empty"
         )
     require_port(
-        rendezvous.get(
-            "port", default_for("stages.*.launcher.rendezvous.port")
-        ),
+        rendezvous.port,
         field=f"stages.{stage.name}.launcher.rendezvous.port",
     )

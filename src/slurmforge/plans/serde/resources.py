@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...io import SchemaVersion, require_schema
 from ...record_fields import (
     required_int,
     required_nullable_float,
@@ -41,6 +42,7 @@ def resource_plan_from_dict(payload: dict[str, Any]) -> ResourcePlan:
 
 
 def resource_sizing_from_dict(payload: dict[str, Any]) -> GpuSizingResolution:
+    require_schema(payload, name="resource_sizing", version=SchemaVersion.RESOURCE_SIZING)
     return GpuSizingResolution(
         mode=required_string(
             payload, "mode", label="resource_sizing", non_empty=True

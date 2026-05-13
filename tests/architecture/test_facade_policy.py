@@ -22,6 +22,7 @@ class FacadePolicyTests(StageBatchSystemTestCase):
             "planner",
             "plans",
             "resolver",
+            "resource_estimates",
             "root_model",
             "runtime",
             "sizing",

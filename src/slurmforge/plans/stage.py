@@ -25,6 +25,15 @@ class EntryPlan:
 
 
 @dataclass(frozen=True)
+class StageInstanceLineage:
+    project: str
+    experiment: str
+    config_path: str
+    project_root: str
+    source_ref: str
+
+
+@dataclass(frozen=True)
 class StageInstancePlan:
     stage_instance_id: str
     run_id: str
@@ -41,7 +50,7 @@ class StageInstancePlan:
     artifact_store_plan: ArtifactStorePlan
     input_bindings: tuple[InputBinding, ...]
     output_contract: StageOutputContract
-    lineage: dict[str, Any]
+    lineage: StageInstanceLineage
     run_overrides: dict[str, Any]
     resource_sizing: GpuSizingResolution
     spec_snapshot_digest: str

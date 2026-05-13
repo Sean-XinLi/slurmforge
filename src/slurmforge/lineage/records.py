@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from ..contracts import InputSource, ResolvedInput
+from ..contracts import InputResolution, InputSource, ResolvedInput
 from ..contracts import input_source_from_dict, resolved_input_from_dict
+from ..contracts import input_resolution_from_dict
 from ..errors import RecordContractError
 from ..io import SchemaVersion, require_schema, to_jsonable
 from ..record_fields import (
@@ -36,7 +37,7 @@ class LineageInputSourceRecord:
     source: InputSource
     expects: str
     resolved: ResolvedInput
-    resolution: dict[str, Any]
+    resolution: InputResolution
 
 
 @dataclass(frozen=True)
@@ -228,11 +229,9 @@ def _lineage_input_source_from_dict(
     resolved = resolved_input_from_dict(
         required_object(payload, "resolved", label=label)
     )
-    resolution = required_object(payload, "resolution", label=label)
-    if "lineage_ref" in resolution and not isinstance(resolution["lineage_ref"], str):
-        raise RecordContractError(
-            "lineage_index.input_sources.lineage_ref must be a string"
-        )
+    resolution = input_resolution_from_dict(
+        required_object(payload, "resolution", label=label)
+    )
     return LineageInputSourceRecord(
         stage_instance_id=required_string(
             payload, "stage_instance_id", label=label, non_empty=True

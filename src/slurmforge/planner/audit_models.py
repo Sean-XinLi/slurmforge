@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
 
-from ..contracts import InputSource
+from ..contracts import InputResolution, InputSource
 from ..inputs.models import StageInputVerificationReport
 from ..io import SchemaVersion, to_jsonable
 from ..plans.budget import BudgetPlan
 from ..plans.stage import GroupPlan, StageBatchPlan
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..runtime.probe import RuntimeContractReport
-from ..sizing.models import ExperimentResourceEstimate
+from ..resource_estimates.models import ExperimentResourceEstimate
 
 
 @dataclass(frozen=True)
@@ -60,7 +59,7 @@ class TrainEvalDryRunValidation:
     state: str
     project: str
     experiment: str
-    stage_batches: Mapping[str, StageBatchDryRunValidation]
+    stage_batches: dict[str, StageBatchDryRunValidation]
 
 
 @dataclass(frozen=True)
@@ -89,18 +88,16 @@ class DryRunAudit:
     schema_version: int = SchemaVersion.DRY_RUN_AUDIT
 
 
-def input_resolution_audit_from_mapping(
-    resolution: Mapping[str, object],
+def input_resolution_audit_from_resolution(
+    resolution: InputResolution,
 ) -> InputResolutionAudit:
     return InputResolutionAudit(
-        kind=_string_value(resolution, "kind"),
-        state=_string_value(resolution, "state"),
-        reason=_string_value(resolution, "reason"),
-        producer_stage_instance_id=_string_value(
-            resolution, "producer_stage_instance_id"
-        ),
-        output_name=_string_value(resolution, "output_name"),
-        source_root=_string_value(resolution, "source_root"),
+        kind=resolution.kind,
+        state=resolution.state,
+        reason=resolution.reason,
+        producer_stage_instance_id=resolution.producer_stage_instance_id,
+        output_name=resolution.output_name,
+        source_root=resolution.source_root,
     )
 
 
@@ -188,9 +185,3 @@ def _input_resolution_to_dict(record: InputResolutionAudit) -> dict[str, object]
             payload[key] = value
     return payload
 
-
-def _string_value(payload: Mapping[str, object], field_name: str) -> str:
-    if field_name not in payload:
-        return ""
-    value = payload[field_name]
-    return value if isinstance(value, str) else ""

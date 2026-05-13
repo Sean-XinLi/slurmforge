@@ -2,14 +2,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..contracts import InputBinding, InputSource, ResolvedInput
+from ..contracts import (
+    InputBinding,
+    InputInjection,
+    InputResolution,
+    InputSource,
+    ResolvedInput,
+)
 from ..errors import ConfigContractError
 from ..spec import ExperimentSpec, StageInputSpec
 
 
 def input_inject(
     spec: ExperimentSpec, *, stage_name: str, input_name: str
-) -> dict[str, object]:
+) -> InputInjection:
     input_spec = spec.enabled_stages[stage_name].inputs.get(input_name)
     if input_spec is None:
         raise ConfigContractError(
@@ -25,13 +31,12 @@ def source_payload(input_spec: StageInputSpec) -> InputSource:
     )
 
 
-def inject_payload(input_spec: StageInputSpec) -> dict[str, object]:
-    return {
-        "flag": input_spec.inject.flag,
-        "env": input_spec.inject.env,
-        "mode": input_spec.inject.mode,
-        "required": input_spec.required,
-    }
+def inject_payload(input_spec: StageInputSpec) -> InputInjection:
+    return InputInjection(
+        flag=input_spec.inject.flag,
+        env=input_spec.inject.env,
+        mode=input_spec.inject.mode,
+    )
 
 
 def unresolved_resolved(*, path: str = "") -> ResolvedInput:
@@ -46,13 +51,14 @@ def unresolved_binding(
         input_name=input_spec.name,
         source=actual_source,
         expects=input_spec.expects,
+        required=input_spec.required,
         resolved=unresolved_resolved(),
         inject=inject_payload(input_spec),
-        resolution={
-            "kind": actual_source.kind,
-            "state": "unresolved",
-            "reason": reason,
-        },
+        resolution=InputResolution(
+            kind=actual_source.kind,
+            state="unresolved",
+            reason=reason,
+        ),
     )
 
 
@@ -68,29 +74,32 @@ def path_binding_for_spec(
         input_name=input_spec.name,
         source=source_payload(input_spec),
         expects=input_spec.expects,
+        required=input_spec.required,
         resolved=ResolvedInput(kind=input_spec.expects, path=path_text),
         inject=inject_payload(input_spec),
-        resolution={
-            "kind": input_spec.source.kind,
-            "resolved": {"kind": "path", "path": path_text},
-            "source_root": str(spec.project_root),
-        },
+        resolution=InputResolution(
+            kind=input_spec.source.kind,
+            state="resolved",
+            source_root=str(spec.project_root),
+        ),
     )
 
 
 def path_binding_for_input(
     *,
     input_name: str,
-    inject: dict[str, object],
+    inject: InputInjection,
     source: InputSource,
     expects: str,
+    required: bool,
     resolved: ResolvedInput,
-    resolution: dict[str, object],
+    resolution: InputResolution,
 ) -> InputBinding:
     return InputBinding(
         input_name=input_name,
         source=source,
         expects=expects,
+        required=required,
         resolved=resolved,
         inject=inject,
         resolution=resolution,

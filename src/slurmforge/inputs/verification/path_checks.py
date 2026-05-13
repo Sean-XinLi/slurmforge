@@ -20,10 +20,9 @@ class PathVerification:
 
 
 def path_kind_for_binding(binding: InputBinding) -> str:
-    resolution = dict(binding.resolution or {})
     if binding.resolved.kind == "manifest":
         return "file"
-    return str(resolution.get("path_kind") or "file")
+    return binding.resolution.path_kind or "file"
 
 
 def verify_resolved_path(

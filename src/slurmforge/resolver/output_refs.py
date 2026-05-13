@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..config_contract.option_sets import INPUT_EXPECTS_VALUE
-from ..contracts import ResolvedInput, resolved_kind_for_output_kind
+from ..contracts import InputResolution, ResolvedInput, resolved_kind_for_output_kind
 from ..errors import ConfigContractError
 from ..plans.outputs import OutputRef, StageOutputsRecord
 from ..spec import StageInputSpec
@@ -51,19 +51,20 @@ def upstream_resolution(
     stage_name: str,
     output_name: str,
     output: OutputRef,
-) -> dict[str, object]:
-    return {
-        "kind": "upstream_output",
-        "producer_root": str(producer_root.resolve()),
-        "producer_run_dir": str(run_dir.resolve()),
-        "producer_stage_instance_id": stage_instance_id,
-        "producer_run_id": run_id,
-        "producer_stage_name": stage_name,
-        "output_name": output_name,
-        "output_path": output.path,
-        "output_digest": output.digest or output.managed_digest,
-        "selection_reason": output.selection_reason,
-    }
+) -> InputResolution:
+    return InputResolution(
+        kind="upstream_output",
+        state="resolved",
+        producer_root=str(producer_root.resolve()),
+        producer_run_dir=str(run_dir.resolve()),
+        producer_stage_instance_id=stage_instance_id,
+        producer_run_id=run_id,
+        producer_stage_name=stage_name,
+        output_name=output_name,
+        output_path=output.path,
+        output_digest=output.digest or output.managed_digest,
+        selection_reason=output.selection_reason,
+    )
 
 
 def producer_output_for_input(

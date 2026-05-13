@@ -44,11 +44,11 @@ def _build_command(
     extra_args = args_to_argv(entry.args)
     for binding in bindings:
         injected = binding_injected_value(binding)
-        if binding.inject.get("required") and injected is None:
+        if binding.required and injected is None:
             raise FileNotFoundError(
                 f"Required input `{binding.input_name}` is unresolved"
             )
-        injected_flag = binding.inject.get("flag")
+        injected_flag = binding.inject.flag
         if injected_flag and injected is not None:
             extra_args.extend([flag(str(injected_flag)), injected])
     launcher = instance.launcher_plan

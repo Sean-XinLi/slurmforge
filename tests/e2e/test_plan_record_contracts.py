@@ -36,6 +36,12 @@ class PlanRecordContractTests(StageBatchSystemTestCase):
             self.assertEqual(batch_payload["schema_version"], 1)
             self.assertEqual(batch_payload["stage_instances"][0]["schema_version"], 1)
             self.assertEqual(batch_payload["group_plans"][0]["schema_version"], 1)
+            self.assertEqual(
+                batch_payload["stage_instances"][0]["resource_sizing"][
+                    "schema_version"
+                ],
+                1,
+            )
             output_contract = batch_payload["stage_instances"][0]["output_contract"]
             self.assertEqual(output_contract["schema_version"], 1)
             self.assertEqual(

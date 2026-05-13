@@ -56,10 +56,21 @@ class StorageContractTests(StageBatchSystemTestCase):
 
             batch_plan_path = Path(train_batch.submission_root) / "batch_plan.json"
             batch_payload = json.loads(batch_plan_path.read_text())
-            del batch_payload["stage_instances"][0]["resource_sizing"]
-            batch_plan_path.write_text(json.dumps(batch_payload), encoding="utf-8")
+            missing_sizing = copy.deepcopy(batch_payload)
+            del missing_sizing["stage_instances"][0]["resource_sizing"]
+            batch_plan_path.write_text(json.dumps(missing_sizing), encoding="utf-8")
 
             with self.assertRaisesRegex(RecordContractError, "resource_sizing"):
+                load_stage_batch_plan(Path(train_batch.submission_root))
+
+            del batch_payload["stage_instances"][0]["resource_sizing"][
+                "schema_version"
+            ]
+            batch_plan_path.write_text(json.dumps(batch_payload), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                RecordContractError, "resource_sizing.schema_version"
+            ):
                 load_stage_batch_plan(Path(train_batch.submission_root))
 
     def test_stage_batch_plan_requires_current_contract_fields(self) -> None:

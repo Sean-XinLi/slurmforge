@@ -4,10 +4,9 @@ from pathlib import Path
 
 from ..contracts import (
     InputBinding,
+    InputResolution,
     ResolvedInput,
     binding_is_ready_for_injection,
-    input_source_from_dict,
-    resolved_input_from_dict,
 )
 from ..errors import ConfigContractError
 from ..contracts import RunDefinition
@@ -29,7 +28,7 @@ def resolve_stage_inputs_from_prior_source(
         input_spec = stage.inputs[input_name]
         source = source_payload(input_spec)
         resolved_payload = unresolved_resolved()
-        resolution = {"kind": source.kind, "state": "unresolved"}
+        resolution = InputResolution(kind=source.kind, state="unresolved")
         if source.kind == "upstream_output":
             upstream_stage, output_name = source.stage, source.output
             lineage_ref = f"{upstream_stage}/{run.run_id}:{output_name}"
@@ -40,9 +39,9 @@ def resolve_stage_inputs_from_prior_source(
                 input_name=input_name,
             )
             if resolved is not None:
-                source = input_source_from_dict(resolved["source"])
-                resolved_payload = resolved_input_from_dict(resolved["resolved"])
-                resolution = dict(resolved["resolution"])
+                source = resolved.source
+                resolved_payload = resolved.resolved
+                resolution = resolved.resolution
         elif source.kind == "external_path":
             source_path = Path(source.path).expanduser()
             source_path = (
@@ -56,18 +55,16 @@ def resolve_stage_inputs_from_prior_source(
                 if source_path.exists()
                 else unresolved_resolved(path=str(source_path))
             )
-            resolution = {
-                "kind": source.kind,
-                "resolved": {
-                    "kind": resolved_payload.kind,
-                    "path": resolved_payload.path,
-                },
-                "source_exists": source_path.exists(),
-            }
+            resolution = InputResolution(
+                kind=source.kind,
+                state="resolved" if source_path.exists() else "unresolved",
+                source_exists=source_path.exists(),
+            )
         binding = InputBinding(
             input_name=input_spec.name,
             source=source,
             expects=input_spec.expects,
+            required=input_spec.required,
             resolved=resolved_payload,
             inject=inject_payload(input_spec),
             resolution=resolution,

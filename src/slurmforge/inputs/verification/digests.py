@@ -12,22 +12,18 @@ def normalize_digest(value: object) -> str:
 
 
 def producer_digest(binding: InputBinding) -> str:
-    resolution = dict(binding.resolution or {})
+    resolution = binding.resolution
     return normalize_digest(
         binding.resolved.digest
-        or resolution.get("output_digest")
-        or resolution.get("producer_digest")
-        or resolution.get("digest")
+        or resolution.output_digest
+        or resolution.producer_digest
+        or resolution.digest
     )
 
 
 def expected_digest(binding: InputBinding) -> str:
-    resolution = dict(binding.resolution or {})
-    explicit = normalize_digest(
-        resolution.get("expected_digest")
-        or resolution.get("expected_value_digest")
-        or resolution.get("value_digest")
-    )
+    resolution = binding.resolution
+    explicit = normalize_digest(resolution.expected_digest)
     if explicit:
         return explicit
     if binding.resolved.kind in {"path", "manifest"}:

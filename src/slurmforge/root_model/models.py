@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 from ..io import SchemaVersion
+from ..plans.notifications import NotificationPlan
 from ..workflow_contract import TRAIN_EVAL_PIPELINE_KIND
 from ..status.models import (
     RunStatusRecord,
@@ -21,7 +22,7 @@ RootKind = Literal["stage_batch", "train_eval_pipeline"]
 class RootDescriptor:
     root: Path
     kind: RootKind
-    manifest: dict[str, Any]
+    schema_version: int
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,7 @@ class RootStatusSnapshot:
 class RootNotificationSnapshot:
     root: Path
     kind: RootKind
-    notification_plan: Any
+    notification_plan: NotificationPlan
     summary_input: NotificationSummaryInput
     status: RootStatusSnapshot
 

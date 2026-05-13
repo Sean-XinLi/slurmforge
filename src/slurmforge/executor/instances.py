@@ -2,14 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..io import read_json
+from ..io import read_json_object
 from ..plans.stage import StageInstancePlan
 from ..plans.serde import stage_instance_plan_from_dict
 from ..storage.plan_reader import load_execution_stage_batch_plan
-
-
-def _stage_plan_path(run_dir: Path) -> Path:
-    return run_dir / "stage_plan.json"
+from ..storage.paths import stage_plan_path
 
 
 def find_stage_instance(
@@ -32,4 +29,4 @@ def find_stage_instance(
 
 
 def load_stage_instance_from_run_dir(run_dir: Path) -> StageInstancePlan:
-    return stage_instance_plan_from_dict(read_json(_stage_plan_path(run_dir)))
+    return stage_instance_plan_from_dict(read_json_object(stage_plan_path(run_dir)))

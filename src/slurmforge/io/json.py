@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
-import os
 import hashlib
+import os
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
+
+from ..errors import RecordContractError
 
 
 def to_jsonable(value: Any) -> Any:
@@ -31,7 +33,7 @@ def content_digest(payload: Any, *, prefix: int | None = None) -> str:
     return digest[:prefix] if prefix is not None else digest
 
 
-def write_json(path: Path, payload: Any) -> None:
+def write_json_value(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
     tmp.write_text(
@@ -41,5 +43,21 @@ def write_json(path: Path, payload: Any) -> None:
     tmp.replace(path)
 
 
-def read_json(path: Path) -> dict[str, Any]:
+def write_json_object(path: Path, payload: Any, *, label: str | None = None) -> None:
+    value = to_jsonable(payload)
+    if not isinstance(value, dict):
+        name = label or str(path)
+        raise RecordContractError(f"{name} must be a JSON object")
+    write_json_value(path, value)
+
+
+def read_json_value(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def read_json_object(path: Path, *, label: str | None = None) -> dict[str, Any]:
+    payload = read_json_value(path)
+    if not isinstance(payload, dict):
+        name = label or str(path)
+        raise RecordContractError(f"{name} must be a JSON object")
+    return dict(payload)

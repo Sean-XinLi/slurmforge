@@ -7,10 +7,10 @@ from typing import Any
 from ..errors import ConfigContractError
 from ..io import (
     SchemaVersion,
-    read_json,
+    read_json_object,
     to_jsonable,
     utc_now,
-    write_json,
+    write_json_object,
 )
 from .models import GroupSubmissionRecord, SubmissionLedger, SubmitGeneration
 from .ledger_records import (
@@ -45,12 +45,12 @@ def read_submission_ledger(batch_root: Path) -> SubmissionLedger | None:
     path = ledger_path(batch_root)
     if not path.exists():
         return None
-    return submission_ledger_from_dict(read_json(path))
+    return submission_ledger_from_dict(read_json_object(path))
 
 
 def write_submission_ledger(batch_root: Path, ledger: SubmissionLedger) -> None:
     validate_submission_ledger(ledger)
-    write_json(ledger_path(batch_root), ledger)
+    write_json_object(ledger_path(batch_root), ledger)
 
 
 def initialize_submission_ledger(

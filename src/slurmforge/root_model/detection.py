@@ -12,7 +12,11 @@ def detect_root(root: Path) -> RootDescriptor:
     if not target.exists():
         raise ConfigContractError(f"root does not exist: {target}")
     manifest = require_root_manifest(target)
-    return RootDescriptor(root=target, kind=manifest.kind, manifest=manifest.payload)
+    return RootDescriptor(
+        root=target,
+        kind=manifest.kind,
+        schema_version=manifest.schema_version,
+    )
 
 
 def is_stage_batch_root(root: Path) -> bool:

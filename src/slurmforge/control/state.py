@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..control_paths import workflow_events_path, workflow_state_path
-from ..io import read_json, utc_now, write_json
+from ..io import read_json_object, utc_now, write_json_object
 from ..plans.train_eval import TrainEvalPipelinePlan
 from ..storage.workflow import default_workflow_state
 from ..storage.workflow_state_models import WorkflowState
@@ -15,14 +15,14 @@ from ..storage.workflow_state_serde import workflow_state_from_dict, workflow_st
 def load_workflow_state(pipeline_root: Path, plan: TrainEvalPipelinePlan) -> WorkflowState:
     path = workflow_state_path(pipeline_root)
     if path.exists():
-        return workflow_state_from_dict(read_json(path))
+        return workflow_state_from_dict(read_json_object(path))
     state = default_workflow_state(plan)
-    write_json(path, workflow_state_to_dict(state))
+    write_json_object(path, workflow_state_to_dict(state))
     return state
 
 
 def save_workflow_state(pipeline_root: Path, state: WorkflowState) -> None:
-    write_json(workflow_state_path(pipeline_root), workflow_state_to_dict(state))
+    write_json_object(workflow_state_path(pipeline_root), workflow_state_to_dict(state))
 
 
 def record_workflow_event(pipeline_root: Path, event: str, **payload: Any) -> None:

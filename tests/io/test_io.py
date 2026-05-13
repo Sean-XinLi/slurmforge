@@ -28,6 +28,41 @@ class IoPrimitiveTests(StageBatchSystemTestCase):
                 "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
             )
 
+    def test_read_json_object_rejects_non_object_documents(self) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.io import read_json_object, read_json_value
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "payload.json"
+            path.write_text('{"ok": true}', encoding="utf-8")
+
+            self.assertEqual(read_json_object(path), {"ok": True})
+
+            for raw in ("[]", "null", '"value"', "1"):
+                with self.subTest(raw=raw):
+                    path.write_text(raw, encoding="utf-8")
+                    read_json_value(path)
+                    with self.assertRaises(RecordContractError):
+                        read_json_object(path)
+
+    def test_write_json_object_rejects_non_object_documents(self) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.io import read_json_value, write_json_object, write_json_value
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "payload.json"
+
+            write_json_object(path, {"ok": True})
+            self.assertEqual(read_json_value(path), {"ok": True})
+
+            for value in ([], None, "value", 1):
+                with self.subTest(value=value):
+                    with self.assertRaises(RecordContractError):
+                        write_json_object(path, value)
+
+            write_json_value(path, ["freeform"])
+            self.assertEqual(read_json_value(path), ["freeform"])
+
     def test_require_schema_rejects_non_integer_versions(self) -> None:
         from slurmforge.errors import RecordContractError
         from slurmforge.io import require_schema

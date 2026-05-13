@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..io import SchemaVersion, read_json, require_schema
+from ..io import SchemaVersion, read_json_object, require_schema
 from ..record_fields import (
     required_int,
     required_object_array,
     required_string,
     required_string_array,
 )
+from ..submission_paths import submit_manifest_path
 
 
 @dataclass(frozen=True)
@@ -59,12 +60,8 @@ class SubmitManifest:
     schema_version: int = SchemaVersion.SUBMIT_MANIFEST
 
 
-def submit_manifest_path(batch_root: Path) -> Path:
-    return Path(batch_root) / "submit" / "submit_manifest.json"
-
-
 def load_submit_manifest(batch_root: Path) -> SubmitManifest:
-    return submit_manifest_from_dict(read_json(submit_manifest_path(batch_root)))
+    return submit_manifest_from_dict(read_json_object(submit_manifest_path(batch_root)))
 
 
 def submit_manifest_from_dict(payload: dict[str, Any]) -> SubmitManifest:

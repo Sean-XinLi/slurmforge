@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from ..errors import ConfigContractError
-from ..io import SchemaVersion, read_json
+from ..io import SchemaVersion, read_json_object
 from ..workflow_contract import TRAIN_EVAL_PIPELINE_KIND
 from .models import RootKind, STAGE_BATCH_KIND, root_kind_from_manifest
 
@@ -13,7 +13,6 @@ from .models import RootKind, STAGE_BATCH_KIND, root_kind_from_manifest
 @dataclass(frozen=True)
 class RootManifestRecord:
     kind: RootKind
-    payload: dict[str, Any]
     schema_version: int
 
 
@@ -25,9 +24,7 @@ def read_root_manifest(root: Path) -> RootManifestRecord | None:
     path = root_manifest_path(root)
     if not path.exists():
         return None
-    payload = read_json(path)
-    if not isinstance(payload, dict):
-        raise ConfigContractError(f"root manifest must contain a mapping: {path}")
+    payload = read_json_object(path)
     if "kind" not in payload:
         raise ConfigContractError(f"root manifest kind is required: {path}")
     kind_value = payload["kind"]
@@ -41,7 +38,6 @@ def read_root_manifest(root: Path) -> RootManifestRecord | None:
     schema_version = _manifest_schema_version(payload, path=path, kind=kind)
     return RootManifestRecord(
         kind=kind,
-        payload=dict(payload),
         schema_version=schema_version,
     )
 

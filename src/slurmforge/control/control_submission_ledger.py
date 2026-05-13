@@ -10,7 +10,14 @@ from ..control_job_contract import (
     control_job_from_payload,
 )
 from ..errors import RecordContractError
-from ..io import SchemaVersion, read_json, require_schema, to_jsonable, utc_now, write_json
+from ..io import (
+    SchemaVersion,
+    read_json_object,
+    require_schema,
+    to_jsonable,
+    utc_now,
+    write_json_object,
+)
 from ..record_fields import required_object, required_string
 from .control_submission_records import (
     ControlSubmissionLedger,
@@ -22,7 +29,7 @@ def read_control_submission_ledger(pipeline_root: Path) -> ControlSubmissionLedg
     path = control_submissions_path(pipeline_root)
     if not path.exists():
         return empty_control_submission_ledger()
-    payload = read_json(path)
+    payload = read_json_object(path)
     require_schema(
         payload,
         name="control_submissions",
@@ -52,7 +59,7 @@ def read_control_submission_ledger(pipeline_root: Path) -> ControlSubmissionLedg
 def write_control_submission_ledger(
     pipeline_root: Path, ledger: ControlSubmissionLedger
 ) -> None:
-    write_json(
+    write_json_object(
         control_submissions_path(pipeline_root),
         ControlSubmissionLedger(
             schema_version=SchemaVersion.CONTROL_SUBMISSIONS,

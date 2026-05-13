@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..io import SchemaVersion, write_json
+from ..io import SchemaVersion, write_json_object
 from ..storage.plan_reader import load_train_eval_pipeline_plan
 from .aggregation import aggregate_run_statuses, aggregate_train_eval_pipeline_status
 from .detection import detect_root
@@ -19,7 +19,7 @@ def refresh_stage_batch_status(batch_root: Path) -> RootStatusSnapshot:
         stage_statuses=tuple(statuses),
         run_statuses=aggregate_run_statuses(statuses),
     )
-    write_json(
+    write_json_object(
         root / "run_status.json",
         {"schema_version": SchemaVersion.STATUS, "runs": snapshot.run_statuses},
     )
@@ -38,11 +38,11 @@ def refresh_train_eval_pipeline_status(pipeline_root: Path) -> RootStatusSnapsho
         run_statuses=aggregate_run_statuses(statuses),
         pipeline_status=pipeline_status,
     )
-    write_json(
+    write_json_object(
         root / "run_status.json",
         {"schema_version": SchemaVersion.STATUS, "runs": snapshot.run_statuses},
     )
-    write_json(root / "train_eval_pipeline_status.json", pipeline_status)
+    write_json_object(root / "train_eval_pipeline_status.json", pipeline_status)
     return snapshot
 
 

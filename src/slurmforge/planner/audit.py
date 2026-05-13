@@ -14,9 +14,9 @@ from .audit_models import (
     StageBatchDryRunValidation,
     TrainEvalDryRunValidation,
     UnresolvedInputAuditRecord,
-    input_resolution_audit_from_mapping,
+    input_resolution_audit_from_resolution,
 )
-from .resource_estimate import build_resource_estimate
+from ..resource_estimates.build import build_resource_estimate
 
 
 def build_empty_source_selection_audit(
@@ -57,7 +57,7 @@ def _stage_batch_unresolved_inputs(
                     input_name=binding.input_name,
                     source=binding.source,
                     expects=binding.expects,
-                    resolution=input_resolution_audit_from_mapping(
+                    resolution=input_resolution_audit_from_resolution(
                         binding.resolution
                     ),
                 )
@@ -183,6 +183,4 @@ def build_dry_run_audit(
 
 
 def _binding_required(binding: InputBinding) -> bool:
-    if "required" not in binding.inject:
-        return False
-    return binding.inject["required"] is True
+    return binding.required

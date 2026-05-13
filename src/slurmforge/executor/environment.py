@@ -5,11 +5,8 @@ from pathlib import Path
 
 from ..plans.stage import StageInstancePlan
 from ..contracts import InputBinding
+from ..storage.paths import input_bindings_path
 from .bindings import binding_injected_value
-
-
-def _input_bindings_path(run_dir: Path) -> Path:
-    return run_dir / "input_bindings.json"
 
 
 def build_execution_env(
@@ -28,10 +25,10 @@ def build_execution_env(
     env["SFORGE_RUN_ID"] = instance.run_id
     env["SFORGE_STAGE_NAME"] = instance.stage_name
     env["SFORGE_STAGE_INSTANCE_ID"] = instance.stage_instance_id
-    env["SFORGE_INPUT_BINDINGS"] = str(_input_bindings_path(run_dir))
+    env["SFORGE_INPUT_BINDINGS"] = str(input_bindings_path(run_dir))
     env["SFORGE_ATTEMPT_DIR"] = str(attempt_dir)
     for binding in bindings:
-        env_name = binding.inject.get("env")
+        env_name = binding.inject.env
         injected = binding_injected_value(binding)
         if env_name and injected is not None:
             env[str(env_name)] = injected

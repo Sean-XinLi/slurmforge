@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any
 
+from ..contracts import InputBinding, RunDefinition
 from ..errors import UsageError
 from ..orchestration.pipeline_build import build_train_eval_pipeline_plan
 from ..orchestration.stage_build import (
@@ -26,7 +26,7 @@ def load_spec_from_args(args: argparse.Namespace) -> ExperimentSpec:
 def resolve_eval_input_source(
     spec: ExperimentSpec,
     source: EvalInputSourceRequest,
-) -> tuple[tuple[Any, ...], dict[str, tuple[Any, ...]], str]:
+) -> tuple[tuple[RunDefinition, ...], dict[str, tuple[InputBinding, ...]], str]:
     return resolve_eval_inputs(
         spec,
         from_train_batch=source.value if source.kind == "from_train_batch" else None,

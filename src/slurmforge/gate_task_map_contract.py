@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .errors import RecordContractError
-from .io import SchemaVersion, read_json, require_schema, write_json
+from .io import SchemaVersion, read_json_object, require_schema, write_json_object
 from .record_fields import required_string, required_string_map
 
 
@@ -61,11 +61,11 @@ def gate_task_map_to_dict(record: GateTaskMapRecord) -> dict[str, Any]:
 
 
 def write_gate_task_map(path: Path, record: GateTaskMapRecord) -> None:
-    write_json(path, gate_task_map_to_dict(record))
+    write_json_object(path, gate_task_map_to_dict(record))
 
 
 def load_gate_task_map(path: Path) -> GateTaskMapRecord:
-    return gate_task_map_from_dict(read_json(path))
+    return gate_task_map_from_dict(read_json_object(path))
 
 
 def stage_instance_id_for_task(record: GateTaskMapRecord, task_id: str) -> str:
