@@ -29,6 +29,10 @@ The core planning objects are:
 - `output_contract`
 - `lineage`
 
+`input_bindings` is a tuple of typed `InputBinding` records. Each binding carries the schema-versioned source contract, the `required` policy, a typed `ResolvedInput`, injection settings in `InputInjection`, and the resolution audit in `InputResolution`.
+
+`lineage` is a typed `StageInstanceLineage` record with project, experiment, config path, project root, and source ref. It is not a freeform display dictionary.
+
 `StageBatchPlan` groups same-stage instances by resource shape and emits Slurm array jobs. A group never mixes train and eval.
 
 `TrainEvalPipelinePlan` is train/eval pipeline orchestration metadata. It is consumed by short-lived control gates and does not execute user code directly.

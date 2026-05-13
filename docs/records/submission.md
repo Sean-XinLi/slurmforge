@@ -11,16 +11,25 @@ Every stage instance has `input_bindings.json`:
   "stage_instance_id": "eval/run_001",
   "bindings": {
     "checkpoint": {
+      "schema_version": 1,
+      "input_name": "checkpoint",
       "source": {
+        "schema_version": 1,
         "kind": "upstream_output",
         "stage": "train",
-        "output": "checkpoint"
+        "output": "checkpoint",
+        "path": ""
       },
       "expects": "path",
+      "required": true,
       "resolved": {
+        "schema_version": 1,
         "kind": "path",
         "path": "/abs/path/checkpoints/step_12000.pt",
-        "digest": "sha256..."
+        "value": null,
+        "digest": "sha256...",
+        "source_output_kind": "file",
+        "producer_stage_instance_id": "train/run_001"
       },
       "inject": {
         "flag": "checkpoint_path",
@@ -28,7 +37,11 @@ Every stage instance has `input_bindings.json`:
         "mode": "path"
       },
       "resolution": {
+        "schema_version": 1,
         "kind": "upstream_output",
+        "state": "resolved",
+        "reason": "",
+        "source_root": "",
         "producer_root": "/abs/path/train_batch",
         "producer_run_dir": "/abs/path/train_batch/runs/run_001",
         "producer_stage_instance_id": "train/run_001",
@@ -37,7 +50,16 @@ Every stage instance has `input_bindings.json`:
         "output_name": "checkpoint",
         "output_path": "/abs/path/checkpoints/step_12000.pt",
         "output_digest": "sha256...",
-        "selection_reason": "latest_step"
+        "producer_digest": "",
+        "digest": "",
+        "selection_reason": "latest_step",
+        "searched_root": "",
+        "resolved_from_lineage_root": "",
+        "source_exists": null,
+        "source_role": "",
+        "path_kind": "file",
+        "lineage_ref": "",
+        "expected_digest": ""
       }
     }
   }
