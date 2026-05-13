@@ -6,7 +6,6 @@ from ...contracts import (
     resolved_kind_matches_expectation,
     resolved_payload_present,
 )
-from ...io import to_jsonable
 from ..models import InputVerificationRecord
 from .digests import expected_digest as expected_digest_for_binding
 from .digests import producer_digest, value_digest
@@ -24,7 +23,7 @@ def _base_record(
     resolved = binding.resolved
     return {
         "input_name": binding.input_name,
-        "source": to_jsonable(binding.source),
+        "source": binding.source,
         "expects": binding.expects,
         "resolved_kind": resolved.kind,
         "resolved_path": resolved.path or None,
@@ -43,7 +42,7 @@ def record_for_binding(
     phase: str,
     now: str,
 ) -> InputVerificationRecord:
-    required = bool(binding.inject.get("required"))
+    required = binding.required
     expected_digest = expected_digest_for_binding(binding)
     base = _base_record(
         binding,
@@ -76,7 +75,7 @@ def record_for_binding(
             path_kind="unknown",
             state="failed" if required else "skipped",
             failure_class="input_contract_error" if required else None,
-            reason=f"input `{binding.input_name}` is not compatible with inject.mode={binding.inject.get('mode') or 'path'}",
+            reason=f"input `{binding.input_name}` is not compatible with inject.mode={binding.inject.mode or 'path'}",
         )
     if binding.resolved.kind == "value":
         return _record_for_value(binding, base=base, expected_digest=expected_digest)

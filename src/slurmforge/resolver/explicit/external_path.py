@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...contracts import InputBinding, InputSource, ResolvedInput
+from ...contracts import InputBinding, InputResolution, InputSource, ResolvedInput
 from ...errors import ConfigContractError
 from ...contracts import RunDefinition
 from ...spec import ExperimentSpec
@@ -40,19 +40,19 @@ def explicit_input_bindings(
         raise ConfigContractError(f"Input path does not exist: {resolved}")
     selected_runs = runs or expand_run_definitions(spec)
     inject = input_inject(spec, stage_name=consumer_stage, input_name=input_name)
-    resolution = {
-        "kind": "external_path",
-        "resolved": {"kind": input_spec.expects, "path": str(resolved)},
-        "source_exists": True,
-    }
-    if source_role:
-        resolution["source_role"] = source_role
+    resolution = InputResolution(
+        kind="external_path",
+        state="resolved",
+        source_exists=True,
+        source_role=source_role,
+    )
     bindings = {
         run.run_id: (
             InputBinding(
                 input_name=input_name,
                 source=InputSource(kind="external_path", path=str(resolved)),
                 expects=input_spec.expects,
+                required=input_spec.required,
                 resolved=ResolvedInput(kind=input_spec.expects, path=str(resolved)),
                 inject=inject,
                 resolution=resolution,

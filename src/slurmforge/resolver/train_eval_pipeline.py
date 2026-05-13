@@ -88,6 +88,7 @@ def _pipeline_upstream_binding(
             kind="upstream_output", stage=producer_plan.stage_name, output=output_name
         ),
         expects=input_spec.expects,
+        required=input_spec.required,
         resolved=resolved_output(output),
         inject=inject_payload(input_spec),
         resolution=upstream_resolution(
@@ -152,9 +153,9 @@ def resolve_stage_inputs_for_train_eval_pipeline(
             for input_name in sorted(stage.inputs)
         )
         failures = [
-            f"{binding.input_name}: {binding.resolution.get('reason') or 'unresolved'}"
+            f"{binding.input_name}: {binding.resolution.reason or 'unresolved'}"
             for binding in bindings
-            if binding.inject.get("required")
+            if binding.required
             and not binding_is_ready_for_injection(binding)
         ]
         if failures:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..slurm import SlurmClientProtocol
 from ..workflow_contract import WORKFLOW_STREAMING
 from .dispatch_queue import dispatch_ready_instances
@@ -10,7 +11,7 @@ from .state_model import PipelineAdvanceResult, result_from_state, set_workflow_
 
 
 def submit_initial_pipeline_locked(
-    plan,
+    plan: TrainEvalPipelinePlan,
     *,
     client: SlurmClientProtocol,
     max_dependency_length: int,

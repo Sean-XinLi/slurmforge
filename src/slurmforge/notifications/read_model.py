@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
+from ..plans.notifications import NotificationPlan
 from ..root_model.notifications import (
     load_notification_summary_input as _load_notification_summary_input,
 )
@@ -12,7 +12,7 @@ from ..root_model.notifications import (
 from .models import NotificationSummaryInput
 
 
-def notification_plan_for_root(root: Path) -> Any:
+def notification_plan_for_root(root: Path) -> NotificationPlan:
     return _notification_plan_for_root(root)
 
 

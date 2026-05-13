@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from slurmforge.emit.pipeline_gate import render_pipeline_gate_sbatch
-from slurmforge.emit.stage import load_stage_submit_manifest, write_stage_submit_files
+from slurmforge.emit.stage import write_stage_submit_files
 from slurmforge.executor.launcher import build_shell_script
 from slurmforge.executor.stage import execute_stage_task
 from slurmforge.io import SchemaVersion
@@ -14,6 +14,7 @@ from slurmforge.resolver.explicit.stage_batch import upstream_bindings_from_trai
 from slurmforge.spec import load_experiment_spec
 from slurmforge.submission.generation import prepare_stage_submission
 from slurmforge.submission.state import read_submission_state
+from slurmforge.submission.submit_manifest import load_submit_manifest
 from slurmforge.submission.submitter import submit_prepared_stage_batch
 
 from tests.helpers import write_demo_project
@@ -25,7 +26,7 @@ __all__ = [
     "compile_train_eval_pipeline_plan",
     "execute_stage_task",
     "load_experiment_spec",
-    "load_stage_submit_manifest",
+    "load_submit_manifest",
     "prepare_stage_submission",
     "read_submission_state",
     "render_pipeline_gate_sbatch",

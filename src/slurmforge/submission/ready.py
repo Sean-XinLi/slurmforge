@@ -3,11 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..errors import ConfigContractError
-from ..inputs.verifier import input_verification_path
-from ..io import read_json
+from ..inputs.verifier import load_stage_input_verification_report
 from ..plans.stage import StageBatchPlan
 from ..storage.plan_reader import load_execution_stage_batch_plan
 from ..storage.batch_materialization_records import read_materialization_status
+from ..storage.paths import input_verification_path
 from .ledger import read_submission_ledger
 from .models import PreparedSubmission, SubmissionLedger
 
@@ -77,12 +77,14 @@ def load_ready_prepared_submission(
             raise ConfigContractError(
                 f"Input verification report is missing: {verification_path}"
             )
-        verification = read_json(verification_path)
-        if verification.get("state") == "failed":
+        verification = load_stage_input_verification_report(
+            batch_root / instance.run_dir_rel
+        )
+        if verification.state == "failed":
             raise ConfigContractError(
                 f"Input verification failed for prepared submission: {verification_path}"
             )
-        if verification.get("phase") != "submit":
+        if verification.phase != "submit":
             raise ConfigContractError(
                 f"Input verification report is not a submit-phase report: {verification_path}"
             )

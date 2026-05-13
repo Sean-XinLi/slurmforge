@@ -1,9 +1,14 @@
 from __future__ import annotations
 
-from ..plans.train_eval import TrainEvalPipelinePlan
 from ..io import utc_now
-from ..workflow_contract import TRAIN_STAGE
-from ..storage.workflow_state_records import (
+from ..plans.train_eval import TrainEvalPipelinePlan
+from ..release_policy_contract import (
+    RELEASE_PER_GROUP,
+    RELEASE_PER_RUN,
+    RELEASE_PER_STAGE,
+    RELEASE_WINDOWED,
+)
+from ..storage.workflow_state_constants import (
     DEPENDENCY_BLOCKED,
     DEPENDENCY_READY,
     DEPENDENCY_RESOLVED,
@@ -13,13 +18,10 @@ from ..storage.workflow_state_records import (
     INSTANCE_READY,
     INSTANCE_SUCCESS,
     INSTANCE_TERMINAL_STATES,
-    RELEASE_PER_GROUP,
-    RELEASE_PER_RUN,
-    RELEASE_PER_STAGE,
-    RELEASE_WINDOWED,
-    WorkflowState,
-    queue_instance,
 )
+from ..storage.workflow_state_models import WorkflowState
+from ..storage.workflow_state_mutations import queue_instance
+from ..workflow_contract import TRAIN_STAGE
 
 
 def resolve_dependencies(

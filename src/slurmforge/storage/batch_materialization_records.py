@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..errors import RecordContractError
-from ..io import SchemaVersion, read_json, require_schema, utc_now, write_json
+from ..io import SchemaVersion, read_json_object, require_schema, utc_now, write_json_object
 from ..record_fields import required_nullable_string, required_string
 
 MATERIALIZATION_PLANNED = "planned"
@@ -67,7 +67,7 @@ def read_materialization_status(batch_root: Path) -> MaterializationStatusRecord
     path = materialization_status_path(batch_root)
     if not path.exists():
         return None
-    return materialization_status_from_dict(read_json(path))
+    return materialization_status_from_dict(read_json_object(path))
 
 
 def write_materialization_status(
@@ -93,7 +93,7 @@ def write_materialization_status(
         else (verified_at or ""),
         submit_manifest_path=submit_manifest_path,
     )
-    write_json(materialization_status_path(batch_root), record)
+    write_json_object(materialization_status_path(batch_root), record)
     return record
 
 

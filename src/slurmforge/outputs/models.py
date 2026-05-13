@@ -5,6 +5,13 @@ from typing import Any
 
 from ..io import SchemaVersion, require_schema
 from ..plans.outputs import OutputRef
+from ..record_fields import (
+    required_bool,
+    required_int,
+    required_nullable_bool,
+    required_object_array,
+    required_string,
+)
 
 
 def _require_output_schema(payload: dict[str, Any], *, name: str) -> None:
@@ -66,20 +73,28 @@ def output_ref_from_artifact(
 def artifact_ref_from_dict(payload: dict[str, Any]) -> ArtifactRef:
     _require_output_schema(payload, name="artifact_ref")
     return ArtifactRef(
-        name=str(payload["name"]),
-        kind=str(payload["kind"]),
-        source_path=str(payload["source_path"]),
-        managed_path=str(payload["managed_path"]),
-        strategy=str(payload["strategy"]),
-        managed=bool(payload["managed"]),
-        digest=str(payload["digest"]),
-        source_digest=str(payload.get("source_digest") or payload["digest"]),
-        managed_digest=str(payload.get("managed_digest") or payload["digest"]),
-        verified=None
-        if payload.get("verified") is None
-        else bool(payload.get("verified")),
-        size_bytes=int(payload["size_bytes"]),
-        optional=bool(payload.get("optional", False)),
+        name=required_string(payload, "name", label="artifact_ref", non_empty=True),
+        kind=required_string(payload, "kind", label="artifact_ref", non_empty=True),
+        source_path=required_string(
+            payload, "source_path", label="artifact_ref", non_empty=True
+        ),
+        managed_path=required_string(
+            payload, "managed_path", label="artifact_ref", non_empty=True
+        ),
+        strategy=required_string(
+            payload, "strategy", label="artifact_ref", non_empty=True
+        ),
+        managed=required_bool(payload, "managed", label="artifact_ref"),
+        digest=required_string(payload, "digest", label="artifact_ref", non_empty=True),
+        source_digest=required_string(
+            payload, "source_digest", label="artifact_ref", non_empty=True
+        ),
+        managed_digest=required_string(
+            payload, "managed_digest", label="artifact_ref", non_empty=True
+        ),
+        verified=required_nullable_bool(payload, "verified", label="artifact_ref"),
+        size_bytes=required_int(payload, "size_bytes", label="artifact_ref"),
+        optional=required_bool(payload, "optional", label="artifact_ref"),
     )
 
 
@@ -88,9 +103,16 @@ def artifact_manifest_record_from_dict(
 ) -> ArtifactManifestRecord:
     _require_output_schema(payload, name="artifact_manifest")
     return ArtifactManifestRecord(
-        stage_instance_id=str(payload["stage_instance_id"]),
-        attempt_id=str(payload["attempt_id"]),
+        stage_instance_id=required_string(
+            payload, "stage_instance_id", label="artifact_manifest", non_empty=True
+        ),
+        attempt_id=required_string(
+            payload, "attempt_id", label="artifact_manifest", non_empty=True
+        ),
         artifacts=tuple(
-            artifact_ref_from_dict(dict(item)) for item in payload.get("artifacts", ())
+            artifact_ref_from_dict(item)
+            for item in required_object_array(
+                payload, "artifacts", label="artifact_manifest"
+            )
         ),
     )

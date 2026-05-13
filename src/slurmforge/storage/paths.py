@@ -17,6 +17,10 @@ def input_bindings_path(run_dir: Path) -> Path:
     return run_dir / "input_bindings.json"
 
 
+def input_verification_path(run_dir: Path) -> Path:
+    return run_dir / "input_verification.json"
+
+
 def stage_outputs_path(run_dir: Path) -> Path:
     return run_dir / "stage_outputs.json"
 

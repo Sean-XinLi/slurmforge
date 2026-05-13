@@ -32,7 +32,7 @@ class OutputRef:
     size_bytes: int | None = None
     selection_reason: str = ""
     value: Any = None
-    schema_version: int = SchemaVersion.PLAN
+    schema_version: int = SchemaVersion.OUTPUT_RECORD
 
 
 @dataclass(frozen=True)

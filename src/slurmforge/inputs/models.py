@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
-
-JsonObject = dict[str, Any]
+from ..contracts import InputSource
 
 
 @dataclass(frozen=True)
 class InputVerificationRecord:
     input_name: str
-    source: JsonObject
+    source: InputSource
     expects: str
     required: bool
     resolved_kind: str = "unresolved"

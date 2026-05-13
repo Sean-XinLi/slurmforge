@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..emit.stage import load_stage_submit_manifest, write_stage_submit_files
+from ..emit.stage import write_stage_submit_files
 from ..errors import ConfigContractError, InputContractError
 from ..inputs.models import StageInputVerificationReport
 from ..inputs.verifier import verification_failure_reasons, verify_stage_batch_inputs
@@ -14,6 +14,12 @@ from ..storage.batch_materialization_records import write_materialization_status
 from .ledger import initialize_submission_ledger, ledger_path
 from .models import SubmitGeneration
 from .models import PreparedSubmission
+from .submit_manifest import (
+    load_submit_manifest,
+    submit_manifest_dependency_records,
+    submit_manifest_group_paths,
+    submit_manifest_path,
+)
 
 
 def _report_failure_reason(report: StageInputVerificationReport) -> str:
@@ -50,19 +56,15 @@ def _mark_blocked_stage_inputs(
 def create_submit_generation(batch: StageBatchPlan) -> SubmitGeneration:
     batch_root = Path(batch.submission_root)
     write_stage_submit_files(batch)
-    manifest = load_stage_submit_manifest(batch_root)
-    groups = {
-        str(item["group_id"]): str(item["sbatch_path"])
-        for item in manifest.get("groups", ())
-    }
+    manifest = load_submit_manifest(batch_root)
     return SubmitGeneration(
-        generation_id=str(manifest["generation_id"]),
-        batch_id=str(manifest["batch_id"]),
-        stage_name=str(manifest["stage_name"]),
-        manifest_path=str(batch_root / "submit" / "submit_manifest.json"),
-        submit_script=str(manifest["submit_script"]),
-        sbatch_paths_by_group=groups,
-        dependency_plan=tuple(dict(item) for item in manifest.get("dependencies", ())),
+        generation_id=manifest.generation_id,
+        batch_id=manifest.batch_id,
+        stage_name=manifest.stage_name,
+        manifest_path=str(submit_manifest_path(batch_root)),
+        submit_script=manifest.submit_script,
+        sbatch_paths_by_group=submit_manifest_group_paths(manifest),
+        dependency_plan=submit_manifest_dependency_records(manifest),
     )
 
 

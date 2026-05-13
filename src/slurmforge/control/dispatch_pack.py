@@ -3,8 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from ..io import content_digest
+from ..plans.train_eval import TrainEvalPipelinePlan
+from ..release_policy_contract import RELEASE_WINDOWED
+from ..storage.workflow_state_constants import INSTANCE_READY
+from ..storage.workflow_state_models import WorkflowState
 from ..workflow_contract import EVAL_STAGE, TRAIN_STAGE
-from ..storage.workflow_state_records import INSTANCE_READY, RELEASE_WINDOWED, WorkflowState
 
 
 def ready_instance_ids(
@@ -26,7 +29,9 @@ def ready_eval_ids(state: WorkflowState) -> tuple[str, ...]:
     return ready_instance_ids(state, stage_name=EVAL_STAGE)
 
 
-def window_allows_dispatch(plan, state: WorkflowState, ready_ids: tuple[str, ...]) -> bool:
+def window_allows_dispatch(
+    plan: TrainEvalPipelinePlan, state: WorkflowState, ready_ids: tuple[str, ...]
+) -> bool:
     if state.release_policy != RELEASE_WINDOWED:
         return True
     window_size = int(getattr(plan, "dispatch_window_size", 1) or 1)

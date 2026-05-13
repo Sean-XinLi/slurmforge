@@ -4,25 +4,10 @@ from pathlib import Path
 
 from ..io import utc_now
 from ..slurm import failure_class_for_slurm_state
+from ..storage.paths import next_attempt_id
 from .machine import commit_attempt
 from .models import StageAttemptRecord
 from .reader import list_attempts
-
-
-def _attempts_dir(run_dir: Path) -> Path:
-    return Path(run_dir) / "attempts"
-
-
-def _next_attempt_id(run_dir: Path) -> str:
-    root = _attempts_dir(run_dir)
-    if not root.exists():
-        return "0001"
-    existing = [
-        int(path.name)
-        for path in root.iterdir()
-        if path.is_dir() and path.name.isdigit()
-    ]
-    return f"{(max(existing) + 1) if existing else 1:04d}"
 
 
 def _exit_code_from_slurm(value: str) -> int | None:
@@ -96,7 +81,7 @@ def scheduler_attempt(
                     ),
                 )
             return attempt.attempt_id
-    attempt_id = _next_attempt_id(run_dir)
+    attempt_id = next_attempt_id(run_dir)
     attempt = _reconciled_attempt(
         attempt_id=attempt_id,
         stage_instance_id=stage_instance_id,

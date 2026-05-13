@@ -6,8 +6,8 @@ from ..default_values import DEFAULT_ENVIRONMENT_NAME
 from ..option_sets import (
     DISPATCH_POLICIES,
     DISPATCH_POLICY_SERIALIZE_GROUPS,
-    RELEASE_POLICIES,
     RELEASE_POLICY_PER_RUN,
+    RELEASE_POLICY_OPTIONS,
 )
 from ..workflows import ALL_STARTER_TEMPLATES, TEMPLATE_TRAIN_EVAL
 from ..models import ConfigField
@@ -43,7 +43,7 @@ FIELDS: Final[tuple[ConfigField, ...]] = (
         level="intermediate",
         templates=ALL_STARTER_TEMPLATES,
         default_value=RELEASE_POLICY_PER_RUN,
-        options=RELEASE_POLICIES,
+        options=RELEASE_POLICY_OPTIONS,
     ),
     ConfigField(
         path="dispatch.window_size",

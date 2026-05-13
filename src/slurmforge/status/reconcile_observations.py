@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..io import SchemaVersion, read_json, utc_now, write_json
+from ..io import SchemaVersion, read_json_object, utc_now, write_json_object
 from ..record_fields import required_string
 
 
@@ -27,7 +27,7 @@ def missing_output_expired(
 ) -> bool:
     path = Path(run_dir) / "reconcile.json"
     if path.exists():
-        payload = read_json(path)
+        payload = read_json_object(path)
         first_missing = required_string(
             payload,
             "first_missing_output_at",
@@ -36,7 +36,7 @@ def missing_output_expired(
         )
     else:
         first_missing = utc_now()
-        write_json(
+        write_json_object(
             path,
             {
                 "schema_version": SchemaVersion.STATUS,

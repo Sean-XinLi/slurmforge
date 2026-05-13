@@ -4,16 +4,32 @@ from dataclasses import dataclass, field
 
 from ...contracts import InputInjection, InputSource
 from ...contracts.outputs import StageOutputContract
-from .common import JsonObject
 from .entry import EntrySpec
 from .resources import ResourceSpec
 from .sizing import StageGpuSizingSpec
 
 
 @dataclass(frozen=True)
+class LauncherRendezvousSpec:
+    backend: str = "c10d"
+    endpoint: str = "auto"
+    port: int | str | None = 29500
+
+
+@dataclass(frozen=True)
+class TorchrunLauncherSpec:
+    mode: str = ""
+    nnodes: int | str | None = "auto"
+    nproc_per_node: int | str | None = "auto"
+    rendezvous: LauncherRendezvousSpec = field(default_factory=LauncherRendezvousSpec)
+    srun_args: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class LauncherSpec:
     type: str = ""
-    options: JsonObject = field(default_factory=dict)
+    torchrun: TorchrunLauncherSpec = field(default_factory=TorchrunLauncherSpec)
+    args: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

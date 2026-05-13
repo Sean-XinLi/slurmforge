@@ -10,8 +10,8 @@ from ...record_fields import (
     required_string,
     required_string_tuple,
 )
+from ...release_policy_contract import RELEASE_POLICIES
 from ...workflow_contract import TRAIN_EVAL_PIPELINE_KIND
-from ...workflow_enums import RELEASE_POLICIES
 from ..train_eval import (
     TrainEvalControlPlan,
     TrainEvalPipelinePlan,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...io import write_json
+from ...io import write_json_object
 from ...plans.outputs import StageOutputsRecord
 from ...plans.stage import StageInstancePlan
 from ..models import ArtifactManifestRecord, ArtifactRef
@@ -43,7 +43,7 @@ def discover_stage_outputs(
         artifacts=tuple(artifact_refs),
     )
     manifest_path = attempt_dir / "artifacts" / "artifact_manifest.json"
-    write_json(manifest_path, artifact_manifest)
+    write_json_object(manifest_path, artifact_manifest)
     stage_outputs = StageOutputsRecord(
         stage_instance_id=instance.stage_instance_id,
         producer_attempt_id=attempt_id,

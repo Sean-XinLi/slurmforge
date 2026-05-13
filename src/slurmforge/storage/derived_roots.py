@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..io import SchemaVersion, to_jsonable, write_json
+from ..io import SchemaVersion, to_jsonable, write_json_object
 from ..plans.sources import SourcedStageBatchPlan, prior_batch_lineage_to_dict
 
 
@@ -50,5 +50,5 @@ def _source_plan_payload(plan: SourcedStageBatchPlan) -> dict[str, object]:
 
 def write_source_contract(plan: SourcedStageBatchPlan) -> None:
     root = Path(plan.batch.submission_root)
-    write_json(root / "source_plan.json", _source_plan_payload(plan))
-    write_json(root / "source_lineage.json", prior_batch_lineage_to_dict(plan.lineage))
+    write_json_object(root / "source_plan.json", _source_plan_payload(plan))
+    write_json_object(root / "source_lineage.json", prior_batch_lineage_to_dict(plan.lineage))

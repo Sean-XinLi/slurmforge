@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from ..config_contract.option_sets import EMAIL_EVENT_BATCH_FINISHED
-from ..io import SchemaVersion, content_digest, read_json, write_json
+from ..io import SchemaVersion, content_digest, write_json_object
+from ..notifications.policy import email_notification_enabled
 from ..plans.stage import StageBatchPlan
+from ..submission_paths import submit_manifest_path
 from .sbatch_helpers import _q
 from .stage_render import (
     render_stage_group_sbatch,
@@ -42,27 +43,11 @@ def _generation_dir(batch: StageBatchPlan, generation_id: str) -> Path:
     return _submit_root(batch) / "generations" / generation_id
 
 
-def _manifest_path(batch_root: Path) -> Path:
-    return batch_root / "submit" / "submit_manifest.json"
-
-
-def _notification_enabled(batch: StageBatchPlan, event: str) -> bool:
-    email = batch.notification_plan.email
-    return email.enabled and bool(email.recipients) and event in set(email.events)
-
-
 def write_stage_notification_submit_file(
     batch: StageBatchPlan, event: str = EMAIL_EVENT_BATCH_FINISHED
 ) -> Path:
-    manifest = load_stage_submit_manifest(Path(batch.submission_root))
-    generation_id = str(manifest["generation_id"])
-    path = (
-        _submit_root(batch) / "notifications" / generation_id / f"notify_{event}.sbatch"
-    )
-    for item in manifest.get("notifications", ()):
-        if str(item.get("event") or "") == event and item.get("sbatch_path"):
-            path = Path(str(item["sbatch_path"]))
-            break
+    generation_id = _generation_id(batch)
+    path = _notification_submit_path(batch, event, generation_id=generation_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         render_stage_notification_sbatch(batch, event, generation_id=generation_id),
@@ -78,8 +63,7 @@ def write_stage_notification_barrier_file(
     *,
     barrier_index: int,
 ) -> Path:
-    manifest = load_stage_submit_manifest(Path(batch.submission_root))
-    generation_id = str(manifest["generation_id"])
+    generation_id = _generation_id(batch)
     path = (
         _submit_root(batch)
         / "notifications"
@@ -98,6 +82,19 @@ def write_stage_notification_barrier_file(
     )
     path.chmod(0o755)
     return path
+
+
+def _notification_submit_path(
+    batch: StageBatchPlan, event: str, *, generation_id: str
+) -> Path:
+    if event == EMAIL_EVENT_BATCH_FINISHED:
+        return _generation_dir(batch, generation_id) / "notify_batch_finished.sbatch"
+    return (
+        _submit_root(batch)
+        / "notifications"
+        / generation_id
+        / f"notify_{event}.sbatch"
+    )
 
 
 def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
@@ -134,7 +131,7 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
         submit_lines.append(f'printf "%s\\n" "{group_id}=${{{var_name}}}"')
         job_vars[group_id] = var_name
     notification_entries: list[dict[str, str]] = []
-    if _notification_enabled(batch, EMAIL_EVENT_BATCH_FINISHED):
+    if email_notification_enabled(batch.notification_plan, EMAIL_EVENT_BATCH_FINISHED):
         notify_path = submit_dir / "notify_batch_finished.sbatch"
         notify_path.write_text(
             render_stage_notification_sbatch(
@@ -171,7 +168,7 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
         "dependencies": batch.budget_plan.dependencies,
         "notifications": notification_entries,
     }
-    write_json(_manifest_path(root), manifest)
+    write_json_object(submit_manifest_path(root), manifest)
     wrapper = _submit_root(batch) / "submit.sh"
     wrapper.write_text(
         "\n".join(
@@ -186,12 +183,3 @@ def write_stage_submit_files(batch: StageBatchPlan) -> tuple[Path, ...]:
     )
     wrapper.chmod(0o755)
     return tuple(sbatch_paths)
-
-
-def load_stage_submit_manifest(batch_root: Path) -> dict[str, Any]:
-    return read_json(_manifest_path(batch_root))
-
-
-def _stage_submit_paths_from_manifest(batch_root: Path) -> tuple[Path, ...]:
-    manifest = load_stage_submit_manifest(batch_root)
-    return tuple(Path(str(item["sbatch_path"])) for item in manifest.get("groups", ()))

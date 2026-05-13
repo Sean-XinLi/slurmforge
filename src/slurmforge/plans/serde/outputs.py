@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...errors import RecordContractError
 from ...io import SchemaVersion, require_schema
 from ...record_fields import (
     required_bool,
@@ -50,6 +51,7 @@ def output_ref_from_dict(payload: dict[str, Any]) -> OutputRef:
 
 def stage_outputs_record_from_dict(payload: dict[str, Any]) -> StageOutputsRecord:
     require_schema(payload, name="stage_outputs", version=SchemaVersion.OUTPUT_RECORD)
+    outputs = required_object(payload, "outputs", label="stage_outputs")
     return StageOutputsRecord(
         stage_instance_id=required_string(
             payload, "stage_instance_id", label="stage_outputs", non_empty=True
@@ -58,16 +60,34 @@ def stage_outputs_record_from_dict(payload: dict[str, Any]) -> StageOutputsRecor
             payload, "producer_attempt_id", label="stage_outputs", non_empty=True
         ),
         outputs={
-            str(name): output_ref_from_dict(dict(item))
-            for name, item in required_object(
-                payload, "outputs", label="stage_outputs"
-            ).items()
+            _output_key(name): _output_ref_for_key(name, item)
+            for name, item in outputs.items()
         },
         artifacts=required_string_tuple(payload, "artifacts", label="stage_outputs"),
         artifact_manifest=required_string(
             payload, "artifact_manifest", label="stage_outputs"
         ),
     )
+
+
+def _output_key(name: Any) -> str:
+    if not isinstance(name, str) or not name:
+        raise RecordContractError("stage_outputs.outputs keys must be non-empty strings")
+    return name
+
+
+def _output_ref_for_key(name: Any, payload: Any) -> OutputRef:
+    output_name = _output_key(name)
+    if not isinstance(payload, dict):
+        raise RecordContractError(
+            f"stage_outputs.outputs.{output_name} must be an object"
+        )
+    output = output_ref_from_dict(payload)
+    if output.output_name != output_name:
+        raise RecordContractError(
+            f"stage_outputs output key `{output_name}` does not match `{output.output_name}`"
+        )
+    return output
 
 
 def artifact_store_plan_from_dict(payload: dict[str, Any]) -> ArtifactStorePlan:

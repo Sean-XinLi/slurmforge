@@ -6,6 +6,8 @@ from ..materialization.sourced import materialize_sourced_stage_batch
 from ..materialization.stage_batch import materialize_stage_batch
 from ..materialization.train_eval import materialize_train_eval_pipeline
 from ..plans.sources import SourcedStageBatchPlan
+from ..plans.stage import StageBatchPlan
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..spec import ExperimentSpec
 from ..submission.notifications import submit_stage_batch_notification
 from ..submission.generation import prepare_stage_submission
@@ -19,7 +21,9 @@ from .results import (
 )
 
 
-def _materialize_stage_batch(spec: ExperimentSpec, batch) -> PreparedSubmission:
+def _materialize_stage_batch(
+    spec: ExperimentSpec, batch: StageBatchPlan
+) -> PreparedSubmission:
     materialize_stage_batch(batch, spec_snapshot=spec.raw)
     return prepare_stage_submission(batch)
 
@@ -62,7 +66,7 @@ def emit_sourced_stage_batch(
 
 
 def emit_stage_batch(
-    spec: ExperimentSpec, batch, *, submit: bool
+    spec: ExperimentSpec, batch: StageBatchPlan, *, submit: bool
 ) -> StageBatchExecutionResult:
     prepared = _materialize_stage_batch(spec, batch)
     if not submit:
@@ -81,7 +85,7 @@ def emit_stage_batch(
 
 
 def execute_stage_batch_plan(
-    spec: ExperimentSpec, batch, *, mode: ExecutionMode
+    spec: ExperimentSpec, batch: StageBatchPlan, *, mode: ExecutionMode
 ) -> StageBatchExecutionResult:
     if mode == "preview":
         return StageBatchExecutionResult(root=batch.submission_root, mode="preview")
@@ -89,7 +93,7 @@ def execute_stage_batch_plan(
 
 
 def emit_train_eval_pipeline(
-    spec: ExperimentSpec, plan, *, submit: bool
+    spec: ExperimentSpec, plan: TrainEvalPipelinePlan, *, submit: bool
 ) -> TrainEvalPipelineExecutionResult:
     materialize_train_eval_pipeline(plan, spec_snapshot=spec.raw)
     if not submit:
@@ -106,7 +110,7 @@ def emit_train_eval_pipeline(
 
 
 def execute_train_eval_pipeline_plan(
-    spec: ExperimentSpec, plan, *, mode: ExecutionMode
+    spec: ExperimentSpec, plan: TrainEvalPipelinePlan, *, mode: ExecutionMode
 ) -> TrainEvalPipelineExecutionResult:
     if mode == "preview":
         return TrainEvalPipelineExecutionResult(root=plan.root_dir, mode="preview")

@@ -6,7 +6,7 @@ from pathlib import Path
 from ..errors import ConfigContractError
 from ..overrides import deep_set
 from ..contracts import InputBinding, RunDefinition, binding_is_ready_for_injection
-from ..plans.stage import StageBatchPlan, StageInstancePlan
+from ..plans.stage import StageBatchPlan, StageInstanceLineage, StageInstancePlan
 from ..spec import (
     ExperimentSpec,
     parse_experiment_spec,
@@ -150,13 +150,13 @@ def _compile_stage_instances(
                 artifact_store_plan=artifact_store_payload(run_spec),
                 input_bindings=bindings,
                 output_contract=copy.deepcopy(stage.outputs),
-                lineage={
-                    "project": spec.project,
-                    "experiment": spec.experiment,
-                    "config_path": str(spec.config_path),
-                    "project_root": str(spec.project_root),
-                    "source_ref": source_ref,
-                },
+                lineage=StageInstanceLineage(
+                    project=spec.project,
+                    experiment=spec.experiment,
+                    config_path=str(spec.config_path),
+                    project_root=str(spec.project_root),
+                    source_ref=source_ref,
+                ),
                 run_overrides=copy.deepcopy(run.run_overrides),
                 resource_sizing=copy.deepcopy(resource_sizing),
                 spec_snapshot_digest=spec.spec_snapshot_digest,
@@ -181,9 +181,7 @@ def _input_bindings_for_run(
         )
     bindings = input_bindings_by_run[run.run_id]
     for binding in bindings:
-        if binding.inject.get("required") and not binding_is_ready_for_injection(
-            binding
-        ):
+        if binding.required and not binding_is_ready_for_injection(binding):
             raise ConfigContractError(
                 f"Required input `{binding.input_name}` for run `{run.run_id}` is not ready for injection"
             )

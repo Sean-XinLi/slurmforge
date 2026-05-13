@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..control_job_contract import (
+    CONTROL_KIND_TERMINAL_NOTIFICATION,
+    CONTROL_STATE_SUBMITTED,
+    ControlJobRecord,
+    control_job_key,
+)
 from ..config_contract.option_sets import EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED
 from ..emit.pipeline_notification import (
     write_pipeline_notification_barrier_file,
@@ -14,15 +20,13 @@ from ..notifications.records import (
     read_notification_record,
     write_notification_record,
 )
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..slurm import SlurmClientProtocol
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..submission.notification_mail import SLURM_MAIL_BACKEND, submit_slurm_mail_jobs
 from .control_submission_records import (
-    CONTROL_KIND_TERMINAL_NOTIFICATION,
     CONTROL_ON_ERROR_RECORD_FAILED,
-    ControlSubmissionRecord,
     ControlSubmitResult,
-    control_submission_key,
 )
 from .control_submission_submit import (
     submit_control_once,
@@ -30,7 +34,7 @@ from .control_submission_submit import (
 
 
 def terminal_notification_control_key() -> str:
-    return control_submission_key(
+    return control_job_key(
         CONTROL_KIND_TERMINAL_NOTIFICATION,
         target_id=EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED,
     )
@@ -38,12 +42,12 @@ def terminal_notification_control_key() -> str:
 
 def submit_pipeline_terminal_notification(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     *,
     dependency_job_ids: tuple[str, ...],
     client: SlurmClientProtocol,
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,
-) -> ControlSubmissionRecord | None:
+) -> ControlJobRecord | None:
     event = EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED
     if not email_notification_enabled(plan.notification_plan, event):
         return None
@@ -73,7 +77,7 @@ def submit_pipeline_terminal_notification(
 
 def _submit_terminal_mail_jobs(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     *,
     dependency_job_ids: tuple[str, ...],
     notification_path: Path,
@@ -105,8 +109,8 @@ def _submit_terminal_mail_jobs(
 
 def _write_terminal_notification_record(
     pipeline_root: Path,
-    plan,
-    record: ControlSubmissionRecord,
+    plan: TrainEvalPipelinePlan,
+    record: ControlJobRecord,
 ) -> NotificationSubmissionRecord:
     event = EMAIL_EVENT_TRAIN_EVAL_PIPELINE_FINISHED
     existing = read_notification_record(pipeline_root, event, SLURM_MAIL_BACKEND)
@@ -134,7 +138,7 @@ def _write_terminal_notification_record(
         pipeline_root,
         (
             "notification_submitted"
-            if record.state == "submitted"
+            if record.state == CONTROL_STATE_SUBMITTED
             else "notification_submit_failed"
         ),
         notification_event=event,

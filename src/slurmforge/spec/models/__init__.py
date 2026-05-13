@@ -21,7 +21,14 @@ from .sizing import (
     SizingSpec,
     StageGpuSizingSpec,
 )
-from .stages import BeforeStepSpec, LauncherSpec, StageInputSpec, StageSpec
+from .stages import (
+    BeforeStepSpec,
+    LauncherRendezvousSpec,
+    LauncherSpec,
+    StageInputSpec,
+    StageSpec,
+    TorchrunLauncherSpec,
+)
 from .storage import ArtifactStoreSpec, StorageSpec
 
 __all__ = [
@@ -39,6 +46,7 @@ __all__ = [
     "GpuTypeSpec",
     "HardwareSpec",
     "JsonObject",
+    "LauncherRendezvousSpec",
     "LauncherSpec",
     "NotificationsSpec",
     "OrchestrationSpec",
@@ -52,5 +60,6 @@ __all__ = [
     "StageInputSpec",
     "StageSpec",
     "StorageSpec",
+    "TorchrunLauncherSpec",
     "UserRuntimeSpec",
 ]

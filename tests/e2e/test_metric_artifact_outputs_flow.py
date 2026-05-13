@@ -85,18 +85,18 @@ class MetricArtifactOutputFlowTests(StageBatchSystemTestCase):
             )
             outputs = load_stage_outputs(eval_run_dir)
             assert outputs is not None
-            self.assertEqual(outputs["outputs"]["accuracy"]["kind"], "metric")
-            self.assertEqual(outputs["outputs"]["accuracy"]["value"], 0.98)
-            self.assertTrue(outputs["outputs"]["accuracy"]["managed"])
-            self.assertTrue(outputs["outputs"]["accuracy"]["digest"])
+            accuracy = outputs.outputs["accuracy"]
+            eval_report = outputs.outputs["eval_report"]
+            self.assertEqual(accuracy.kind, "metric")
+            self.assertEqual(accuracy.value, 0.98)
+            self.assertTrue(accuracy.managed)
+            self.assertTrue(accuracy.digest)
             self.assertTrue(
-                outputs["outputs"]["accuracy"]["source_path"].endswith(
-                    "eval/metrics.json"
-                )
+                accuracy.source_path.endswith("eval/metrics.json")
             )
-            self.assertTrue(Path(outputs["outputs"]["accuracy"]["path"]).exists())
-            self.assertEqual(outputs["outputs"]["eval_report"]["kind"], "manifest")
-            self.assertTrue(Path(outputs["outputs"]["eval_report"]["path"]).exists())
+            self.assertTrue(Path(accuracy.path).exists())
+            self.assertEqual(eval_report.kind, "manifest")
+            self.assertTrue(Path(eval_report.path).exists())
             manifest = json.loads(
                 (
                     eval_run_dir

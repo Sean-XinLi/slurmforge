@@ -52,9 +52,9 @@ class LineageTests(StageBatchSystemTestCase):
 
             self.assertIn(Path(train_batch.submission_root).resolve(), roots)
             assert record is not None
-            self.assertEqual(record["stage_name"], "eval")
+            self.assertEqual(record.stage_name, "eval")
             self.assertEqual(
-                record["resolution"]["producer_root"],
+                record.resolution.producer_root,
                 str(Path(train_batch.submission_root).resolve()),
             )
 
@@ -74,3 +74,140 @@ class LineageTests(StageBatchSystemTestCase):
                     for batch in plan.stage_batches.values()
                 },
             )
+
+    def test_lineage_index_reader_returns_typed_records_and_rejects_invalid(
+        self,
+    ) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.contracts import InputResolution
+        from slurmforge.io import to_jsonable
+        from slurmforge.lineage.records import (
+            StageBatchLineageRecord,
+            TrainEvalPipelineLineageRecord,
+            lineage_index_from_dict,
+        )
+
+        pipeline_payload = {
+            "schema_version": 1,
+            "kind": "train_eval_pipeline_lineage",
+            "root": "/tmp/pipeline",
+            "pipeline_id": "pipe",
+            "pipeline_kind": "train_eval",
+            "stage_order": ["train", "eval"],
+            "run_ids": ["run_1"],
+            "spec_snapshot_digest": "digest",
+            "stage_batches": {
+                "train": {
+                    "batch_id": "batch",
+                    "root": "/tmp/train",
+                    "stage_name": "train",
+                    "source_ref": "source",
+                }
+            },
+            "source_roots": ["/tmp/train"],
+        }
+        stage_payload = {
+            "schema_version": 1,
+            "kind": "stage_batch_lineage",
+            "root": "/tmp/eval",
+            "batch_id": "batch",
+            "stage_name": "eval",
+            "source_ref": "source",
+            "spec_snapshot_digest": "digest",
+            "run_ids": ["run_1"],
+            "stage_instances": [
+                {
+                    "stage_instance_id": "run_1.eval",
+                    "run_id": "run_1",
+                    "stage_name": "eval",
+                    "run_dir_rel": "runs/run_1",
+                }
+            ],
+            "source_roots": ["/tmp/train"],
+            "input_sources": [
+                {
+                    "stage_instance_id": "run_1.eval",
+                    "run_id": "run_1",
+                    "stage_name": "eval",
+                    "input_name": "checkpoint",
+                    "source": {
+                        "schema_version": 1,
+                        "kind": "upstream_output",
+                        "stage": "train",
+                        "output": "checkpoint",
+                        "path": "",
+                    },
+                    "expects": "path",
+                    "resolved": {
+                        "schema_version": 1,
+                        "kind": "path",
+                        "path": "/tmp/checkpoint.pt",
+                        "value": None,
+                        "digest": "abc",
+                        "source_output_kind": "file",
+                        "producer_stage_instance_id": "run_1.train",
+                    },
+                    "resolution": to_jsonable(
+                        InputResolution(kind="upstream_output", state="resolved")
+                    ),
+                }
+            ],
+        }
+
+        pipeline_record = lineage_index_from_dict(pipeline_payload)
+        stage_record = lineage_index_from_dict(stage_payload)
+
+        self.assertIsInstance(pipeline_record, TrainEvalPipelineLineageRecord)
+        assert isinstance(pipeline_record, TrainEvalPipelineLineageRecord)
+        self.assertEqual(pipeline_record.stage_batches["train"].stage_name, "train")
+        self.assertIsInstance(stage_record, StageBatchLineageRecord)
+        assert isinstance(stage_record, StageBatchLineageRecord)
+        self.assertEqual(stage_record.input_sources[0].source.output, "checkpoint")
+        self.assertEqual(stage_record.input_sources[0].resolved.path, "/tmp/checkpoint.pt")
+
+        cases = {
+            "schema_version": {**pipeline_payload, "schema_version": "1"},
+            "source_roots": {**pipeline_payload, "source_roots": ("/tmp/train",)},
+            "root": {
+                **pipeline_payload,
+                "stage_batches": {
+                    "train": {
+                        key: value
+                        for key, value in pipeline_payload["stage_batches"][
+                            "train"
+                        ].items()
+                        if key != "root"
+                    }
+                },
+            },
+            "resolved": {
+                **stage_payload,
+                "input_sources": [
+                    {
+                        key: value
+                        for key, value in stage_payload["input_sources"][0].items()
+                        if key != "resolved"
+                    }
+                ],
+            },
+            "does not match": {
+                **pipeline_payload,
+                "stage_batches": {
+                    "renamed": pipeline_payload["stage_batches"]["train"]
+                },
+            },
+            "source": {
+                **stage_payload,
+                "input_sources": [
+                    {
+                        **stage_payload["input_sources"][0],
+                        "source": "bad",
+                    }
+                ],
+            },
+        }
+
+        for expected, invalid in cases.items():
+            with self.subTest(field=expected):
+                with self.assertRaisesRegex(RecordContractError, expected):
+                    lineage_index_from_dict(invalid)

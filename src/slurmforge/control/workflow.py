@@ -9,6 +9,7 @@ from typing import Iterator
 from ..control_paths import workflow_lock_path, workflow_traceback_path
 from ..errors import ConfigContractError
 from ..io import write_exception_diagnostic
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..slurm import SlurmClient, SlurmClientProtocol
 from ..storage.plan_reader import load_train_eval_pipeline_plan
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
@@ -45,7 +46,7 @@ def _pipeline_lock(pipeline_root: Path) -> Iterator[None]:
 
 
 def submit_initial_pipeline(
-    plan,
+    plan: TrainEvalPipelinePlan,
     *,
     client: SlurmClientProtocol | None = None,
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,

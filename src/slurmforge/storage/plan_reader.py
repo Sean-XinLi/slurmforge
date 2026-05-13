@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..contracts import RunDefinition
-from ..io import read_json
+from ..io import read_json_object
 from ..plans.serde import (
     stage_batch_plan_from_dict,
     stage_instance_plan_from_dict,
@@ -17,19 +17,19 @@ from .paths import stage_plan_path
 
 
 def load_stage_batch_plan(batch_root: Path) -> StageBatchPlan:
-    return stage_batch_plan_from_dict(read_json(batch_root / "batch_plan.json"))
+    return stage_batch_plan_from_dict(read_json_object(batch_root / "batch_plan.json"))
 
 
 def load_execution_stage_batch_plan(batch_root: Path) -> StageBatchPlan:
     selected = batch_root / "selected_batch_plan.json"
     if selected.exists():
-        return stage_batch_plan_from_dict(read_json(selected))
+        return stage_batch_plan_from_dict(read_json_object(selected))
     return load_stage_batch_plan(batch_root)
 
 
 def load_train_eval_pipeline_plan(pipeline_root: Path) -> TrainEvalPipelinePlan:
     return train_eval_pipeline_plan_from_dict(
-        read_json(pipeline_root / "train_eval_pipeline_plan.json")
+        read_json_object(pipeline_root / "train_eval_pipeline_plan.json")
     )
 
 
@@ -57,4 +57,4 @@ def plan_for_run_dir(run_dir: Path) -> StageInstancePlan | None:
     path = stage_plan_path(run_dir)
     if not path.exists():
         return None
-    return stage_instance_plan_from_dict(read_json(path))
+    return stage_instance_plan_from_dict(read_json_object(path))

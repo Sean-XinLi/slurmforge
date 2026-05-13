@@ -65,6 +65,7 @@ def upstream_bindings_from_run(
                         output=output_name,
                     ),
                     expects=input_spec.expects,
+                    required=input_spec.required,
                     resolved=resolved_output(output),
                     resolution=upstream_resolution(
                         producer_root=producer_root_from_run_dir(run_dir),

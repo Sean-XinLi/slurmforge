@@ -88,9 +88,11 @@ Every executable stage instance writes `input_verification.json` before sbatch g
     {
       "input_name": "checkpoint",
       "source": {
+        "schema_version": 1,
         "kind": "upstream_output",
         "stage": "train",
-        "output": "checkpoint"
+        "output": "checkpoint",
+        "path": ""
       },
       "expects": "path",
       "resolved_kind": "path",
@@ -102,8 +104,10 @@ Every executable stage instance writes `input_verification.json` before sbatch g
       "size_bytes": 123,
       "expected_digest": "sha256...",
       "producer_digest": "sha256...",
+      "producer_stage_instance_id": "train/run_001",
       "digest": "sha256...",
       "value_digest": "",
+      "verified_at": "2026-01-01T00:00:00+00:00",
       "phase": "submit",
       "state": "verified",
       "failure_class": null,

@@ -24,6 +24,7 @@ class InternalFacadeImportTests(StageBatchSystemTestCase):
             "slurmforge.planner",
             "slurmforge.plans",
             "slurmforge.resolver",
+            "slurmforge.resource_estimates",
             "slurmforge.root_model",
             "slurmforge.runtime",
             "slurmforge.sizing",

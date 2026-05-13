@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..contracts import ResolvedInput, resolved_input_from_output_ref
+from ..config_contract.option_sets import INPUT_EXPECTS_VALUE
+from ..contracts import InputResolution, ResolvedInput, resolved_kind_for_output_kind
 from ..errors import ConfigContractError
+from ..plans.outputs import OutputRef, StageOutputsRecord
 from ..spec import StageInputSpec
 
 
-def output_ref(payload: dict, output_name: str) -> dict | None:
-    outputs = dict(payload.get("outputs") or {})
-    output = outputs.get(output_name)
-    if isinstance(output, dict) and output.get("path"):
-        return dict(output)
-    return None
+def output_ref(record: StageOutputsRecord, output_name: str) -> OutputRef | None:
+    output = record.outputs.get(output_name)
+    if output is None or not output.path:
+        return None
+    return output
 
 
 def producer_root_from_run_dir(run_dir: Path) -> Path:
@@ -21,8 +22,24 @@ def producer_root_from_run_dir(run_dir: Path) -> Path:
     return run_dir.parent.resolve()
 
 
-def resolved_output(output: dict) -> ResolvedInput:
-    return resolved_input_from_output_ref(output)
+def resolved_output(output: OutputRef) -> ResolvedInput:
+    resolved_kind = resolved_kind_for_output_kind(output.kind, output.cardinality)
+    if resolved_kind == INPUT_EXPECTS_VALUE:
+        return ResolvedInput(
+            kind=INPUT_EXPECTS_VALUE,
+            path=output.path,
+            value=output.value,
+            digest=output.digest,
+            source_output_kind=output.kind,
+            producer_stage_instance_id=output.producer_stage_instance_id,
+        )
+    return ResolvedInput(
+        kind=resolved_kind,
+        path=output.path,
+        digest=output.digest,
+        source_output_kind=output.kind or output.output_name,
+        producer_stage_instance_id=output.producer_stage_instance_id,
+    )
 
 
 def upstream_resolution(
@@ -33,22 +50,21 @@ def upstream_resolution(
     run_id: str,
     stage_name: str,
     output_name: str,
-    output: dict,
-) -> dict[str, object]:
-    return {
-        "kind": "upstream_output",
-        "producer_root": str(producer_root.resolve()),
-        "producer_run_dir": str(run_dir.resolve()),
-        "producer_stage_instance_id": stage_instance_id,
-        "producer_run_id": run_id,
-        "producer_stage_name": stage_name,
-        "output_name": output_name,
-        "output_path": str(output["path"]),
-        "output_digest": str(
-            output.get("digest") or output.get("managed_digest") or ""
-        ),
-        "selection_reason": str(output.get("selection_reason") or ""),
-    }
+    output: OutputRef,
+) -> InputResolution:
+    return InputResolution(
+        kind="upstream_output",
+        state="resolved",
+        producer_root=str(producer_root.resolve()),
+        producer_run_dir=str(run_dir.resolve()),
+        producer_stage_instance_id=stage_instance_id,
+        producer_run_id=run_id,
+        producer_stage_name=stage_name,
+        output_name=output_name,
+        output_path=output.path,
+        output_digest=output.digest or output.managed_digest,
+        selection_reason=output.selection_reason,
+    )
 
 
 def producer_output_for_input(

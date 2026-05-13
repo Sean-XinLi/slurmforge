@@ -135,9 +135,7 @@ class StatusTests(StageBatchSystemTestCase):
             read_workflow_status,
             write_workflow_status,
         )
-        from slurmforge.storage.workflow_status_records import (
-            WorkflowStatusControlJobRecord,
-        )
+        from slurmforge.control_job_contract import ControlJobRecord
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -150,7 +148,7 @@ class StatusTests(StageBatchSystemTestCase):
             workflow_status.state = "failed"
             workflow_status.reason = "control action failed"
             workflow_status.control_jobs = {
-                "terminal_notification:train_eval_pipeline_finished": WorkflowStatusControlJobRecord(
+                "terminal_notification:train_eval_pipeline_finished": ControlJobRecord(
                     key="terminal_notification:train_eval_pipeline_finished",
                     kind="terminal_notification",
                     target_kind="workflow",
@@ -159,7 +157,7 @@ class StatusTests(StageBatchSystemTestCase):
                     sbatch_paths=("notify.sbatch",),
                     scheduler_job_ids=("1001", "1002"),
                 ),
-                "dispatch_catchup_gate:train_initial": WorkflowStatusControlJobRecord(
+                "dispatch_catchup_gate:train_initial": ControlJobRecord(
                     key="dispatch_catchup_gate:train_initial",
                     kind="dispatch_catchup_gate",
                     target_kind="dispatch",
@@ -201,3 +199,30 @@ class StatusTests(StageBatchSystemTestCase):
 
             with self.assertRaises(RecordContractError):
                 read_workflow_status(pipeline_root)
+
+    def test_workflow_status_record_rejects_malformed_stage_jobs_on_write(self) -> None:
+        from slurmforge.errors import RecordContractError
+        from slurmforge.storage.workflow_status_records import (
+            WorkflowStatusRecord,
+            workflow_status_to_dict,
+        )
+
+        cases = {
+            "empty_stage_key": {"": {"g0": "1001"}},
+            "non_string_stage_key": {1: {"g0": "1001"}},
+            "empty_group_key": {"train": {"": "1001"}},
+            "non_string_group_key": {"train": {1: "1001"}},
+            "empty_job_id": {"train": {"g0": ""}},
+            "non_string_job_id": {"train": {"g0": 1001}},
+        }
+
+        for name, stage_jobs in cases.items():
+            with self.subTest(name=name):
+                with self.assertRaises(RecordContractError):
+                    workflow_status_to_dict(
+                        WorkflowStatusRecord(
+                            state="streaming",
+                            updated_at="2026-01-01T00:00:00Z",
+                            stage_jobs=stage_jobs,
+                        )
+                    )

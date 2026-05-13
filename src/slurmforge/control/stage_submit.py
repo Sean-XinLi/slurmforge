@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..plans.stage import StageBatchPlan
 from ..slurm import SlurmClientProtocol
 from ..submission.generation import prepare_stage_submission
 from ..submission.ledger import submitted_group_job_ids
@@ -13,7 +14,7 @@ from .state_model import stage_key
 
 def ensure_stage_submitted(
     pipeline_root: Path,
-    batch,
+    batch: StageBatchPlan,
     *,
     client: SlurmClientProtocol,
     state_dispatch_id: str | None = None,

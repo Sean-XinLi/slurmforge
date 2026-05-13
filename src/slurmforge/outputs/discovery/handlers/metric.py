@@ -1,26 +1,27 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
+from ....contracts.outputs import StageOutputSpec
 from ...artifact_store import manage_file
 from ...selection import json_path_value, resolve_file
 from ....errors import ConfigContractError
 from ....plans.outputs import OutputRef
 from ..context import OutputDiscoveryContext
 from ..models import OutputDiscoveryItem
+from .common import missing_required_output
 
 
 def discover_metric_output(
     output_name: str,
-    output_cfg: Any,
+    output_cfg: StageOutputSpec,
     context: OutputDiscoveryContext,
 ) -> OutputDiscoveryItem:
     metric_file = resolve_file(context.workdir, output_cfg.file).resolve()
     if not metric_file.exists() or not metric_file.is_file():
         return OutputDiscoveryItem(
             output_name=output_name,
-            missing_required_reason=_missing_required(output_name)
+            missing_required_reason=missing_required_output(output_name)
             if output_cfg.required
             else "",
         )
@@ -72,7 +73,3 @@ def discover_metric_output(
     return OutputDiscoveryItem(
         output_name=output_name, output_ref=output_ref, artifacts=(artifact,)
     )
-
-
-def _missing_required(output_name: str) -> str:
-    return f"required output `{output_name}` was not produced"

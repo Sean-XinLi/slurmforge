@@ -7,13 +7,17 @@ from typing import Any
 from ..errors import RecordContractError
 from ..io import (
     SchemaVersion,
-    read_json,
+    read_json_object,
     require_schema,
     to_jsonable,
     utc_now,
-    write_json,
+    write_json_object,
 )
-from ..record_fields import required_string, required_string_tuple
+from ..record_fields import (
+    required_string,
+    required_string_tuple,
+    string_tuple_record_field,
+)
 from .models import NotificationSubmissionRecord
 
 NOTIFICATION_STATES = ("submitted", "failed", "uncertain")
@@ -70,16 +74,16 @@ def notification_submission_record_from_dict(
             payload, "recipients", label="notification", non_empty_items=True
         ),
         scheduler_job_ids=required_string_tuple(
-            payload, "scheduler_job_ids", label="notification"
+            payload, "scheduler_job_ids", label="notification", non_empty_items=True
         ),
         sbatch_paths=required_string_tuple(
-            payload, "sbatch_paths", label="notification"
+            payload, "sbatch_paths", label="notification", non_empty_items=True
         ),
         barrier_job_ids=required_string_tuple(
-            payload, "barrier_job_ids", label="notification"
+            payload, "barrier_job_ids", label="notification", non_empty_items=True
         ),
         dependency_job_ids=required_string_tuple(
-            payload, "dependency_job_ids", label="notification"
+            payload, "dependency_job_ids", label="notification", non_empty_items=True
         ),
         dependency_type=required_string(
             payload, "dependency_type", label="notification", non_empty=True
@@ -100,12 +104,12 @@ def read_notification_record(
     path = notification_record_path(root, event, backend)
     if not path.exists():
         return None
-    return notification_submission_record_from_dict(read_json(path))
+    return notification_submission_record_from_dict(read_json_object(path))
 
 
 def write_notification_record(root: Path, record: NotificationSubmissionRecord) -> None:
     validate_notification_submission_record(record)
-    write_json(notification_record_path(root, record.event, record.backend), record)
+    write_json_object(notification_record_path(root, record.event, record.backend), record)
 
 
 def validate_notification_submission_record(record: NotificationSubmissionRecord) -> None:
@@ -116,18 +120,42 @@ def validate_notification_submission_record(record: NotificationSubmissionRecord
     for field_name in ("event", "root_kind", "root", "backend"):
         if not getattr(record, field_name):
             raise RecordContractError(f"notification.{field_name} is required")
-    if not record.recipients or any(not recipient for recipient in record.recipients):
-        raise RecordContractError("notification.recipients must be non-empty strings")
+    string_tuple_record_field(
+        record.recipients,
+        label="notification.recipients",
+        non_empty=True,
+        non_empty_items=True,
+    )
+    scheduler_job_ids = string_tuple_record_field(
+        record.scheduler_job_ids,
+        label="notification.scheduler_job_ids",
+        non_empty_items=True,
+    )
+    sbatch_paths = string_tuple_record_field(
+        record.sbatch_paths,
+        label="notification.sbatch_paths",
+        non_empty_items=True,
+    )
+    string_tuple_record_field(
+        record.barrier_job_ids,
+        label="notification.barrier_job_ids",
+        non_empty_items=True,
+    )
+    string_tuple_record_field(
+        record.dependency_job_ids,
+        label="notification.dependency_job_ids",
+        non_empty_items=True,
+    )
     if not record.dependency_type:
         raise RecordContractError("notification.dependency_type is required")
     if not record.mail_type:
         raise RecordContractError("notification.mail_type is required")
     if record.state == "submitted":
-        if not record.scheduler_job_ids:
+        if not scheduler_job_ids:
             raise RecordContractError(
                 "submitted notification requires scheduler_job_ids"
             )
-        if not record.sbatch_paths:
+        if not sbatch_paths:
             raise RecordContractError("submitted notification requires sbatch_paths")
     if record.state in {"failed", "uncertain"} and not record.reason:
         raise RecordContractError(f"{record.state} notification requires reason")

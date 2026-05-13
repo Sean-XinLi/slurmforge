@@ -65,7 +65,7 @@ def _project_root_for_prior_source(
     first_plan = plan_for_run_dir(selected[0].run_dir)
     if first_plan is None:
         return source_root
-    return Path(first_plan.lineage.get("project_root") or source_root).resolve()
+    return Path(first_plan.lineage.project_root or str(source_root)).resolve()
 
 
 def compile_stage_batch_from_prior_source(

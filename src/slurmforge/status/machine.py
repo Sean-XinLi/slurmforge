@@ -14,17 +14,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ..io import to_jsonable, utc_now, write_json
+from ..io import to_jsonable, utc_now, write_json_object
+from ..storage.paths import attempt_path, status_events_path, status_path
 from .models import (
     StageAttemptRecord,
     StageStatusRecord,
     TERMINAL_STATES,
 )
-from .reader import attempt_path, read_stage_status, status_path
-
-
-def _status_events_path(run_dir: Path) -> Path:
-    return Path(run_dir) / "status_events.jsonl"
+from .reader import read_stage_status
 
 
 # ---------------------------------------------------------------------------
@@ -42,7 +39,7 @@ def _state_rank(state: str) -> int:
 
 
 def _write_stage_status(run_dir: Path, status: StageStatusRecord) -> None:
-    write_json(status_path(run_dir), status)
+    write_json_object(status_path(run_dir), status)
 
 
 def _append_status_event(
@@ -52,7 +49,7 @@ def _append_status_event(
     current: StageStatusRecord,
     source: str,
 ) -> None:
-    path = _status_events_path(run_dir)
+    path = status_events_path(run_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "stage_instance_id": current.stage_instance_id,
@@ -127,7 +124,7 @@ def _transition_stage_status(
 
 def _write_attempt(run_dir: Path, attempt: StageAttemptRecord) -> Path:
     path = attempt_path(run_dir, attempt.attempt_id)
-    write_json(path, attempt)
+    write_json_object(path, attempt)
     return path
 
 

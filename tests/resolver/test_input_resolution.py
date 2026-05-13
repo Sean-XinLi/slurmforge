@@ -165,7 +165,7 @@ class InputResolutionTests(StageBatchSystemTestCase):
             binding = bindings[runs[0].run_id][0]
             self.assertEqual(source_ref, f"checkpoint:{checkpoint.resolve()}")
             self.assertEqual(binding.source.kind, "external_path")
-            self.assertEqual(binding.resolution["source_role"], "checkpoint")
+            self.assertEqual(binding.resolution.source_role, "checkpoint")
             self.assertEqual(binding.resolved.path, str(checkpoint.resolve()))
 
     def test_checkpoint_cli_relative_path_resolves_from_config_root(self) -> None:

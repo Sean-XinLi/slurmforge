@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..io import utc_now
+from ..plans.train_eval import TrainEvalPipelinePlan
 from ..slurm import SlurmClientProtocol
 from ..submission.dependency_tree import MAX_DEPENDENCY_LENGTH
 from ..workflow_contract import (
@@ -15,17 +16,17 @@ from .terminal_notification import (
     terminal_notification_control_key,
 )
 from .state_model import set_workflow_status
-from ..storage.workflow_state_records import (
+from ..storage.workflow_state_constants import (
     INSTANCE_BLOCKED,
     INSTANCE_FAILED,
     INSTANCE_TERMINAL_STATES,
-    WorkflowState,
 )
+from ..storage.workflow_state_models import WorkflowState
 
 
 def finalize_if_terminal(
     pipeline_root: Path,
-    plan,
+    plan: TrainEvalPipelinePlan,
     state: WorkflowState,
     *,
     client: SlurmClientProtocol,

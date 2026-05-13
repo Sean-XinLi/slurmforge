@@ -2,15 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...io import SchemaVersion, file_digest, write_json
+from ...io import SchemaVersion, file_digest, write_json_object
 from ...plans.outputs import OutputRef, StageOutputsRecord
+from ...storage.paths import stage_outputs_path as _stage_outputs_path
 from ..artifact_store import artifact_payload
 from ..models import ArtifactRef
 from .context import OutputDiscoveryContext
-
-
-def _stage_outputs_path(run_dir: Path) -> Path:
-    return run_dir / "stage_outputs.json"
 
 
 def write_files_output_manifest(
@@ -30,7 +27,7 @@ def write_files_output_manifest(
     manifest_path = (
         context.attempt_dir / "artifacts" / "output_manifests" / f"{output_name}.json"
     )
-    write_json(manifest_path, payload)
+    write_json_object(manifest_path, payload)
     digest = file_digest(manifest_path)
     return OutputRef(
         output_name=output_name,
@@ -53,5 +50,5 @@ def write_files_output_manifest(
 def write_stage_outputs_record(
     record: StageOutputsRecord, *, run_dir: Path, attempt_dir: Path
 ) -> None:
-    write_json(_stage_outputs_path(run_dir), record)
-    write_json(attempt_dir / "outputs" / "stage_outputs.json", record)
+    write_json_object(_stage_outputs_path(run_dir), record)
+    write_json_object(attempt_dir / "outputs" / "stage_outputs.json", record)

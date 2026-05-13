@@ -6,11 +6,14 @@ from ..workflow_contract import (
     TRAIN_STAGE,
     WORKFLOW_PLANNED,
 )
+from ..release_policy_contract import RELEASE_PER_RUN
 from ..plans.train_eval import TrainEvalPipelinePlan
-from .workflow_state_records import (
+from .workflow_state_constants import (
     DEPENDENCY_WAITING,
     INSTANCE_PLANNED,
     INSTANCE_READY,
+)
+from .workflow_state_models import (
     DependencyState,
     StageInstanceState,
     WorkflowState,
@@ -51,7 +54,7 @@ def build_initial_workflow_state(plan: TrainEvalPipelinePlan) -> WorkflowState:
         dependencies=dependencies,
         dispatch_queue=tuple(dispatch_queue),
         submissions={},
-        release_policy=getattr(plan, "release_policy", "per_run"),
+        release_policy=getattr(plan, "release_policy", RELEASE_PER_RUN),
     )
 
 

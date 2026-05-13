@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 from ..errors import ConfigContractError
-from ..slurm import SlurmSubmitOptions
+from ..plans.stage import StageBatchPlan
+from ..slurm import SlurmClientProtocol, SlurmSubmitOptions
 
 
 MAX_DEPENDENCY_LENGTH = 3500
@@ -46,7 +46,7 @@ def dependency_chunks(
     return tuple(chunks)
 
 
-def dependency_sink_group_ids(batch) -> tuple[str, ...]:
+def dependency_sink_group_ids(batch: StageBatchPlan) -> tuple[str, ...]:
     group_ids = {group.group_id for group in batch.group_plans}
     has_outgoing_dependency: set[str] = set()
     for dep in batch.budget_plan.dependencies:
@@ -58,7 +58,7 @@ def dependency_sink_group_ids(batch) -> tuple[str, ...]:
 def submit_dependency_barriers(
     *,
     dependency_job_ids: tuple[str, ...],
-    client: Any,
+    client: SlurmClientProtocol,
     barrier_path_factory: Callable[[int], Path],
     dependency_type: str = "afterany",
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,
@@ -100,7 +100,7 @@ def submit_dependent_job_with_dependency_tree(
     *,
     target_path: Path,
     dependency_job_ids: tuple[str, ...],
-    client: Any,
+    client: SlurmClientProtocol,
     barrier_path_factory: Callable[[int], Path],
     dependency_type: str = "afterany",
     max_dependency_length: int = MAX_DEPENDENCY_LENGTH,

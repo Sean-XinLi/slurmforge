@@ -67,6 +67,29 @@ class SpecShapeTests(StageBatchSystemTestCase):
         self.assertNotIn("parse_experiment_spec", text)
         self.assertNotIn("from .parser import", text)
 
+    def test_launcher_spec_is_typed_after_parse(self) -> None:
+        model_text = Path("src/slurmforge/spec/models/stages.py").read_text(
+            encoding="utf-8"
+        )
+        parser_text = Path("src/slurmforge/spec/stage_parse/launcher.py").read_text(
+            encoding="utf-8"
+        )
+        validation_text = Path("src/slurmforge/spec/validation_launcher.py").read_text(
+            encoding="utf-8"
+        )
+        payload_text = Path("src/slurmforge/planner/payloads/launcher.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("class LauncherRendezvousSpec", model_text)
+        self.assertIn("class TorchrunLauncherSpec", model_text)
+        self.assertIn("torchrun: TorchrunLauncherSpec", model_text)
+        self.assertNotIn("options:", model_text)
+        self.assertNotIn("stage.launcher.options", validation_text)
+        self.assertNotIn("stage.launcher.options", payload_text)
+        self.assertNotIn("copy.deepcopy", parser_text)
+        self.assertNotIn("copy.deepcopy", payload_text)
+
     def test_resolver_explicit_sources_are_split(self) -> None:
         self.assertFalse(Path("src/slurmforge/resolver/explicit.py").exists())
         self.assertTrue(Path("src/slurmforge/resolver/explicit").is_dir())

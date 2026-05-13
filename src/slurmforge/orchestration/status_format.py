@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from ..storage.workflow_status_records import (
-    WorkflowStatusControlJobRecord,
-    WorkflowStatusRecord,
-)
+from ..control_job_contract import ControlJobRecord
+from ..storage.workflow_status_records import WorkflowStatusRecord
 from .status_read_model import StatusReadModel
 
 
@@ -52,7 +50,7 @@ def _workflow_status_line(workflow_status: WorkflowStatusRecord) -> str:
     return f"[STATUS] control state={workflow_status.state} jobs={jobs} reason={reason}"
 
 
-def _control_job_display(record: WorkflowStatusControlJobRecord) -> str:
+def _control_job_display(record: ControlJobRecord) -> str:
     if record.scheduler_job_ids:
         job_ids = ",".join(record.scheduler_job_ids)
         return f"{record.key}={job_ids}"

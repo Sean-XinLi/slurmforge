@@ -10,7 +10,7 @@ This document captures the internal contracts that keep planning, submission, ex
 - `docs_render.config_reference` owns rendered config reference text from the `config_contract` catalog.
 - `spec.run_paths`, `spec.run_ids`, and `spec.run_expansion` own run override path normalization, run identity generation, and `single`/`grid`/`cases`/`matrix` expansion. `spec.queries` is kept for non-run spec lookup helpers.
 - `starter.config_yaml` is split by render concern: top-level orchestration, scalar quoting, top-level sections, and stage/input/output sections.
-- `planner` has no package facade; callers import role modules such as `planner.stage_batch`, `planner.train_eval_pipeline`, `planner.sources`, `planner.audit`, `planner.resource_estimate`, and `planner.summaries` directly.
+- `planner` has no package facade; callers import role modules such as `planner.stage_batch`, `planner.train_eval_pipeline`, `planner.sources`, `planner.audit`, and `planner.summaries` directly. Resource estimate reporting lives outside planner in `resource_estimates`.
 - `executor.stage` is the stage execution entrypoint. `executor.attempt` owns attempt/status transaction writes, `executor.runner` owns runtime checks, input verification, environment construction, and user command execution, and `executor.finalize` owns output discovery and final stage output records.
 - `resolver.explicit` is split by source shape: external paths, producer stage batches, and producer run directories.
 - `root_paths` is the single source for inferring a parent train/eval pipeline root from a stage batch root.

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from ..io import to_jsonable
 from ..plans.stage import StageBatchPlan
 from ..plans.train_eval import TrainEvalPipelinePlan
-from ..sizing.models import (
+from ..sizing.models import GpuSizingResolution
+from .models import (
     ExperimentResourceEstimate,
     ResourceGroupEstimate,
     StageResourceEstimate,
@@ -36,15 +36,14 @@ def build_stage_batch_resource_estimate(batch: StageBatchPlan) -> StageResourceE
                 peak_concurrent_gpus=int(group.gpus_per_task) * active,
             )
         )
-    seen: set[str] = set()
-    run_sizing = []
+    seen: set[GpuSizingResolution] = set()
+    run_sizing: list[GpuSizingResolution] = []
     for instance in batch.stage_instances:
-        payload = to_jsonable(instance.resource_sizing)
-        key = repr(sorted(payload.items()))
-        if key in seen:
+        sizing = instance.resource_sizing
+        if sizing in seen:
             continue
-        seen.add(key)
-        run_sizing.append(payload)
+        seen.add(sizing)
+        run_sizing.append(sizing)
     return StageResourceEstimate(
         stage_name=batch.stage_name,
         runs=len(batch.selected_runs),
@@ -88,54 +87,3 @@ def build_resource_estimate(
             stages=(stage,),
         )
     return build_train_eval_pipeline_resource_estimate(plan)
-
-
-def render_resource_estimate(estimate: ExperimentResourceEstimate) -> list[str]:
-    lines = [
-        f"[ESTIMATE] project={estimate.project} experiment={estimate.experiment} runs={estimate.runs}",
-        f"[ESTIMATE] max_available_gpus={estimate.max_available_gpus}",
-    ]
-    for stage in estimate.stages:
-        lines.extend(
-            [
-                "",
-                f"Stage {stage.stage_name}:",
-                f"  runs: {stage.runs}",
-                f"  total_requested_gpus: {stage.total_requested_gpus}",
-                f"  peak_concurrent_gpus: {stage.peak_concurrent_gpus}",
-                f"  waves: {stage.waves}",
-            ]
-        )
-        for index, sizing in enumerate(stage.run_sizing, start=1):
-            prefix = "sizing" if len(stage.run_sizing) == 1 else f"sizing[{index}]"
-            lines.append(f"  {prefix}.mode: {sizing.get('mode', 'fixed')}")
-            if sizing.get("gpu_type"):
-                lines.append(f"  {prefix}.gpu_type: {sizing['gpu_type']}")
-            if sizing.get("estimator"):
-                lines.append(f"  {prefix}.estimator: {sizing['estimator']}")
-            if sizing.get("target_memory_gb") is not None:
-                lines.append(
-                    f"  {prefix}.target_memory_gb: {sizing['target_memory_gb']}"
-                )
-            if sizing.get("usable_memory_per_gpu_gb") is not None:
-                lines.append(
-                    f"  {prefix}.usable_memory_per_gpu_gb: {sizing['usable_memory_per_gpu_gb']}"
-                )
-            lines.append(
-                f"  {prefix}.resolved_gpus_per_node: {sizing.get('resolved_gpus_per_node', 0)}"
-            )
-            lines.append(
-                f"  {prefix}.total_gpus_per_run: {sizing.get('resolved_total_gpus', 0)}"
-            )
-        for group in stage.resource_groups:
-            throttle = (
-                "-" if group.array_throttle is None else str(group.array_throttle)
-            )
-            lines.append(
-                f"  group {group.group_id}: runs={group.runs} "
-                f"gpus_per_run={group.gpus_per_task} throttle={throttle} "
-                f"peak_gpus={group.peak_concurrent_gpus}"
-            )
-        for warning in stage.warnings:
-            lines.append(f"  warning: {warning}")
-    return lines

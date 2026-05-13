@@ -5,14 +5,15 @@ from typing import Any
 from ..errors import RecordContractError
 from ..io import SchemaVersion, require_schema, to_jsonable
 from ..record_fields import (
-    required_array,
     required_bool,
     required_int,
     required_object,
     required_record,
     required_string,
+    required_string_array,
+    required_string_map,
 )
-from .workflow_state_constants import RELEASE_POLICIES
+from ..release_policy_contract import RELEASE_POLICIES
 from .workflow_state_models import (
     DependencyState,
     DispatchGroupSubmissionState,
@@ -57,9 +58,10 @@ def workflow_state_from_dict(payload: dict[str, Any]) -> WorkflowState:
                 payload, "dependencies", label=WORKFLOW_STATE_LABEL
             ).items()
         },
-        dispatch_queue=tuple(
-            str(item)
-            for item in required_array(payload, "dispatch_queue", label=WORKFLOW_STATE_LABEL)
+        dispatch_queue=required_string_array(
+            payload,
+            "dispatch_queue",
+            label=WORKFLOW_STATE_LABEL,
         ),
         submissions={
             submission_id: _submission_from_dict(
@@ -155,11 +157,10 @@ def _dispatch_group_from_dict(payload: dict[str, Any]) -> DispatchGroupSubmissio
         group_id=required_string(
             payload, "group_id", label=WORKFLOW_STATE_LABEL, non_empty=True
         ),
-        stage_instance_ids=tuple(
-            str(item)
-            for item in required_array(
-                payload, "stage_instance_ids", label=WORKFLOW_STATE_LABEL
-            )
+        stage_instance_ids=required_string_array(
+            payload,
+            "stage_instance_ids",
+            label=WORKFLOW_STATE_LABEL,
         ),
         scheduler_job_id=required_string(
             payload, "scheduler_job_id", label=WORKFLOW_STATE_LABEL
@@ -171,12 +172,9 @@ def _dispatch_group_from_dict(payload: dict[str, Any]) -> DispatchGroupSubmissio
         gpus_per_task=required_int(
             payload, "gpus_per_task", label=WORKFLOW_STATE_LABEL
         ),
-        task_ids_by_instance={
-            str(instance_id): str(task_id)
-            for instance_id, task_id in required_object(
-                payload, "task_ids_by_instance", label=WORKFLOW_STATE_LABEL
-            ).items()
-        },
+        task_ids_by_instance=required_string_map(
+            payload, "task_ids_by_instance", label=WORKFLOW_STATE_LABEL
+        ),
         stage_instance_gate_job_id=required_string(
             payload, "stage_instance_gate_job_id", label=WORKFLOW_STATE_LABEL
         ),
@@ -200,9 +198,10 @@ def _submission_from_dict(payload: dict[str, Any]) -> DispatchSubmissionState:
         display_key=required_string(
             payload, "display_key", label=WORKFLOW_STATE_LABEL, non_empty=True
         ),
-        instance_ids=tuple(
-            str(item)
-            for item in required_array(payload, "instance_ids", label=WORKFLOW_STATE_LABEL)
+        instance_ids=required_string_array(
+            payload,
+            "instance_ids",
+            label=WORKFLOW_STATE_LABEL,
         ),
         root=required_string(payload, "root", label=WORKFLOW_STATE_LABEL, non_empty=True),
         groups={

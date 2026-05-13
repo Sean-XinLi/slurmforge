@@ -1,0 +1,20 @@
+from __future__ import annotations
+
+RELEASE_PER_RUN = "per_run"
+RELEASE_PER_GROUP = "per_group"
+RELEASE_PER_STAGE = "per_stage"
+RELEASE_WINDOWED = "windowed"
+RELEASE_POLICIES = (
+    RELEASE_PER_RUN,
+    RELEASE_PER_GROUP,
+    RELEASE_PER_STAGE,
+    RELEASE_WINDOWED,
+)
+
+__all__ = (
+    "RELEASE_PER_GROUP",
+    "RELEASE_PER_RUN",
+    "RELEASE_PER_STAGE",
+    "RELEASE_POLICIES",
+    "RELEASE_WINDOWED",
+)
